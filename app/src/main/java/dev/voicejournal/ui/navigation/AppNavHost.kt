@@ -1,12 +1,5 @@
 package dev.voicejournal.ui.navigation
 
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -14,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import dev.voicejournal.ui.designsystem.motion.NavigationMotion
 import dev.voicejournal.ui.folders.FoldersScreen
 import dev.voicejournal.ui.journal.JournalScreen
 import dev.voicejournal.ui.calendar.CalendarScreen
@@ -48,21 +42,12 @@ fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) 
             val targetIndex = getTabIndex(targetState.destination.route)
             if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
                 if (targetIndex > initialIndex) {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
+                    NavigationMotion.TabSwitchForwardEnter
                 } else {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> (-fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
+                    NavigationMotion.TabSwitchBackwardEnter
                 }
             } else {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> (fullWidth * 0.15f).toInt() },
-                    animationSpec = tween(220, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                NavigationMotion.DefaultEnter
             }
         },
         exitTransition = {
@@ -70,21 +55,12 @@ fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) 
             val targetIndex = getTabIndex(targetState.destination.route)
             if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
                 if (targetIndex > initialIndex) {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> (-fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(220, easing = FastOutLinearInEasing)
-                    ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
+                    NavigationMotion.TabSwitchForwardExit
                 } else {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(220, easing = FastOutLinearInEasing)
-                    ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
+                    NavigationMotion.TabSwitchBackwardExit
                 }
             } else {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> (-fullWidth * 0.10f).toInt() },
-                    animationSpec = tween(180, easing = FastOutLinearInEasing)
-                ) + fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
+                NavigationMotion.DefaultExit
             }
         },
         popEnterTransition = {
@@ -92,21 +68,12 @@ fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) 
             val targetIndex = getTabIndex(targetState.destination.route)
             if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
                 if (targetIndex > initialIndex) {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
+                    NavigationMotion.TabSwitchForwardEnter
                 } else {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> (-fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
+                    NavigationMotion.TabSwitchBackwardEnter
                 }
             } else {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> (-fullWidth * 0.10f).toInt() },
-                    animationSpec = tween(220, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                NavigationMotion.ScreenPopEnter
             }
         },
         popExitTransition = {
@@ -114,21 +81,12 @@ fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) 
             val targetIndex = getTabIndex(targetState.destination.route)
             if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
                 if (targetIndex > initialIndex) {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> (-fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(220, easing = FastOutLinearInEasing)
-                    ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
+                    NavigationMotion.TabSwitchForwardExit
                 } else {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                        animationSpec = tween(220, easing = FastOutLinearInEasing)
-                    ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
+                    NavigationMotion.TabSwitchBackwardExit
                 }
             } else {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> (fullWidth * 0.15f).toInt() },
-                    animationSpec = tween(180, easing = FastOutLinearInEasing)
-                ) + fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
+                NavigationMotion.ScreenPopExit
             }
         }
     ) {
@@ -179,30 +137,10 @@ fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) 
                     defaultValue = null
                 }
             ),
-            enterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                    animationSpec = tween(260, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
-            },
-            exitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> (-fullWidth * 0.20f).toInt() },
-                    animationSpec = tween(220, easing = FastOutLinearInEasing)
-                ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
-            },
-            popEnterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> (-fullWidth * 0.20f).toInt() },
-                    animationSpec = tween(260, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing))
-            },
-            popExitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> (fullWidth * 0.35f).toInt() },
-                    animationSpec = tween(220, easing = FastOutLinearInEasing)
-                ) + fadeOut(animationSpec = tween(220, easing = FastOutLinearInEasing))
-            }
+            enterTransition = { NavigationMotion.ScreenPushEnter },
+            exitTransition = { NavigationMotion.ScreenPushExit },
+            popEnterTransition = { NavigationMotion.ScreenPopEnter },
+            popExitTransition = { NavigationMotion.ScreenPopExit }
         ) { backStackEntry ->
             val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
             val initialFolder = backStackEntry.arguments?.getString("initialFolder")

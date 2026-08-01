@@ -3,6 +3,7 @@ package dev.voicejournal.ui.insight.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -11,8 +12,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.TimeOfDayMetric
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 import java.util.Locale
 
@@ -27,46 +29,24 @@ fun PeakReflectionCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .background(colors.surface)
-            .padding(16.dp)
+            .padding(Spacing.SpaceLg)
     ) {
+        // Title Row
+        Text(
+            text = "Peak Reflection Hours",
+            color = colors.textPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
+
+        // 4 Time of Day Cards Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Peak Reflection Hours",
-                color = colors.textPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            peakPeriod?.let { peak ->
-                if (peak.count > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.primaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "${peak.icon} ${peak.periodName}",
-                            color = colors.primary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
         ) {
             timeOfDayDistribution.forEach { item ->
                 val pctStr = String.format(Locale.US, "%.0f%%", item.percentage)
@@ -74,20 +54,20 @@ fun PeakReflectionCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(88.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Radius.RadiusMd))
                         .background(colors.surfaceVariant)
-                        .padding(vertical = 8.dp, horizontal = 2.dp),
+                        .padding(vertical = Spacing.SpaceXs, horizontal = Spacing.SpaceX3s),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = item.icon,
-                        fontSize = 20.sp
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Text(
                         text = item.periodName,
                         color = colors.textPrimary,
-                        fontSize = 10.5.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         softWrap = false,
@@ -96,9 +76,34 @@ fun PeakReflectionCard(
                     Text(
                         text = pctStr,
                         color = colors.primary,
-                        fontSize = 12.5.sp,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+        }
+
+        // Peak Insight Badge placed below the cards, left-aligned
+        peakPeriod?.let { peak ->
+            if (peak.count > 0) {
+                Spacer(modifier = Modifier.height(Spacing.SpaceMd))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.RadiusSm))
+                            .background(colors.primaryContainer)
+                            .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
+                    ) {
+                        Text(
+                            text = "${peak.icon} ${peak.periodName}",
+                            color = colors.primary,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

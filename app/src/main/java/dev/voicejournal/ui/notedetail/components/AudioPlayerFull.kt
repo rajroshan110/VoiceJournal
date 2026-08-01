@@ -1,6 +1,10 @@
 package dev.voicejournal.ui.notedetail.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.components.UnifiedAudioPlayerBar
+import dev.voicejournal.ui.designsystem.motion.MotionSpecs
 import dev.voicejournal.ui.theme.AppTheme
 
 @Composable
@@ -83,7 +88,11 @@ fun AudioPlayerFull(
         val shouldShowContainer = isSpeechToTextEnabled && (isTranscribing || (isTranscriptExpanded && (!transcript.isNullOrEmpty() || isTranscriptionFailed)))
 
         if (shouldShowContainer) {
-            AnimatedVisibility(visible = true) {
+            AnimatedVisibility(
+                visible = true,
+                enter = expandVertically(animationSpec = MotionSpecs.tweenFast()) + fadeIn(animationSpec = MotionSpecs.tweenFast()),
+                exit = shrinkVertically(animationSpec = MotionSpecs.tweenExit()) + fadeOut(animationSpec = MotionSpecs.tweenExit())
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
