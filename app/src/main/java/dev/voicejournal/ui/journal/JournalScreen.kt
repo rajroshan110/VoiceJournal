@@ -139,9 +139,13 @@ fun JournalScreen(
         }
     }
 
-    // Smooth sort repositioning with fluid animation
+    // Smooth sort repositioning with fluid animation ONLY when user changes sort option
+    var prevSortOption by remember { mutableStateOf<SortOption?>(null) }
     LaunchedEffect(uiState.sortOption) {
-        listState.animateScrollToItem(0)
+        if (prevSortOption != null && prevSortOption != uiState.sortOption) {
+            listState.animateScrollToItem(0)
+        }
+        prevSortOption = uiState.sortOption
     }
 
     // Auto-close search if list is scrolled and search query is empty
@@ -158,17 +162,12 @@ fun JournalScreen(
 
     // Handle back button presses for navigation drawer, selection mode and search bar
     BackHandler(enabled = drawerState.isOpen || selectionState.isSelectionMode || uiState.isSearchActive) {
-        when {
-            drawerState.isOpen -> {
-                scope.launch { drawerState.close() }
-            }
-            selectionState.isSelectionMode -> {
-                viewModel.clearSelection()
-            }
-            uiState.isSearchActive -> {
-                viewModel.toggleSearch()
-                keyboardController?.hide()
-            }
+        if (drawerState.isOpen) {
+            scope.launch { drawerState.close() }
+        } else if (selectionState.isSelectionMode) {
+            viewModel.clearSelection()
+        } else if (uiState.isSearchActive) {
+            viewModel.toggleSearch()
         }
     }
 
@@ -194,6 +193,7 @@ fun JournalScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = !selectionState.isSelectionMode,
         drawerContent = {
             JournalDrawerContent(
                 onNavigateToArchive = { navController.navigate(Screen.Archive.route) },
@@ -229,27 +229,36 @@ fun JournalScreen(
                         onDeleteSelected = { showDeleteDialog = true },
                         onClearSelection = { viewModel.clearSelection() }
                     )
-                FilterBar(
-                    selectedTagsCount = uiState.filterState.selectedTags.size,
-                    selectedPeopleCount = uiState.filterState.selectedPeople.size,
-                    selectedMoodsCount = uiState.filterState.selectedMoods.size,
-                    onAllClick = { viewModel.clearAllFilters() },
-                    onTagsClick = { activeSheet = ActiveSheet.TAGS },
-                    onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
-                    onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                    FilterBar(
+                        selectedTagsCount = uiState.filterState.selectedTags.size,
+                        selectedPeopleCount = uiState.filterState.selectedPeople.size,
+                        selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                        onAllClick = { viewModel.clearAllFilters() },
+                        onTagsClick = { activeSheet = ActiveSheet.TAGS },
+                        onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
+                        onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                    )
+                }
+            },
+            bottomBar = {
+                BottomNavBar(
+                    navController = navController,
+                    onJournalReselected = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    }
                 )
+            },
+            floatingActionButton = {
+                if (uiState.feedState !is FeedState.EmptyGlobal) {
+                    MicFab(
+                        onClick = { navController.navigate(Screen.NoteDetail.createRoute(-1L)) },
+                        modifier = Modifier.padding(bottom = 8.dp, end = 8.dp)
+                    )
+                }
             }
-        },
-        bottomBar = { BottomNavBar(navController = navController) },
-        floatingActionButton = {
-            if (uiState.feedState !is FeedState.EmptyGlobal) {
-                MicFab(
-                    onClick = { navController.navigate(Screen.NoteDetail.createRoute(-1L)) },
-                    modifier = Modifier.padding(bottom = 8.dp, end = 8.dp)
-                )
-            }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.refreshFeed() },

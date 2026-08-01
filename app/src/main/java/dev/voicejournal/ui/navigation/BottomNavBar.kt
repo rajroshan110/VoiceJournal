@@ -125,7 +125,11 @@ private val AnalyticsIcon: ImageVector
     }.build()
 
 @Composable
-fun BottomNavBar(navController: NavController, modifier: Modifier = Modifier) {
+fun BottomNavBar(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    onJournalReselected: (() -> Unit)? = null
+) {
     val items = listOf(Screen.Journal, Screen.Calendar, Screen.Insight)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -165,9 +169,13 @@ fun BottomNavBar(navController: NavController, modifier: Modifier = Modifier) {
                 label = { Text(label) },
                 selected = isSelected,
                 onClick = {
-                    if ((currentRoute == Screen.Folders.route || currentRoute == Screen.Tags.route || currentRoute == Screen.Archive.route || currentRoute == Screen.Draft.route) && screen.route == Screen.Journal.route) {
+                    if (isSelected) {
+                        if (screen is Screen.Journal) {
+                            onJournalReselected?.invoke()
+                        }
+                    } else if ((currentRoute == Screen.Folders.route || currentRoute == Screen.Tags.route || currentRoute == Screen.Archive.route || currentRoute == Screen.Draft.route) && screen.route == Screen.Journal.route) {
                         navController.popBackStack(Screen.Journal.route, inclusive = false)
-                    } else if (currentRoute != screen.route) {
+                    } else {
                         navController.navigate(screen.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
