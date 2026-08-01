@@ -1,0 +1,173 @@
+package dev.voicejournal.audio
+
+import android.content.Context
+import android.media.AudioFormat as AndroidAudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import dev.voicejournal.domain.model.AudioFormat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.io.File
+import kotlin.math.sqrt
+
+sealed class RecordingState {
+    object Idle : RecordingState()
+    data class Recording(val durationMs: Long, val amplitude: Float) : RecordingState()
+    data class Stopped(val file: File, val durationMs: Long, val format: AudioFormat) : RecordingState()
+    data class Error(val msg: String) : RecordingState()
+}
+
+class AudioRecorderManager(private val context: Context) {
+    private val _state = MutableStateFlow<RecordingState>(RecordingState.Idle)
+    val state: StateFlow<RecordingState> = _state
+
+    private var audioRecord: AudioRecord? = null
+    private var recordingJob: Job? = null
+    private var outputFile: File? = null
+    private var activeFormat: AudioFormat = AudioFormat.M4A_AAC_128KBPS
+
+    private var totalActiveDurationMs: Long = 0L
+    private var segmentStartTimeMs: Long = 0L
+    @Volatile var isPaused: Boolean = false
+        private set
+
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    fun startRecording(format: AudioFormat): File {
+        activeFormat = format
+        totalActiveDurationMs = 0L
+        isPaused = false
+        val extension = if (format == AudioFormat.WAV_16KHZ) ".wav" else ".m4a"
+        val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
+        val file = File(audioDir, "record_${System.currentTimeMillis()}$extension")
+        outputFile = file
+
+        val minBufferSize = AudioRecord.getMinBufferSize(
+            16000,
+            AndroidAudioFormat.CHANNEL_IN_MONO,
+            AndroidAudioFormat.ENCODING_PCM_16BIT
+        )
+
+        try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                16000,
+                AndroidAudioFormat.CHANNEL_IN_MONO,
+                AndroidAudioFormat.ENCODING_PCM_16BIT,
+                minBufferSize
+            )
+
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                _state.value = RecordingState.Error("Failed to initialize AudioRecord")
+                return file
+            }
+
+            audioRecord?.startRecording()
+            segmentStartTimeMs = System.currentTimeMillis()
+
+            recordingJob = scope.launch {
+                val buffer = ByteArray(minBufferSize)
+                var wavWriter: WavFileWriter? = null
+                var m4aEncoder: M4aEncoder? = null
+
+                if (format == AudioFormat.WAV_16KHZ) {
+                    wavWriter = WavFileWriter().apply { start(file) }
+                } else {
+                    m4aEncoder = M4aEncoder().apply { start(file) }
+                }
+
+                while (isActive) {
+                    val read = audioRecord?.read(buffer, 0, minBufferSize) ?: 0
+                    if (read > 0) {
+                        if (!isPaused) {
+                            wavWriter?.writePcmChunk(buffer, read)
+                            m4aEncoder?.encodePcmChunk(buffer, read)
+
+                            val activeSegment = (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+                            val liveDur = totalActiveDurationMs + activeSegment
+                            val amplitude = calculateRms(buffer, read)
+                            _state.value = RecordingState.Recording(liveDur, amplitude)
+                        } else {
+                            _state.value = RecordingState.Recording(totalActiveDurationMs, 0f)
+                        }
+                    }
+                }
+
+                wavWriter?.finish()
+                m4aEncoder?.finish()
+            }
+        } catch (e: SecurityException) {
+            _state.value = RecordingState.Error("Permission denied: ${e.message}")
+        } catch (e: Exception) {
+            _state.value = RecordingState.Error(e.message ?: "Unknown error")
+        }
+
+        return file
+    }
+
+    fun pauseRecording() {
+        if (!isPaused && segmentStartTimeMs > 0L) {
+            totalActiveDurationMs += (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+            isPaused = true
+            _state.value = RecordingState.Recording(totalActiveDurationMs, 0f)
+        }
+    }
+
+    fun resumeRecording() {
+        if (isPaused) {
+            segmentStartTimeMs = System.currentTimeMillis()
+            isPaused = false
+        }
+    }
+
+    fun stopRecording(): File? {
+        if (!isPaused && segmentStartTimeMs > 0L) {
+            totalActiveDurationMs += (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+        }
+        isPaused = false
+
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+
+        runBlocking {
+            recordingJob?.cancelAndJoin()
+        }
+
+        val file = outputFile
+        if (file != null) {
+            _state.value = RecordingState.Stopped(file, totalActiveDurationMs, activeFormat)
+        } else {
+            _state.value = RecordingState.Idle
+        }
+        return file
+    }
+
+    fun cancelRecording() {
+        isPaused = false
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+        runBlocking { recordingJob?.cancelAndJoin() }
+        outputFile?.delete()
+        _state.value = RecordingState.Idle
+    }
+
+    private fun calculateRms(buffer: ByteArray, read: Int): Float {
+        var sum = 0.0
+        for (i in 0 until read step 2) {
+            val sample = (buffer[i].toInt() and 0xFF) or (buffer[i + 1].toInt() shl 8)
+            val shortSample = sample.toShort()
+            sum += shortSample * shortSample
+        }
+        val rms = sqrt(sum / (read / 2))
+        return (rms / Short.MAX_VALUE).toFloat().coerceIn(0f, 1f)
+    }
+}

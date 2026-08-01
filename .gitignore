@@ -1,0 +1,59 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+*.dex
+
+# Files for the Art profiling
+*.prof
+
+# Native build outputs
+.externalNativeBuild
+.cxx
+/build
+/app/build
+
+# Gradle files & caches
+.gradle/
+.gradle_home/
+build/
+app/build/
+**/build/
+
+# Kotlin cache
+.kotlin/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.navigation/
+
+# macOS / OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local configuration files (contains local SDK paths, local properties)
+local.properties
+
+# Secrets, Keys, and Certificates
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+secrets.properties
+
+# Log files
+*.log
+
+# Android Studio capturing
+/captures/
