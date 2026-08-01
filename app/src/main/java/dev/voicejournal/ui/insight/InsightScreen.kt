@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.voicejournal.ui.insight.components.*
 import dev.voicejournal.ui.navigation.BottomNavBar
@@ -30,7 +31,7 @@ fun InsightScreen(
     viewModel: InsightViewModel = hiltViewModel()
 ) {
     val colors = AppTheme.colors
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val isWideLayout = configuration.screenWidthDp >= 600
 

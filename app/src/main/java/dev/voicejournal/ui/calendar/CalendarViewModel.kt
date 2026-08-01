@@ -74,6 +74,14 @@ class CalendarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
+    private fun findTrackId(entryId: Long?, audioPath: String?): String? {
+        if (audioPath.isNullOrBlank()) return null
+        val targetEntry = _uiState.value.selectedDateEntries.firstOrNull { it.id == entryId }
+            ?: _uiState.value.monthEntries.firstOrNull { it.id == entryId }
+        return targetEntry?.allAudioTracks?.firstOrNull { it.path == audioPath || it.id == audioPath }?.id
+            ?: targetEntry?.allAudioTracks?.firstOrNull()?.id
+    }
+
     init {
         // Observe player state for audio playback in Calendar tab
         viewModelScope.launch {
@@ -81,15 +89,21 @@ class CalendarViewModel @Inject constructor(
                 val current = _cardPlaybackState.value
                 when (state) {
                     is PlayerState.Playing -> {
+                        val entryId = state.entryId ?: current.activeEntryId
+                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
                         _cardPlaybackState.value = current.copy(
-                            activeEntryId = state.entryId ?: current.activeEntryId,
+                            activeEntryId = entryId,
+                            activeTrackId = trackId,
                             status = PlaybackStatus.Playing,
                             currentPositionMs = state.currentPosition
                         )
                     }
                     is PlayerState.Paused -> {
+                        val entryId = state.entryId ?: current.activeEntryId
+                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
                         _cardPlaybackState.value = current.copy(
-                            activeEntryId = state.entryId ?: current.activeEntryId,
+                            activeEntryId = entryId,
+                            activeTrackId = trackId,
                             status = PlaybackStatus.Paused,
                             currentPositionMs = state.currentPosition
                         )
@@ -97,6 +111,7 @@ class CalendarViewModel @Inject constructor(
                     is PlayerState.Ended -> {
                         _cardPlaybackState.value = current.copy(
                             activeEntryId = null,
+                            activeTrackId = null,
                             status = PlaybackStatus.Idle,
                             currentPositionMs = 0L
                         )
@@ -105,6 +120,7 @@ class CalendarViewModel @Inject constructor(
                         if (current.status != PlaybackStatus.Error) {
                             _cardPlaybackState.value = current.copy(
                                 activeEntryId = null,
+                                activeTrackId = null,
                                 status = PlaybackStatus.Idle,
                                 currentPositionMs = 0L
                             )

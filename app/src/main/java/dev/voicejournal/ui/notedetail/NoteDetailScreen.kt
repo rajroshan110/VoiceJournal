@@ -51,6 +51,7 @@ import dev.voicejournal.ui.notedetail.components.MicRecordingPill
 import dev.voicejournal.ui.notedetail.components.NoteDetailHeader
 import dev.voicejournal.ui.notedetail.components.UserTextInput
 import dev.voicejournal.ui.theme.AppTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.voicejournal.util.TimeFormatter
 import java.io.File
 
@@ -64,8 +65,8 @@ fun NoteDetailScreen(
     initialTagType: String? = null,
     viewModel: NoteDetailViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val trackSelectionState by viewModel.trackSelectionState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val trackSelectionState by viewModel.trackSelectionState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var showTagsDialog by remember { mutableStateOf(false) }

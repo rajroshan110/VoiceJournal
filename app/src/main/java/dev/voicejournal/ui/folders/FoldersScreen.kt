@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.voicejournal.ui.components.getCreateNewFolderIcon
 import dev.voicejournal.ui.components.getFolderIcon
@@ -42,8 +43,8 @@ fun FoldersScreen(
     navController: NavController,
     viewModel: FoldersViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val cardPlaybackState by viewModel.cardPlaybackState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
     var selectedLightboxImage by remember { mutableStateOf<String?>(null) }

@@ -33,7 +33,8 @@ class AudioPlayerManager(private val context: Context) {
     private var progressJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
     private var currentTitle: String = "Voice Note Playback"
-    private var currentEntryId: Long? = null
+    var currentEntryId: Long? = null
+        private set
     var currentAudioPath: String? = null
         private set
 
@@ -96,12 +97,12 @@ class AudioPlayerManager(private val context: Context) {
                         if (isPlaying) {
                             _playbackState.value = PlayerState.Playing(currentEntryId, player.currentPosition, dur, currentAudioPath)
                             startProgressTracking()
-                            AudioPlaybackService.updateState(context, true, currentTitle)
+                            AudioPlaybackService.updateState(context, true, currentTitle, currentEntryId)
                         } else {
                             if (player.playbackState == Player.STATE_ENDED || player.playbackState == Player.STATE_IDLE) return
                             _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
                             progressJob?.cancel()
-                            AudioPlaybackService.updateState(context, false, currentTitle)
+                            AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
                         }
                     }
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -114,7 +115,7 @@ class AudioPlayerManager(private val context: Context) {
         }
 
         // Start the foreground service notification first
-        AudioPlaybackService.start(context, currentTitle)
+        AudioPlaybackService.start(context, currentTitle, currentEntryId)
 
         exoPlayer?.apply {
             setMediaItem(MediaItem.fromUri(mediaUri))
@@ -168,7 +169,7 @@ class AudioPlayerManager(private val context: Context) {
             val dur = player.duration.coerceAtLeast(0)
             _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
         }
-        AudioPlaybackService.updateState(context, false, currentTitle)
+        AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
     }
 
     fun resume() {
@@ -177,7 +178,7 @@ class AudioPlayerManager(private val context: Context) {
             val dur = player.duration.coerceAtLeast(0)
             _playbackState.value = PlayerState.Playing(currentEntryId, player.currentPosition, dur, currentAudioPath)
         }
-        AudioPlaybackService.updateState(context, true, currentTitle)
+        AudioPlaybackService.updateState(context, true, currentTitle, currentEntryId)
     }
 
     fun seekTo(positionMs: Long) {

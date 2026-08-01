@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.voicejournal.ui.theme.AppTheme
 import dev.voicejournal.ui.trash.components.TrashNoteCard
@@ -31,7 +32,7 @@ fun TrashScreen(
     navController: NavController,
     viewModel: TrashViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
     val context = LocalContext.current
     var lastToastTime by remember { mutableLongStateOf(0L) }

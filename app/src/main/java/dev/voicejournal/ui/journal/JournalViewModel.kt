@@ -98,21 +98,35 @@ class JournalViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(JournalUiState())
     val uiState: StateFlow<JournalUiState> = _uiState.asStateFlow()
 
+    private fun findTrackId(entryId: Long?, audioPath: String?): String? {
+        if (audioPath.isNullOrBlank()) return null
+        val targetEntry = _uiState.value.entries.firstOrNull { it.id == entryId }
+            ?: _uiState.value.entries.firstOrNull { entry -> entry.allAudioTracks.any { it.path == audioPath || it.id == audioPath } }
+        return targetEntry?.allAudioTracks?.firstOrNull { it.path == audioPath || it.id == audioPath }?.id
+            ?: targetEntry?.allAudioTracks?.firstOrNull()?.id
+    }
+
     init {
         viewModelScope.launch {
             audioPlayerManager.playbackState.collect { state ->
                 val current = _cardPlaybackState.value
                 when (state) {
                     is PlayerState.Playing -> {
+                        val entryId = state.entryId ?: current.activeEntryId
+                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
                         _cardPlaybackState.value = current.copy(
-                            activeEntryId = state.entryId ?: current.activeEntryId,
+                            activeEntryId = entryId,
+                            activeTrackId = trackId,
                             status = PlaybackStatus.Playing,
                             currentPositionMs = state.currentPosition
                         )
                     }
                     is PlayerState.Paused -> {
+                        val entryId = state.entryId ?: current.activeEntryId
+                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
                         _cardPlaybackState.value = current.copy(
-                            activeEntryId = state.entryId ?: current.activeEntryId,
+                            activeEntryId = entryId,
+                            activeTrackId = trackId,
                             status = PlaybackStatus.Paused,
                             currentPositionMs = state.currentPosition
                         )

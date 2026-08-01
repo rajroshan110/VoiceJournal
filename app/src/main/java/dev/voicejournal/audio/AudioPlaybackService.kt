@@ -63,9 +63,17 @@ class AudioPlaybackService : Service() {
         super.onDestroy()
     }
 
+    private var currentEntryId: Long? = null
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: return START_NOT_STICKY
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Voice Note Playback"
+        if (intent.hasExtra(EXTRA_ENTRY_ID)) {
+            val id = intent.getLongExtra(EXTRA_ENTRY_ID, -1L)
+            if (id != -1L) {
+                currentEntryId = id
+            }
+        }
 
         when (action) {
             ACTION_START -> {
@@ -130,10 +138,21 @@ class AudioPlaybackService : Service() {
     }
 
     private fun buildNotification(title: String, isPlaying: Boolean): android.app.Notification {
+        val activeEntryId = AudioPlayerManager.instance?.currentEntryId ?: currentEntryId ?: -1L
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            action = "dev.voicejournal.action.NOTIFICATION_CLICK"
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("from_notification", true)
+            if (activeEntryId != -1L) {
+                putExtra("open_entry_id", activeEntryId)
+            }
+        }
+
+        val reqCode = if (activeEntryId != -1L) (activeEntryId % 10000).toInt() else 2001
         val contentIntent = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, MainActivity::class.java),
+            reqCode,
+            openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -212,11 +231,13 @@ class AudioPlaybackService : Service() {
         const val ACTION_SKIP_BACKWARD = "dev.voicejournal.action.SKIP_BACKWARD"
         const val ACTION_STOP = "dev.voicejournal.action.STOP_PLAYBACK"
         const val EXTRA_TITLE = "extra_audio_title"
+        const val EXTRA_ENTRY_ID = "extra_audio_entry_id"
 
-        fun start(context: Context, title: String) {
+        fun start(context: Context, title: String, entryId: Long? = null) {
             val intent = Intent(context, AudioPlaybackService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_TITLE, title)
+                entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
@@ -229,10 +250,11 @@ class AudioPlaybackService : Service() {
             }
         }
 
-        fun updateState(context: Context, isPlaying: Boolean, title: String) {
+        fun updateState(context: Context, isPlaying: Boolean, title: String, entryId: Long? = null) {
             val intent = Intent(context, AudioPlaybackService::class.java).apply {
                 action = if (isPlaying) ACTION_RESUME else ACTION_PAUSE
                 putExtra(EXTRA_TITLE, title)
+                entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {

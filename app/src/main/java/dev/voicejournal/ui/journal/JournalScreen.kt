@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.activity.compose.BackHandler
 import dev.voicejournal.domain.model.Tag
@@ -115,9 +116,9 @@ fun JournalScreen(
     initialTag: String? = null,
     viewModel: JournalViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val cardPlaybackState by viewModel.cardPlaybackState.collectAsState()
-    val selectionState by viewModel.selectionState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
+    val selectionState by viewModel.selectionState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -442,7 +443,11 @@ fun JournalScreen(
                             }
                         }
 
-                        items(state.entries, key = { it.id }) { entry ->
+                        items(
+                            items = state.entries,
+                            key = { it.id },
+                            contentType = { "journal_entry" }
+                        ) { entry ->
                             val isPlaying by remember(entry.id) {
                                 derivedStateOf {
                                     cardPlaybackState.activeEntryId == entry.id && cardPlaybackState.status == PlaybackStatus.Playing

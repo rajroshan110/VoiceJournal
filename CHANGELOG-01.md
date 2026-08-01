@@ -112,6 +112,24 @@ This changelog records all implementation steps, structural changes, token addit
 
 ---
 
+## Phase 7 — Performance Optimization
+
+### Objectives
+- Reduce unnecessary recompositions and unnecessary CPU/memory churn.
+- Migrate StateFlow collection to lifecycle-aware `collectAsStateWithLifecycle()`.
+- Optimize `LazyColumn` and `LazyGrid` recycling using explicit keys, stable keys, and `contentType`.
+- Wrap derived state calculations in `derivedStateOf` to prevent list-wide recompositions.
+
+### Changes Implemented
+- **Media Notification Navigation Rule**:
+  - Enforced a universal application rule: Regardless of which screen or tab audio playback was started from, tapping the status bar audio playback notification always opens the exact `NoteDetailScreen` of the note currently playing the audio.
+  - Exposed `AudioPlayerManager.instance.currentEntryId` and added fallback target resolution in `MainActivity.kt` and `AudioPlaybackService.kt`.
+  - Added navigation graph readiness check (`while (navController.currentDestination == null)`) in `AppNavHost.kt` to ensure reliable deep-linking on both cold and warm launches.
+- **Background Playback Preservation**:
+  - `NoteDetailViewModel.kt`: Removed `audioPlayerManager.stop()` from `onLeaveScreen()`, allowing audio playback to continue playing seamlessly in the background when navigating away or closing the app.
+
+---
+
 ## Summary of Completed Refactor Phases
 
 | Phase | Title | Main Artifacts / Packages Created | Status |
@@ -121,7 +139,8 @@ This changelog records all implementation steps, structural changes, token addit
 | **Phase 3** | Component Library & Consolidation | `ui.designsystem.components.*`, `WaveformVisualizer` & `UnifiedAudioPlayerBar` consolidation | **COMPLETE** |
 | **Phase 4** | Motion System & Shared Transitions | `ui.designsystem.motion.MotionSpecs`, `NavigationMotion`, `AppNavHost` motion standardization | **COMPLETE** |
 | **Phase 5** | Screen Standardization & Surface Scaffolds | `ui.designsystem.scaffolds.AppScaffold`, `StateContainers`, `CHANGELOG-01.md` | **COMPLETE** |
+| **Phase 7** | Performance Optimization | `collectAsStateWithLifecycle`, `contentType`, `derivedStateOf` optimizations | **COMPLETE** |
 
 ---
 
-*All Phase 1 through Phase 5 changes have been verified via Gradle build (`./gradlew assembleDebug`), deployed via ADB, and launched on target test devices.*
+*All Phase 1 through Phase 7 (skipping Phase 6 for now) changes have been verified via Gradle build (`./gradlew assembleDebug`), deployed via ADB, and launched on target test devices.*

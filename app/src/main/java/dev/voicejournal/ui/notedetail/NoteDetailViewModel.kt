@@ -608,7 +608,6 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun onLeaveScreen() {
-        audioPlayerManager.stop()
         // Discard any uncommitted temporary draft files created during unsaved session
         pendingFileAdditions.forEach { path ->
             deletePhysicalFile(path)

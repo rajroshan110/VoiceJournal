@@ -1,6 +1,7 @@
 package dev.voicejournal.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -32,7 +33,30 @@ private fun getTabIndex(route: String?): Int {
 }
 
 @Composable
-fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+fun AppNavHost(
+    navController: NavHostController,
+    openEntryId: Long = -1L,
+    onEntryNavigated: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val currentTargetId by androidx.compose.runtime.rememberUpdatedState(openEntryId)
+    androidx.compose.runtime.LaunchedEffect(currentTargetId) {
+        val targetId = currentTargetId
+        if (targetId != -1L) {
+            while (navController.currentDestination == null) {
+                kotlinx.coroutines.delay(50L)
+            }
+            val targetRoute = Screen.NoteDetail.createRoute(targetId)
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute != targetRoute) {
+                navController.navigate(targetRoute) {
+                    launchSingleTop = true
+                }
+            }
+            onEntryNavigated()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Journal.route,

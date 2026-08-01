@@ -37,6 +37,8 @@ import dev.voicejournal.ui.theme.AppTheme
 import dev.voicejournal.ui.theme.VoiceTheme
 import javax.inject.Inject
 
+import android.content.Intent
+
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
@@ -44,9 +46,11 @@ class MainActivity : FragmentActivity() {
     lateinit var userPreferencesManager: UserPreferencesManager
 
     private var lastStopTimestamp: Long = 0L
+    private var openEntryIdState = mutableLongStateOf(-1L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         enableEdgeToEdge()
         setContent {
             val appThemeMode by userPreferencesManager.appThemeMode.collectAsState(initial = AppThemeMode.DARK)
@@ -126,12 +130,42 @@ class MainActivity : FragmentActivity() {
                     }
                 } else {
                     val navController = rememberNavController()
+                    val targetEntryId = openEntryIdState.longValue
                     AppNavHost(
                         navController = navController,
+                        openEntryId = targetEntryId,
+                        onEntryNavigated = { openEntryIdState.longValue = -1L },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        val isFromNotification = intent.getBooleanExtra("from_notification", false) ||
+                intent.action == "dev.voicejournal.action.NOTIFICATION_CLICK" ||
+                intent.action?.startsWith("dev.voicejournal.action.OPEN_NOTE_") == true
+
+        val idFromExtra = intent.getLongExtra("open_entry_id", -1L)
+        val activePlayerEntryId = (dev.voicejournal.audio.AudioPlayerManager.instance?.playbackState?.value as? dev.voicejournal.audio.PlayerState.Playing)?.entryId
+            ?: (dev.voicejournal.audio.AudioPlayerManager.instance?.playbackState?.value as? dev.voicejournal.audio.PlayerState.Paused)?.entryId
+            ?: dev.voicejournal.audio.AudioPlayerManager.instance?.currentEntryId
+            ?: -1L
+
+        val targetId = if (idFromExtra != -1L) idFromExtra else activePlayerEntryId
+
+        if (isFromNotification && targetId != -1L) {
+            openEntryIdState.longValue = targetId
+        } else if (idFromExtra != -1L) {
+            openEntryIdState.longValue = idFromExtra
         }
     }
 
