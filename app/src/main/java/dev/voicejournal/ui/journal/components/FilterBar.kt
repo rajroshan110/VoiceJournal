@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,9 +33,9 @@ fun FilterBar(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(vertical = Spacing.SpaceX2s),
+        contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // [All] Chip
@@ -41,7 +43,7 @@ fun FilterBar(
             FilterChip(
                 selected = isAllActive,
                 onClick = onAllClick,
-                label = { Text("All", fontWeight = if (isAllActive) FontWeight.Bold else FontWeight.Normal) },
+                label = { Text("All", style = MaterialTheme.typography.labelLarge, fontWeight = if (isAllActive) FontWeight.Bold else FontWeight.Normal) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = colors.primary,
                     selectedLabelColor = colors.onPrimary,
@@ -59,15 +61,15 @@ fun FilterBar(
                 label = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
-                        Text("Topics")
+                        Text("Topics", style = MaterialTheme.typography.labelLarge)
                         if (selectedTagsCount > 0) {
                             Badge(
                                 containerColor = colors.primaryContainer,
                                 contentColor = colors.primary
                             ) {
-                                Text("$selectedTagsCount", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("$selectedTagsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -76,7 +78,7 @@ fun FilterBar(
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select Topics Filter",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.IconSm)
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
@@ -96,15 +98,15 @@ fun FilterBar(
                 label = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
-                        Text("People")
+                        Text("People", style = MaterialTheme.typography.labelLarge)
                         if (selectedPeopleCount > 0) {
                             Badge(
                                 containerColor = colors.primaryContainer,
                                 contentColor = colors.primary
                             ) {
-                                Text("$selectedPeopleCount", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("$selectedPeopleCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -113,7 +115,7 @@ fun FilterBar(
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select People Filter",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.IconSm)
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
@@ -133,15 +135,15 @@ fun FilterBar(
                 label = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
-                        Text("Mood")
+                        Text("Mood", style = MaterialTheme.typography.labelLarge)
                         if (selectedMoodsCount > 0) {
                             Badge(
                                 containerColor = colors.primaryContainer,
                                 contentColor = colors.primary
                             ) {
-                                Text("$selectedMoodsCount", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("$selectedMoodsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -150,7 +152,7 @@ fun FilterBar(
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select Mood Filter",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.IconSm)
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(

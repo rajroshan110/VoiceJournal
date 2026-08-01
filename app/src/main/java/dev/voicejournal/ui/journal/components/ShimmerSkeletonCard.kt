@@ -15,8 +15,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.theme.AppTheme
+
 @Composable
 fun ShimmerSkeletonCard(modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
         initialValue = 0f,
@@ -29,9 +34,9 @@ fun ShimmerSkeletonCard(modifier: Modifier = Modifier) {
     )
 
     val shimmerColors = listOf(
-        Color(0xFF2A2A2A),
-        Color(0xFF3F3F3F),
-        Color(0xFF2A2A2A)
+        colors.surfaceVariant.copy(alpha = 0.6f),
+        colors.divider.copy(alpha = 0.8f),
+        colors.surfaceVariant.copy(alpha = 0.6f)
     )
 
     val brush = Brush.linearGradient(
@@ -43,11 +48,11 @@ fun ShimmerSkeletonCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+            .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s),
+        shape = RoundedCornerShape(Radius.RadiusMd),
+        colors = CardDefaults.cardColors(containerColor = colors.surface)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.SpaceLg)) {
             // Header Shimmer (Date & Emoji placeholder)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -57,57 +62,57 @@ fun ShimmerSkeletonCard(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .width(140.dp)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(Radius.RadiusXs))
                         .background(brush)
                 )
                 Box(
                     modifier = Modifier
                         .size(24.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(Radius.RadiusXs))
                         .background(brush)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
             // Body Text Preview Shimmer (3 lines)
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(Radius.RadiusXs))
                     .background(brush)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXs))
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.75f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(Radius.RadiusXs))
                     .background(brush)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
             // Waveform Shimmer Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Radius.RadiusSm))
                     .background(brush)
             ) {}
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
             // Tags Shimmer Row
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)) {
                 repeat(3) {
                     Box(
                         modifier = Modifier
                             .width(60.dp)
                             .height(24.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(Radius.RadiusMd))
                             .background(brush)
                     )
                 }

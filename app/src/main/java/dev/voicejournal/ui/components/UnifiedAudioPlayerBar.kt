@@ -22,6 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 import java.util.Locale
 
@@ -107,14 +110,14 @@ fun UnifiedAudioPlayerBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp)
+            .padding(vertical = Spacing.SpaceX3s)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .background(colors.surfaceVariant, shape = RoundedCornerShape(22.dp))
-                .padding(horizontal = 8.dp),
+                .background(colors.surfaceVariant, shape = RoundedCornerShape(Radius.RadiusPill))
+                .padding(horizontal = Spacing.SpaceXs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 1. Play / Pause Circular Button
@@ -128,7 +131,7 @@ fun UnifiedAudioPlayerBar(
                 when {
                     isBuffering -> {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(IconSize.IconMd),
                             color = colors.onPrimary,
                             strokeWidth = 2.dp
                         )
@@ -138,7 +141,7 @@ fun UnifiedAudioPlayerBar(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Audio Error",
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.IconMd)
                         )
                     }
                     isPlaying -> {
@@ -146,7 +149,7 @@ fun UnifiedAudioPlayerBar(
                             imageVector = getPauseIcon(colors.onPrimary),
                             contentDescription = "Pause",
                             tint = colors.onPrimary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.IconMd)
                         )
                     }
                     else -> {
@@ -154,13 +157,13 @@ fun UnifiedAudioPlayerBar(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = "Play",
                             tint = colors.onPrimary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.IconMd)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
 
             // 2. Waveform Visualizer
             WaveformVisualizer(
@@ -175,21 +178,20 @@ fun UnifiedAudioPlayerBar(
                     .height(32.dp)
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
 
             // 3. Single-line Running Timer Readout
             Text(
                 text = timeText,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary,
-                fontSize = 12.sp,
                 maxLines = 1,
                 softWrap = false
             )
 
             // 4. Trailing Action Content (placed inline right beside the playback timer readout)
             if (trailingContent != null) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.SpaceXs))
                 trailingContent()
             }
         }

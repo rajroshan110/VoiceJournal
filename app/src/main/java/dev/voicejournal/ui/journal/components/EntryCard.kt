@@ -28,6 +28,10 @@ import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.components.UnifiedAudioPlayerBar
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
 import java.io.File
@@ -76,26 +80,23 @@ fun EntryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s)
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .border(
-                BorderStroke(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = cardBorderColor
-                ),
-                shape = RoundedCornerShape(14.dp)
+                Border.getSelectionBorder(isSelected, colors.primary, colors.border),
+                shape = RoundedCornerShape(Radius.RadiusLg)
             )
             .combinedClickable(
                 onClick = onCardClick,
                 onLongClick = onLongClick
             ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Radius.RadiusLg),
         colors = CardDefaults.cardColors(containerColor = cardBgColor)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceXs)
         ) {
             // 1. Header Layout (Row: Date/Time + Mood + Selection Checkmark)
             Row(
@@ -106,22 +107,21 @@ fun EntryCard(
                 Text(
                     text = formattedDateText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary,
-                    fontSize = 12.sp
+                    color = colors.textSecondary
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = entry.mood,
-                        fontSize = 18.sp
+                        style = MaterialTheme.typography.titleLarge
                     )
                     if (isSelected) {
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(Spacing.SpaceXs))
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",
                             tint = colors.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(IconSize.IconSm)
                         )
                     }
                 }

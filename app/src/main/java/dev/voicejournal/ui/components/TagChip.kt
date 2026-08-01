@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 
 @Composable
@@ -37,24 +40,24 @@ fun TagChip(
         modifier = Modifier
             .background(
                 color = if (selected) colors.primary else colors.surfaceVariant,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(Radius.RadiusPill)
             )
             .clickable(enabled = onClick != null) { onClick?.invoke() }
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
     ) {
         Text(
             text = "$icon${tag.name}",
             color = if (selected) colors.onPrimary else colors.textPrimary,
-            fontSize = 12.sp
+            style = androidx.compose.material3.MaterialTheme.typography.labelMedium
         )
         if (onDelete != null) {
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Remove tag",
                 tint = colors.textSecondary,
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(IconSize.IconXs)
                     .clickable { onDelete.invoke() }
             )
         }

@@ -12,12 +12,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.theme.AppTheme
+
 @Composable
 fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
     val shimmerColors = listOf(
-        Color(0xFF242424),
-        Color(0xFF323232),
-        Color(0xFF242424)
+        colors.surfaceVariant.copy(alpha = 0.6f),
+        colors.divider.copy(alpha = 0.8f),
+        colors.surfaceVariant.copy(alpha = 0.6f)
     )
 
     val transition = rememberInfiniteTransition(label = "shimmerTransition")
@@ -39,14 +44,14 @@ fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceLg)
     ) {
         // Period selector skeleton
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .height(Spacing.Space3Xl)
+                .clip(RoundedCornerShape(Radius.RadiusPill))
                 .background(brush)
         )
 
@@ -55,7 +60,7 @@ fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Radius.RadiusLg))
                 .background(brush)
         )
 
@@ -64,7 +69,7 @@ fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Radius.RadiusLg))
                 .background(brush)
         )
 
@@ -73,7 +78,7 @@ fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Radius.RadiusLg))
                 .background(brush)
         )
 
@@ -82,7 +87,7 @@ fun InsightsShimmerSkeleton(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Radius.RadiusLg))
                 .background(brush)
         )
     }

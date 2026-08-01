@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 
 enum class SortOption(val label: String) {
@@ -108,7 +110,7 @@ fun JournalHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -120,7 +122,7 @@ fun JournalHeader(
                         Text(
                             "Search notes...",
                             color = colors.textSecondary,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     },
                     singleLine = true,
@@ -132,7 +134,7 @@ fun JournalHeader(
                         focusedTextColor = colors.textPrimary,
                         unfocusedTextColor = colors.textPrimary
                     ),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(Radius.RadiusPill),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
                         focusManager.clearFocus()
@@ -150,10 +152,8 @@ fun JournalHeader(
                             Icon(Icons.Default.Close, contentDescription = "Close search", tint = colors.textSecondary)
                         }
                     },
-                    textStyle = LocalTextStyle.current.copy(
-                        color = colors.textPrimary,
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = colors.textPrimary
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -162,7 +162,7 @@ fun JournalHeader(
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                 ) {
                     IconButton(
                         onClick = onMenuClick,
@@ -180,14 +180,14 @@ fun JournalHeader(
                         style = MaterialTheme.typography.titleLarge,
                         color = if (isSelectionMode) colors.primary else colors.textPrimary,
                         fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = Spacing.SpaceX2s)
                     )
                 }
 
                 if (isSelectionMode) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
                         if (selectedCount > 0) {
                             IconButton(
@@ -226,7 +226,7 @@ fun JournalHeader(
                 } else {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
                         // Search Button
                         IconButton(
@@ -264,7 +264,7 @@ fun JournalHeader(
                                             Text(
                                                 text = option.label,
                                                 color = if (option == currentSortOption) colors.primary else colors.textPrimary,
-                                                fontSize = 14.sp
+                                                style = MaterialTheme.typography.bodyMedium
                                             )
                                         },
                                         onClick = {

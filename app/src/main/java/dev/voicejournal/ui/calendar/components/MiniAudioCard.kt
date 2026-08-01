@@ -20,6 +20,10 @@ import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.components.TagChip
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
 
@@ -73,15 +77,15 @@ fun MiniAudioCard(
         onClick = onCardClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(20.dp),
+            .padding(vertical = Spacing.SpaceX2s),
+        shape = RoundedCornerShape(Radius.RadiusMd),
         colors = CardDefaults.outlinedCardColors(containerColor = colors.surface),
-        border = BorderStroke(1.dp, colors.border)
+        border = BorderStroke(Border.WidthThin, colors.border)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(Spacing.SpaceMd),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -97,16 +101,15 @@ fun MiniAudioCard(
                         text = timeText,
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary,
-                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = entry.mood,
-                        fontSize = 18.sp
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
 
                 // Title / Body Text Preview
                 Text(
@@ -119,27 +122,27 @@ fun MiniAudioCard(
                 )
 
                 if (hasAudio || entry.tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.SpaceXs))
 
                     // 1-Line Limit FlowRow: Audio Chip (First Priority) & Tags with Overflow
                     FlowRow(
                         maxLines = 1,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         // 1. Audio Track Chip (FIRST PRIORITY if voice notes exist)
                         if (hasAudio) {
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(Radius.RadiusSm),
                                 color = colors.primaryContainer
                             ) {
                                 Text(
                                     text = "🎙️ $audioTrackCount",
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    modifier = Modifier.padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX3s)
                                 )
                             }
                         }
@@ -151,14 +154,14 @@ fun MiniAudioCard(
                         }
                         if (entry.tags.size > 2) {
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(Radius.RadiusSm),
                                 color = colors.surfaceVariant
                             ) {
                                 Text(
                                     text = "...+${entry.tags.size - 2}",
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = colors.textSecondary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    modifier = Modifier.padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX3s)
                                 )
                             }
                         }
@@ -166,14 +169,14 @@ fun MiniAudioCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(Spacing.SpaceMd))
 
             // Right Action: Chevron right arrow
             Icon(
                 imageVector = getChevronRightIcon(colors.textSecondary),
                 contentDescription = "View Note Detail",
                 tint = colors.textSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(IconSize.IconMd)
             )
         }
     }
