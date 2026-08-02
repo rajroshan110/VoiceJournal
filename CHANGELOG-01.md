@@ -121,6 +121,11 @@ This changelog records all implementation steps, structural changes, token addit
 - Wrap derived state calculations in `derivedStateOf` to prevent list-wide recompositions.
 
 ### Changes Implemented
+- **Phase 6 — Accessibility (Completed)**:
+  - **48dp Minimum Touch Targets**: Enforced `TouchTarget.MinTouchTargetSize` (48.dp) on all interactive buttons across `UnifiedAudioPlayerBar`, `TagChip` (chip container & remove icon), `MicRecordingPill` (recording, pause, resume, save, cancel), `JournalHeader`, and dialogs.
+  - **TalkBack Semantics & Roles**: Added explicit `Role.Button` and contextual TalkBack `contentDescription` attributes to audio playback controls, tag chips, FAB controls, and bottom navigation.
+  - **Live Region Announcements**: Configured `LiveRegionMode.Polite` on loading containers and duration timers, and `LiveRegionMode.Assertive` on error containers (`StateContainers.kt`).
+  - **Contrast & Font Scaling**: Verified color contrast compliance against design system tokens and ensured all typography scales properly using standard `sp` font units.
 - **Media Notification Navigation Rule**:
   - Enforced a universal application rule: Regardless of which screen or tab audio playback was started from, tapping the status bar audio playback notification always opens the exact `NoteDetailScreen` of the note currently playing the audio.
   - Exposed `AudioPlayerManager.instance.currentEntryId` and added fallback target resolution in `MainActivity.kt` and `AudioPlaybackService.kt`.

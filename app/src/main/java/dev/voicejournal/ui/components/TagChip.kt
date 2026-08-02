@@ -11,6 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.Tag
@@ -18,6 +22,7 @@ import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.TouchTarget
 import dev.voicejournal.ui.theme.AppTheme
 
 @Composable
@@ -38,10 +43,15 @@ fun TagChip(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .defaultMinSize(minHeight = TouchTarget.MinTouchTargetSize)
             .background(
                 color = if (selected) colors.primary else colors.surfaceVariant,
                 shape = RoundedCornerShape(Radius.RadiusPill)
             )
+            .semantics {
+                role = Role.Button
+                contentDescription = if (selected) "Tag ${tag.name}, selected" else "Tag ${tag.name}"
+            }
             .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
     ) {
@@ -52,14 +62,26 @@ fun TagChip(
         )
         if (onDelete != null) {
             Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Remove tag",
-                tint = colors.textSecondary,
+            Box(
                 modifier = Modifier
-                    .size(IconSize.IconXs)
-                    .clickable { onDelete.invoke() }
-            )
+                    .defaultMinSize(
+                        minWidth = TouchTarget.MinTouchTargetSize,
+                        minHeight = TouchTarget.MinTouchTargetSize
+                    )
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "Remove tag ${tag.name}"
+                    }
+                    .clickable { onDelete.invoke() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    tint = if (selected) colors.onPrimary else colors.textSecondary,
+                    modifier = Modifier.size(IconSize.IconXs)
+                )
+            }
         }
     }
 }

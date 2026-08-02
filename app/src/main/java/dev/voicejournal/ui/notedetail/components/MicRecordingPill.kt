@@ -24,8 +24,15 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.tokens.TouchTarget
 import dev.voicejournal.ui.theme.AppTheme
 import java.util.Locale
 
@@ -137,12 +144,16 @@ fun MicRecordingPill(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Start recording voice note"
+                        }
                         .clickable { onStartRecording() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = getMicIcon(colors.onPrimary),
-                        contentDescription = "Record Voice Note",
+                        contentDescription = null,
                         tint = colors.onPrimary,
                         modifier = Modifier.size(26.dp)
                     )
@@ -156,7 +167,12 @@ fun MicRecordingPill(
                 ) {
                     // Live / Frozen Duration Timer (Monospace digits with fixed min width prevents jitter)
                     Box(
-                        modifier = Modifier.widthIn(min = 48.dp),
+                        modifier = Modifier
+                            .widthIn(min = 48.dp)
+                            .semantics {
+                                liveRegion = LiveRegionMode.Polite
+                                contentDescription = "Recording duration $formattedDuration"
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -172,10 +188,17 @@ fun MicRecordingPill(
                     }
 
                     // Pause / Resume Control Button
+                    val pauseResumeDesc = if (state == MicFabState.RECORDING) "Pause Recording" else "Resume Recording"
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(colors.onPrimary.copy(alpha = 0.2f), CircleShape)
+                            .defaultMinSize(
+                                minWidth = TouchTarget.MinTouchTargetSize,
+                                minHeight = TouchTarget.MinTouchTargetSize
+                            )
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = pauseResumeDesc
+                            }
                             .clickable {
                                 if (state == MicFabState.RECORDING) {
                                     onPauseRecording()
@@ -185,44 +208,77 @@ fun MicRecordingPill(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (state == MicFabState.RECORDING) getPauseIcon(colors.onPrimary) else Icons.Default.PlayArrow,
-                            contentDescription = if (state == MicFabState.RECORDING) "Pause Recording" else "Resume Recording",
-                            tint = colors.onPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(colors.onPrimary.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (state == MicFabState.RECORDING) getPauseIcon(colors.onPrimary) else Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = colors.onPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     // Save Track Checkmark Button (✓)
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(colors.onPrimary, CircleShape)
+                            .defaultMinSize(
+                                minWidth = TouchTarget.MinTouchTargetSize,
+                                minHeight = TouchTarget.MinTouchTargetSize
+                            )
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Save Audio Track"
+                            }
                             .clickable { onSaveTrack() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Audio Track",
-                            tint = colors.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(colors.onPrimary, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = colors.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
 
                     // Cancel Recording Button (X)
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(colors.onPrimary.copy(alpha = 0.2f), CircleShape)
+                            .defaultMinSize(
+                                minWidth = TouchTarget.MinTouchTargetSize,
+                                minHeight = TouchTarget.MinTouchTargetSize
+                            )
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Cancel Recording"
+                            }
                             .clickable { onCancelRecording() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Cancel Recording",
-                            tint = colors.onPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(colors.onPrimary.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = colors.onPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }

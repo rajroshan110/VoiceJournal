@@ -20,10 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.TouchTarget
 import dev.voicejournal.ui.theme.AppTheme
 import java.util.Locale
 
@@ -120,44 +125,61 @@ fun UnifiedAudioPlayerBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 1. Play / Pause Circular Button
+            val playButtonDesc = when {
+                isBuffering -> "Audio buffering"
+                isAudioError -> "Audio playback error"
+                isPlaying -> "Pause audio track"
+                else -> "Play audio track"
+            }
+
             Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .background(colors.primary, CircleShape)
+                    .defaultMinSize(minWidth = TouchTarget.MinTouchTargetSize, minHeight = TouchTarget.MinTouchTargetSize)
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = playButtonDesc
+                    }
                     .clickable { onPlayPauseClick() },
                 contentAlignment = Alignment.Center
             ) {
-                when {
-                    isBuffering -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(IconSize.IconMd),
-                            color = colors.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                    isAudioError -> {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Audio Error",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(IconSize.IconMd)
-                        )
-                    }
-                    isPlaying -> {
-                        Icon(
-                            imageVector = getPauseIcon(colors.onPrimary),
-                            contentDescription = "Pause",
-                            tint = colors.onPrimary,
-                            modifier = Modifier.size(IconSize.IconMd)
-                        )
-                    }
-                    else -> {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            tint = colors.onPrimary,
-                            modifier = Modifier.size(IconSize.IconMd)
-                        )
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(colors.primary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        isBuffering -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(IconSize.IconMd),
+                                color = colors.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        isAudioError -> {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(IconSize.IconMd)
+                            )
+                        }
+                        isPlaying -> {
+                            Icon(
+                                imageVector = getPauseIcon(colors.onPrimary),
+                                contentDescription = null,
+                                tint = colors.onPrimary,
+                                modifier = Modifier.size(IconSize.IconMd)
+                            )
+                        }
+                        else -> {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = colors.onPrimary,
+                                modifier = Modifier.size(IconSize.IconMd)
+                            )
+                        }
                     }
                 }
             }

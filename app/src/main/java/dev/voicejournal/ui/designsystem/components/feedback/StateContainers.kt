@@ -9,6 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,7 +30,11 @@ fun LoadingStateContainer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(Spacing.SpaceLg),
+            .padding(Spacing.SpaceLg)
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = message
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -61,7 +69,10 @@ fun EmptyStateContainer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(Spacing.SpaceXl),
+            .padding(Spacing.SpaceXl)
+            .semantics {
+                contentDescription = if (subtitle.isNullOrEmpty()) title else "$title. $subtitle"
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -110,7 +121,11 @@ fun ErrorStateContainer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(Spacing.SpaceXl),
+            .padding(Spacing.SpaceXl)
+            .semantics {
+                liveRegion = LiveRegionMode.Assertive
+                contentDescription = "Error: $errorMessage"
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -141,7 +156,8 @@ fun ErrorStateContainer(
             Spacer(modifier = Modifier.height(Spacing.SpaceLg))
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                modifier = Modifier.defaultMinSize(minWidth = dev.voicejournal.ui.designsystem.tokens.TouchTarget.MinTouchTargetSize, minHeight = dev.voicejournal.ui.designsystem.tokens.TouchTarget.MinTouchTargetSize)
             ) {
                 Text("Retry", style = MaterialTheme.typography.labelLarge)
             }
