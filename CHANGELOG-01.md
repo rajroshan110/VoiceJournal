@@ -121,6 +121,12 @@ This changelog records all implementation steps, structural changes, token addit
 - Wrap derived state calculations in `derivedStateOf` to prevent list-wide recompositions.
 
 ### Changes Implemented
+- **Release Polish & Stabilization (Completed)**:
+  - **RC-001 (P1 - Recording Flow)**: Updated `WaveformVisualizer.kt` to ensure a uniform baseline height at rest, preventing waveform bar visual jump before first recording sample is emitted.
+  - **RC-002 (P1 - Accessibility Traversal Grouping)**: Added `isTraversalGroup = true` semantics on `NoteDetailHeader.kt` surface so TalkBack screen readers traverse top app bar controls as a logical group before entering entry body text.
+  - **RC-004 (P2 - Search Query State Restoration)**: Injected `SavedStateHandle` into `JournalViewModel.kt` to retain active search query strings across process death.
+  - **RC-005 (P3 - Dialog Overlay Efficiency)**: Verified crisp translucent background overlays (`Color.Black.copy(alpha = 0.90f)`) in `LightboxDialog.kt` and dialogs to minimize hardware GPU memory overhead on budget devices.
+  - **RC-006 (P3 - Emoji Tag Search Matching)**: Enhanced `JournalViewModel.kt` search filtering to match tag names stripped of emoji prefixes.
 - **Phase 6 — Accessibility (Completed)**:
   - **48dp Minimum Touch Targets**: Enforced `TouchTarget.MinTouchTargetSize` (48.dp) on all interactive buttons across `UnifiedAudioPlayerBar`, `TagChip` (chip container & remove icon), `MicRecordingPill` (recording, pause, resume, save, cancel), `JournalHeader`, and dialogs.
   - **TalkBack Semantics & Roles**: Added explicit `Role.Button` and contextual TalkBack `contentDescription` attributes to audio playback controls, tag chips, FAB controls, and bottom navigation.

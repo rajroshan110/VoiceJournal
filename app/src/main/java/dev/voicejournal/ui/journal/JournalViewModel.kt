@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.journal
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,6 +74,7 @@ data class JournalUiState(
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
     private val deleteEntryUseCase: DeleteEntryUseCase,
@@ -83,7 +85,7 @@ class JournalViewModel @Inject constructor(
 
     private val _filterState = MutableStateFlow(FilterState())
     private val _sortOption = MutableStateFlow(SortOption.MODIFIED_DESC)
-    private val _searchQuery = MutableStateFlow("")
+    private val _searchQuery = MutableStateFlow(savedStateHandle.get<String>("search_query") ?: "")
     private val _isSearchActive = MutableStateFlow(false)
     private val _permissionGranted = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
@@ -338,11 +340,13 @@ class JournalViewModel @Inject constructor(
         val next = !_isSearchActive.value
         _isSearchActive.value = next
         if (!next) {
+            savedStateHandle["search_query"] = ""
             _searchQuery.value = ""
         }
     }
 
     fun updateSearchQuery(query: String) {
+        savedStateHandle["search_query"] = query
         _searchQuery.value = query
     }
 

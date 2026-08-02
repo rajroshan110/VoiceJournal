@@ -90,8 +90,10 @@ fun WaveformVisualizer(
 
         val activeBarIndex = if (currentFraction <= 0f) -1 else (currentFraction * barCount).toInt().coerceIn(0, barCount - 1)
 
+        val isAtRest = currentFraction <= 0f && amplitudes.all { it == 0.toByte() || it == amplitudes.firstOrNull() }
         amplitudes.forEachIndexed { index, ampByte ->
-            val normalizedHeight = (ampByte.toInt().coerceIn(10, 100) / 100f) * barHeightMax
+            val rawAmp = if (isAtRest) 15 else ampByte.toInt().coerceIn(10, 100)
+            val normalizedHeight = (rawAmp / 100f) * barHeightMax
             val barHeight = normalizedHeight.coerceAtLeast(4.dp.toPx())
 
             val x = index * step

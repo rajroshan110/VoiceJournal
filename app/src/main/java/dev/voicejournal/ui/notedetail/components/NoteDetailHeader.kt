@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
@@ -134,6 +136,7 @@ fun NoteDetailHeader(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
+            .semantics { isTraversalGroup = true }
     ) {
         if (isSelectionMode) {
             // Selection Mode Header Layout
