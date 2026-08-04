@@ -27,9 +27,11 @@ import androidx.navigation.NavController
 import dev.voicejournal.ui.components.getCreateNewFolderIcon
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getGridViewIcon
-import dev.voicejournal.ui.components.getListViewIcon
+import dev.voicejournal.domain.model.Tag
+import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.folders.components.FolderCardGrid
 import dev.voicejournal.ui.folders.components.FolderCardList
+import dev.voicejournal.ui.components.getListViewIcon
 import dev.voicejournal.ui.journal.PlaybackStatus
 import dev.voicejournal.ui.journal.components.EntryCard
 import dev.voicejournal.ui.journal.components.LightboxDialog
@@ -77,14 +79,26 @@ fun FoldersScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    if (isSearchVisible && uiState.selectedFolder == null) {
+                        SearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.setSearchQuery(it) },
+                            placeholder = "Search folders...",
+                            requestFocusOnLaunch = true,
+                            onClose = {
+                                isSearchVisible = false
+                                viewModel.setSearchQuery("")
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 if (uiState.selectedFolder != null) {
@@ -112,11 +126,11 @@ fun FoldersScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.selectedFolder == null) {
-                                IconButton(onClick = { isSearchVisible = !isSearchVisible }) {
+                                IconButton(onClick = { isSearchVisible = true }) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = "Search Folders",
-                                        tint = if (isSearchVisible) colors.primary else colors.textSecondary
+                                        tint = colors.textSecondary
                                     )
                                 }
 
@@ -129,27 +143,6 @@ fun FoldersScreen(
                                 }
                             }
                         }
-                    }
-
-                    if (isSearchVisible && uiState.selectedFolder == null) {
-                        OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search folders...", color = colors.textSecondary, fontSize = 14.sp) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colors.primary,
-                                unfocusedBorderColor = colors.border,
-                                focusedContainerColor = colors.surfaceVariant,
-                                unfocusedContainerColor = colors.surfaceVariant,
-                                focusedTextColor = colors.textPrimary,
-                                unfocusedTextColor = colors.textPrimary
-                            ),
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
                     }
                 }
             }

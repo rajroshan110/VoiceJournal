@@ -10,42 +10,79 @@ import dev.voicejournal.domain.model.EntryImage
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
+import org.json.JSONArray
+import org.json.JSONObject
 
 fun List<AudioTrack>.toTracksJson(): String {
-    return joinToString("||") { track ->
-        val safeTranscript = (track.transcript ?: "").replace("::", " ").replace("||", " ")
-        val safeModel = (track.transcriptModel ?: "").replace("::", " ").replace("||", " ")
-        val safeLang = (track.transcriptLanguage ?: "").replace("::", " ").replace("||", " ")
-        val safeVer = (track.transcriptVersion ?: "").replace("::", " ").replace("||", " ")
-        val createdAt = track.transcriptCreatedAt ?: 0L
-        "${track.id}::${track.path}::${track.durationMs}::$safeTranscript::$createdAt::$safeModel::$safeLang::$safeVer"
+    val array = JSONArray()
+    for (track in this) {
+        val obj = JSONObject().apply {
+            put("id", track.id)
+            put("path", track.path)
+            put("durationMs", track.durationMs)
+            put("transcript", track.transcript)
+            put("transcriptCreatedAt", track.transcriptCreatedAt)
+            put("transcriptModel", track.transcriptModel)
+            put("transcriptLanguage", track.transcriptLanguage)
+            put("transcriptVersion", track.transcriptVersion)
+        }
+        array.put(obj)
     }
+    return array.toString()
 }
 
 fun String.toAudioTracks(): List<AudioTrack> {
     if (isBlank()) return emptyList()
-    return split("||").mapNotNull { str ->
-        val parts = str.split("::")
-        if (parts.size >= 3) {
-            val id = parts[0]
-            val path = parts[1]
-            val durationMs = parts[2].toLongOrNull() ?: 0L
-            val transcript = if (parts.size >= 4 && parts[3].isNotBlank()) parts[3] else null
-            val createdAt = if (parts.size >= 5 && parts[4].toLongOrNull() ?: 0L > 0L) parts[4].toLong() else null
-            val model = if (parts.size >= 6 && parts[5].isNotBlank()) parts[5] else null
-            val language = if (parts.size >= 7 && parts[6].isNotBlank()) parts[6] else null
-            val version = if (parts.size >= 8 && parts[7].isNotBlank()) parts[7] else null
-            AudioTrack(
-                id = id,
-                path = path,
-                durationMs = durationMs,
-                transcript = transcript,
-                transcriptCreatedAt = createdAt,
-                transcriptModel = model,
-                transcriptLanguage = language,
-                transcriptVersion = version
+    
+    if (!trimStart().startsWith("[")) {
+        // Legacy delimiter format
+        return split("||").mapNotNull { str ->
+            val parts = str.split("::")
+            if (parts.size >= 3) {
+                val id = parts[0]
+                val path = parts[1]
+                val durationMs = parts[2].toLongOrNull() ?: 0L
+                val transcript = if (parts.size >= 4 && parts[3].isNotBlank()) parts[3] else null
+                val createdAt = if (parts.size >= 5 && parts[4].toLongOrNull() ?: 0L > 0L) parts[4].toLong() else null
+                val model = if (parts.size >= 6 && parts[5].isNotBlank()) parts[5] else null
+                val language = if (parts.size >= 7 && parts[6].isNotBlank()) parts[6] else null
+                val version = if (parts.size >= 8 && parts[7].isNotBlank()) parts[7] else null
+                AudioTrack(
+                    id = id,
+                    path = path,
+                    durationMs = durationMs,
+                    transcript = transcript,
+                    transcriptCreatedAt = createdAt,
+                    transcriptModel = model,
+                    transcriptLanguage = language,
+                    transcriptVersion = version
+                )
+            } else null
+        }
+    }
+
+    return try {
+        val array = JSONArray(this)
+        val list = mutableListOf<AudioTrack>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            list.add(
+                AudioTrack(
+                    id = obj.optString("id", ""),
+                    path = obj.optString("path", ""),
+                    durationMs = obj.optLong("durationMs", 0L),
+                    transcript = obj.optString("transcript", "").takeIf { it.isNotEmpty() },
+                    transcriptCreatedAt = obj.optLong("transcriptCreatedAt", 0L).takeIf { it > 0L },
+                    transcriptModel = obj.optString("transcriptModel", "").takeIf { it.isNotEmpty() },
+                    transcriptLanguage = obj.optString("transcriptLanguage", "").takeIf { it.isNotEmpty() },
+                    transcriptVersion = obj.optString("transcriptVersion", "").takeIf { it.isNotEmpty() }
+                )
             )
-        } else null
+        }
+        list
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
     }
 }
 

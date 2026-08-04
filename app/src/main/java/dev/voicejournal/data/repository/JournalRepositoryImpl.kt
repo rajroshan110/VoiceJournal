@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
 
@@ -241,10 +242,7 @@ class JournalRepositoryImpl @Inject constructor(
             entryImageDao.deleteAllEntryImages()
 
             try {
-                val audioDir = File(context.filesDir, "audio")
-                if (audioDir.exists()) audioDir.deleteRecursively()
-                val imagesDir = File(context.filesDir, "images")
-                if (imagesDir.exists()) imagesDir.deleteRecursively()
+                MediaStorageManager.clearAllMedia(context)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

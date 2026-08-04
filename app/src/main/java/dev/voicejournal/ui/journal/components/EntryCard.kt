@@ -27,7 +27,7 @@ import dev.voicejournal.domain.model.AudioTrack
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TimeFormat
-import dev.voicejournal.ui.components.UnifiedAudioPlayerBar
+import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
 import dev.voicejournal.ui.designsystem.tokens.Border
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius

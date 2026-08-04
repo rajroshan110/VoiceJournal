@@ -24,7 +24,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     version = 7,
     exportSchema = false
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun journalEntryDao(): JournalEntryDao
     abstract fun tagDao(): TagDao

@@ -1,6 +1,7 @@
 package dev.voicejournal.audio
 
 import android.content.Context
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
@@ -35,15 +36,17 @@ object AudioFileRepair {
         if (prefs.getBoolean(KEY_REPAIRED, false)) return
 
         try {
-            val audioDir = File(context.filesDir, "audio")
-            if (!audioDir.exists()) {
+            val audioDirs = MediaStorageManager.getAllAudioDirs(context)
+            if (audioDirs.none { it.exists() }) {
                 prefs.edit().putBoolean(KEY_REPAIRED, true).apply()
                 return
             }
 
-            val wavFiles = audioDir.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
-            wavFiles?.forEach { file ->
-                repairWavHeader(file)
+            audioDirs.filter { it.exists() }.forEach { dir ->
+                val wavFiles = dir.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
+                wavFiles?.forEach { file ->
+                    repairWavHeader(file)
+                }
             }
 
             prefs.edit().putBoolean(KEY_REPAIRED, true).apply()

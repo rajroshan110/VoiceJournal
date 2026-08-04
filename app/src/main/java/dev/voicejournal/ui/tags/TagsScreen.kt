@@ -27,6 +27,7 @@ import androidx.navigation.NavController
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.getGridViewIcon
 import dev.voicejournal.ui.components.getListViewIcon
+import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.folders.components.FolderNoteCard
 import dev.voicejournal.ui.journal.components.LightboxDialog
 import dev.voicejournal.ui.navigation.BottomNavBar
@@ -81,14 +82,26 @@ fun TagsScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    if (isSearchVisible && selectedCategory != null && selectedTag == null) {
+                        SearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.setSearchQuery(it) },
+                            placeholder = "Search tags...",
+                            requestFocusOnLaunch = true,
+                            onClose = {
+                                isSearchVisible = false
+                                viewModel.setSearchQuery("")
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 if (selectedTag != null) {
@@ -125,11 +138,11 @@ fun TagsScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (selectedCategory != null && selectedTag == null) {
-                                IconButton(onClick = { isSearchVisible = !isSearchVisible }) {
+                                IconButton(onClick = { isSearchVisible = true }) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = "Search Tags",
-                                        tint = if (isSearchVisible) colors.primary else colors.textSecondary
+                                        tint = colors.textSecondary
                                     )
                                 }
 
@@ -142,27 +155,6 @@ fun TagsScreen(
                                 }
                             }
                         }
-                    }
-
-                    if (isSearchVisible && selectedCategory != null && selectedTag == null) {
-                        OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search tags...", color = colors.textSecondary, fontSize = 14.sp) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colors.primary,
-                                unfocusedBorderColor = colors.border,
-                                focusedContainerColor = colors.surfaceVariant,
-                                unfocusedContainerColor = colors.surfaceVariant,
-                                focusedTextColor = colors.textPrimary,
-                                unfocusedTextColor = colors.textPrimary
-                            ),
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
                     }
                 }
             }
