@@ -1,6 +1,7 @@
 package dev.voicejournal.transcription
 
 import android.content.Context
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 
 object AudioFileResolver {
@@ -25,7 +26,7 @@ object AudioFileResolver {
         // 3. content:// URI or external storage URI
         try {
             val uri = android.net.Uri.parse(pathOrUri)
-            val cacheDir = File(context.cacheDir, "audio_transcribe_cache").apply { if (!exists()) mkdirs() }
+            val cacheDir = MediaStorageManager.getTranscribeCacheDir(context)
             val tempFile = File(cacheDir, "transcribe_${System.currentTimeMillis()}.m4a")
 
             context.contentResolver.openInputStream(uri)?.use { input ->

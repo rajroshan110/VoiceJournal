@@ -41,7 +41,10 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import dev.voicejournal.ui.notedetail.components.AddItemSheet
-import dev.voicejournal.ui.notedetail.components.AudioPlayerFull
+import dev.voicejournal.data.storage.MediaStorageManager
+import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
+import dev.voicejournal.ui.notedetail.components.TranscriptionButton
+import dev.voicejournal.ui.notedetail.components.TranscriptSection
 import dev.voicejournal.ui.notedetail.components.EditorToolbar
 import dev.voicejournal.ui.notedetail.components.ImageMosaic
 import dev.voicejournal.ui.notedetail.components.JournalTagsDialog
@@ -418,9 +421,7 @@ fun NoteDetailScreen(
                     val isTrackActive = uiState.playingTrackId == track.id
                     val isPlayingThisTrack = isTrackActive && uiState.isPlaying
                     val isExpanded = uiState.expandedTrackId == track.id
-                    val playerProgress = if (isTrackActive && track.durationMs > 0) {
-                        (uiState.currentPositionMs.toFloat() / track.durationMs.toFloat()).coerceIn(0f, 1f)
-                    } else 0f
+                    val isTrackTranscribing = uiState.isTranscribing && uiState.transcribingTrackId == track.id
 
                     Box(
                         modifier = Modifier
@@ -445,6 +446,7 @@ fun NoteDetailScreen(
                             .padding(4.dp)
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
+                            // Track label row ("Voice Note" / "Track N" + selection checkmark)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -476,32 +478,48 @@ fun NoteDetailScreen(
                                 }
                             }
 
-                            AudioPlayerFull(
-                                isPlaying = isPlayingThisTrack,
-                                progress = playerProgress,
-                                waveformAmplitudes = track.waveformAmplitudes,
-                                durationMs = track.durationMs,
-                                currentPosMs = if (isTrackActive) uiState.currentPositionMs else 0L,
+                            // Player row: [UnifiedAudioPlayerBar ──────────] [Aa]
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                UnifiedAudioPlayerBar(
+                                    isPlaying = isPlayingThisTrack,
+                                    currentPositionMs = if (isTrackActive) uiState.currentPositionMs else 0L,
+                                    durationMs = track.durationMs,
+                                    waveformAmplitudes = track.waveformAmplitudes,
+                                    onPlayPauseClick = {
+                                        if (trackSelectionState.isSelectionMode) {
+                                            viewModel.toggleTrackSelection(track.id)
+                                        } else {
+                                            viewModel.togglePlaybackForTrack(track)
+                                        }
+                                    },
+                                    onSeekFraction = { frac -> viewModel.seekTrackToFraction(track, frac) },
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                if (uiState.isSpeechToTextEnabled) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    TranscriptionButton(
+                                        isTranscribing = isTrackTranscribing,
+                                        onClick = {
+                                            if (trackSelectionState.isSelectionMode) {
+                                                viewModel.toggleTrackSelection(track.id)
+                                            } else {
+                                                viewModel.toggleAaTranscriptForTrack(track)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Expandable transcript panel (below the player row)
+                            TranscriptSection(
                                 transcript = track.transcript,
-                                isTranscriptExpanded = isExpanded,
-                                isTranscribing = uiState.isTranscribing && uiState.transcribingTrackId == track.id,
+                                isExpanded = isExpanded,
+                                isTranscribing = isTrackTranscribing,
                                 isTranscriptionFailed = track.isTranscriptionFailed,
-                                isSpeechToTextEnabled = uiState.isSpeechToTextEnabled,
-                                onPlayToggle = {
-                                    if (trackSelectionState.isSelectionMode) {
-                                        viewModel.toggleTrackSelection(track.id)
-                                    } else {
-                                        viewModel.togglePlaybackForTrack(track)
-                                    }
-                                },
-                                onSeek = { frac -> viewModel.seekTrackToFraction(track, frac) },
-                                onAaClick = {
-                                    if (trackSelectionState.isSelectionMode) {
-                                        viewModel.toggleTrackSelection(track.id)
-                                    } else {
-                                        viewModel.toggleAaTranscriptForTrack(track)
-                                    }
-                                },
                                 onRegenerateClick = {
                                     if (trackSelectionState.isSelectionMode) {
                                         viewModel.toggleTrackSelection(track.id)
@@ -544,8 +562,7 @@ fun NoteDetailScreen(
             onDismiss = { showAddItemSheet = false },
             onTakePhotoClick = {
                 try {
-                    val imagesDir = File(context.filesDir, "images").apply { if (!exists()) mkdirs() }
-                    val photoFile = File(imagesDir, "cam_${System.currentTimeMillis()}_${(100..999).random()}.jpg")
+                    val photoFile = MediaStorageManager.generateImageFile(context)
                     currentPhotoFile = photoFile
                     val photoUri = FileProvider.getUriForFile(
                         context,

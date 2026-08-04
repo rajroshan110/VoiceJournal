@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioFormat as AndroidAudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import dev.voicejournal.data.storage.MediaStorageManager
 import dev.voicejournal.domain.model.AudioFormat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,8 +46,7 @@ class AudioRecorderManager(private val context: Context) {
         totalActiveDurationMs = 0L
         isPaused = false
         val extension = if (format == AudioFormat.WAV_16KHZ) ".wav" else ".m4a"
-        val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
-        val file = File(audioDir, "record_${System.currentTimeMillis()}$extension")
+        val file = MediaStorageManager.generateRecordingFile(context, extension)
         outputFile = file
 
         val minBufferSize = AudioRecord.getMinBufferSize(

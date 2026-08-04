@@ -5,6 +5,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.voicejournal.data.local.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import dev.voicejournal.data.storage.MediaStorageManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedOutputStream
@@ -82,9 +83,9 @@ class ExportManager @Inject constructor(
                 // Add Audio files
                 entries.forEach { entry ->
                     if (entry.audioPath.isNotEmpty()) {
-                        val audioFile = File(context.filesDir, entry.audioPath)
+                        val audioFile = MediaStorageManager.getAudioFile(context, entry.audioPath)
                         if (audioFile.exists()) {
-                            zos.putNextEntry(ZipEntry("audio/${audioFile.name}"))
+                            zos.putNextEntry(ZipEntry("media/recordings/${audioFile.name}"))
                             audioFile.inputStream().copyTo(zos)
                             zos.closeEntry()
                         }

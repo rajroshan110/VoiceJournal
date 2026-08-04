@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
 
@@ -862,8 +863,7 @@ class NoteDetailViewModel @Inject constructor(
     private fun saveAudioToInternalStorage(uriString: String): File? {
         return try {
             val uri = android.net.Uri.parse(uriString)
-            val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
-            val destFile = File(audioDir, "audio_${System.currentTimeMillis()}_${(100..999).random()}.m4a")
+            val destFile = MediaStorageManager.generateRecordingFile(context, "m4a")
 
             context.contentResolver.openInputStream(uri)?.use { input ->
                 destFile.outputStream().use { output ->
@@ -889,13 +889,12 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     private fun saveImageToInternalStorage(uriString: String): String? {
-        if (uriString.startsWith(context.filesDir.absolutePath)) {
+        if (MediaStorageManager.isInternalMedia(context, uriString)) {
             return uriString
         }
         return try {
             val uri = android.net.Uri.parse(uriString)
-            val imagesDir = File(context.filesDir, "images").apply { if (!exists()) mkdirs() }
-            val destFile = File(imagesDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.jpg")
+            val destFile = MediaStorageManager.generateImageFile(context, "jpg")
 
             context.contentResolver.openInputStream(uri)?.use { input ->
                 destFile.outputStream().use { output ->
@@ -909,7 +908,7 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     private fun deletePhysicalFile(path: String) {
-        if (path.startsWith("/") || path.startsWith(context.filesDir.absolutePath)) {
+        if (MediaStorageManager.isInternalMedia(context, path)) {
             val file = File(path)
             if (file.exists()) {
                 try {

@@ -8,6 +8,7 @@ import dev.voicejournal.data.local.db.entity.EntryTagCrossRef
 import dev.voicejournal.data.local.db.entity.JournalEntryEntity
 import dev.voicejournal.data.local.db.entity.TagEntity
 import kotlinx.coroutines.Dispatchers
+import dev.voicejournal.data.storage.MediaStorageManager
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -109,12 +110,20 @@ class ImportManager @Inject constructor(
             }
 
             // Copy audio files to internal storage
-            val audioDir = File(extractDir, "audio")
-            if (audioDir.exists() && audioDir.isDirectory) {
-                audioDir.listFiles()?.forEach { audioFile ->
-                    val dest = File(context.filesDir, "audio/${audioFile.name}")
-                    dest.parentFile?.mkdirs()
+            val recordingsDir = File(extractDir, "media/recordings")
+            if (recordingsDir.exists() && recordingsDir.isDirectory) {
+                recordingsDir.listFiles()?.forEach { audioFile ->
+                    val dest = File(MediaStorageManager.getRecordingsDir(context), audioFile.name)
                     audioFile.copyTo(dest, overwrite = true)
+                }
+            }
+            
+            // Copy image files to internal storage
+            val imagesDir = File(extractDir, "media/images")
+            if (imagesDir.exists() && imagesDir.isDirectory) {
+                imagesDir.listFiles()?.forEach { imageFile ->
+                    val dest = File(MediaStorageManager.getImagesDir(context), imageFile.name)
+                    imageFile.copyTo(dest, overwrite = true)
                 }
             }
 
