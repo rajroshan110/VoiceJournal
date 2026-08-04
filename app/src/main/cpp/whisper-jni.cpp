@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <algorithm>
+#include <utility>
 #include <chrono>
 #include <android/log.h>
 #include "whisper/whisper.h"
@@ -130,13 +132,27 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
                 }
                 top_prob = lang_probs[det_id];
 
-                // Log candidate probabilities for diagnosis
-                int hi_id = whisper_lang_id("hi");
-                int ur_id = whisper_lang_id("ur");
-                int en_id = whisper_lang_id("en");
-                if (hi_id >= 0) LOGI("  - Prob 'hi' (Hindi): %.4f", lang_probs[hi_id]);
-                if (ur_id >= 0) LOGI("  - Prob 'ur' (Urdu): %.4f", lang_probs[ur_id]);
-                if (en_id >= 0) LOGI("  - Prob 'en' (English): %.4f", lang_probs[en_id]);
+                // Collect and sort all language probabilities to log Top 5
+                std::vector<std::pair<float, int>> sorted_langs;
+                sorted_langs.reserve(max_lang_id + 1);
+                for (int i = 0; i <= max_lang_id; ++i) {
+                    sorted_langs.push_back({lang_probs[i], i});
+                }
+                std::sort(sorted_langs.rbegin(), sorted_langs.rend());
+
+                LOGI("=== Top 5 Detected Spoken Language Probabilities ===");
+                for (int i = 0; i < 5 && i < (int)sorted_langs.size(); ++i) {
+                    float prob = sorted_langs[i].first;
+                    int lang_id = sorted_langs[i].second;
+                    const char * lstr = whisper_lang_str(lang_id);
+                    const char * fname = whisper_lang_str_full(lang_id);
+                    LOGI("  #%d: '%s' (%s) -> prob=%.4f (%.2f%%)",
+                         i + 1,
+                         (lstr ? lstr : "unknown"),
+                         (fname ? fname : "unknown"),
+                         prob,
+                         prob * 100.0f);
+                }
             } else {
                 LOGE("whisper_lang_auto_detect failed!");
             }
@@ -167,10 +183,12 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
     params.translate = false; // Transcribe in native spoken script
     params.language = final_lang.c_str();
     params.n_threads = num_threads;
-    params.no_context = true; // Prevent hallucinated English context carryover across segments
+    params.no_context = true; // Phase 1: Disable past text context carryover
+    params.n_max_text_ctx = 0; // Phase 1: Zero max past text context tokens
     params.suppress_blank = true;
     params.suppress_non_speech_tokens = true;
     params.temperature = 0.0f; // Deterministic greedy decoding
+    params.temperature_inc = 0.0f; // Phase 1: Disable temperature fallback loop
 
     CallbackData cb_data;
     cb_data.env = env;
@@ -204,9 +222,16 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
         }
     }
 
-    // Log Inference Strategy Details
-    LOGI("Inference Strategy: WHISPER_SAMPLING_GREEDY (best_of=1, no_context=true)");
-    LOGI("Translation Enabled: %s", params.translate ? "true" : "false");
+    // Runtime Parameter Logs (Phase 1 Debugging)
+    LOGI("=== Final whisper_full_params ===");
+    LOGI("language=%s", params.language != nullptr ? params.language : "null");
+    LOGI("no_context=%s", params.no_context ? "true" : "false");
+    LOGI("temperature=%.1f", params.temperature);
+    LOGI("temperature_inc=%.1f", params.temperature_inc);
+    LOGI("n_max_text_ctx=%d", params.n_max_text_ctx);
+    LOGI("translate=%s", params.translate ? "true" : "false");
+    LOGI("strategy=%s", params.strategy == WHISPER_SAMPLING_GREEDY ? "GREEDY" : "BEAM_SEARCH");
+    LOGI("best_of=%d", params.greedy.best_of);
 
     // Measure Whisper Native Full Engine Inference Time
     auto infer_start = std::chrono::high_resolution_clock::now();
@@ -237,7 +262,7 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_dev_voicejournal_transcription_WhisperLib_freeContext(JNIEnv *env, jobject thiz, jlong context_ptr) {
+Java_dev_voicejournal_transcription_WhisperLib_freeContext(JNIEnv *env, jobject thiz, jstring context_ptr) {
     struct whisper_context *ctx = reinterpret_cast<struct whisper_context *>(context_ptr);
     if (ctx != nullptr) {
         LOGI("freeContext freeing ptr: %p", ctx);
