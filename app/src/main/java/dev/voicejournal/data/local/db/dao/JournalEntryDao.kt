@@ -36,6 +36,10 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isDraft = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesWithTagsAndImagesList(): List<EntryWithTagsAndImages>
 
+    @Transaction
+    @Query("SELECT * FROM journal_entries ORDER BY createdAt DESC")
+    suspend fun getAllEntriesForBackup(): List<EntryWithTagsAndImages>
+
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isDraft = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesSync(): List<JournalEntryEntity>
 

@@ -43,48 +43,57 @@ class BackupRestorer(
         val copiedMediaFiles = mutableListOf<File>()
 
         try {
-            // 1. Copy Media Files to Internal App Storage
+            // 1. Prepare Internal Media Directories & Clear Existing Media for Replace Restore
+            val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
+            val imagesDir = File(context.filesDir, "images").apply { if (!exists()) mkdirs() }
+
+            audioDir.listFiles()?.forEach { file ->
+                if (file.isFile) file.delete()
+            }
+            imagesDir.listFiles()?.forEach { file ->
+                if (file.isFile) file.delete()
+            }
+
             val attachmentsByEntryUuid = attachments.groupBy { it.entryUuid }
-            val mediaPathMap = mutableMapOf<String, String>() // attachmentUuid -> relative target path
+            val mediaPathMap = mutableMapOf<String, String>() // attachmentUuid -> canonical absolute target path
 
             attachments.forEach { att ->
                 val sourceFile = File(stagingDir, att.archivePath)
                 if (sourceFile.exists()) {
                     val subFolder = if (att.type == "image") "images" else "audio"
                     val ext = sourceFile.extension.ifBlank { if (att.type == "image") "jpg" else "wav" }
-                    val relTargetName = "$subFolder/${att.uuid}.$ext"
-                    val targetFile = File(context.filesDir, relTargetName)
+                    val targetFile = File(context.filesDir, "$subFolder/${att.uuid}.$ext")
                     targetFile.parentFile?.mkdirs()
 
                     sourceFile.copyTo(targetFile, overwrite = true)
                     copiedMediaFiles.add(targetFile)
-                    mediaPathMap[att.uuid] = relTargetName
+                    // Store canonical absolute path matching freshly created files
+                    mediaPathMap[att.uuid] = targetFile.absolutePath
                 }
             }
 
-            // 2. Perform Single Room Database Transaction
+            // 2. Perform Single Room Database Transaction (Replace Restore)
             var entriesCount = 0
             var tagsCount = 0
             var attachmentsCount = 0
 
             database.withTransaction {
+                // Clear existing database contents for Replace Restore
+                database.journalEntryDao().deleteAllJournalEntries()
+                database.tagDao().deleteAllTags()
+                database.entryImageDao().deleteAllEntryImages()
+                database.journalEntryDao().deleteAllCrossRefs()
+
                 // A. Restore Tags
                 val tagIdMap = mutableMapOf<String, Long>() // tagUuid -> tagDbId
                 tags.forEach { bTag ->
                     val tagTypeStr = bTag.type.uppercase(Locale.ROOT)
-                    val existingTag = database.tagDao().getTagByUuid(bTag.uuid)
-                    val tagId = if (existingTag != null) {
-                        val updated = existingTag.copy(name = bTag.name, type = tagTypeStr)
-                        database.tagDao().insertTag(updated)
-                        existingTag.id
-                    } else {
-                        val newEntity = TagEntity(
-                            name = bTag.name,
-                            type = tagTypeStr,
-                            uuid = bTag.uuid
-                        )
-                        database.tagDao().insertTag(newEntity)
-                    }
+                    val newEntity = TagEntity(
+                        name = bTag.name,
+                        type = tagTypeStr,
+                        uuid = bTag.uuid
+                    )
+                    val tagId = database.tagDao().insertTag(newEntity)
                     tagIdMap[bTag.uuid] = tagId
                     tagsCount++
                 }
@@ -150,9 +159,8 @@ class BackupRestorer(
                     val isArchived = bEntry.status == "archived"
                     val isDraft = bEntry.status == "draft"
 
-                    val existingEntry = database.journalEntryDao().getEntryByUuidSync(bEntry.uuid)
                     val entryEntity = JournalEntryEntity(
-                        id = existingEntry?.entry?.id ?: 0L,
+                        id = 0L,
                         createdAt = bEntry.createdAt,
                         updatedAt = bEntry.updatedAt,
                         title = bEntry.title,

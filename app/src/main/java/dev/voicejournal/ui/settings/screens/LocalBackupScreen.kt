@@ -9,8 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +29,8 @@ fun LocalBackupScreen(
     val colors = AppTheme.colors
     val context = LocalContext.current
 
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
     LaunchedEffect(uiState.backupMessage) {
         uiState.backupMessage?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -48,8 +49,55 @@ fun LocalBackupScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            viewModel.importBackupFromUri(it)
+            pendingImportUri = it
         }
+    }
+
+    if (pendingImportUri != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = {
+                Text(
+                    text = "Restore Backup",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val uriToImport = pendingImportUri
+                        pendingImportUri = null
+                        uriToImport?.let { viewModel.importBackupFromUri(it) }
+                    }
+                ) {
+                    Text(
+                        text = "Restore",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { pendingImportUri = null }
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = colors.surface
+        )
     }
 
     Column(

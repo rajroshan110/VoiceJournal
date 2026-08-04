@@ -33,7 +33,7 @@ class BackupExporter @Inject constructor(
     suspend fun exportToStream(outputStream: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             // 1. Fetch entries and tags from database
-            val entries = database.journalEntryDao().getAllEntriesWithTagsAndImagesList()
+            val entries = database.journalEntryDao().getAllEntriesForBackup()
             val tags = database.tagDao().getAllTagsSync()
 
             // 2. Collect media & construct attachment DTOs
