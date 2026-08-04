@@ -52,6 +52,14 @@ interface JournalEntryDao {
     fun getEntryById(id: Long): Flow<EntryWithTagsAndImages?>
 
     @Transaction
+    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid")
+    fun getEntryByUuid(uuid: String): Flow<EntryWithTagsAndImages?>
+
+    @Transaction
+    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid LIMIT 1")
+    suspend fun getEntryByUuidSync(uuid: String): EntryWithTagsAndImages?
+
+    @Transaction
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 AND isDraft = 0 AND date(createdAt / 1000, 'unixepoch') = :dateStr ORDER BY createdAt DESC")
     fun getEntriesByDate(dateStr: String): Flow<List<EntryWithTagsAndImages>>
 

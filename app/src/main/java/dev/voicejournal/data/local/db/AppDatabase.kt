@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EntryTagCrossRef::class,
         EntryImageEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -55,6 +55,43 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE journal_entries ADD COLUMN isDraft INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 1. journal_entries table
+                db.execSQL("ALTER TABLE journal_entries ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                val entriesCursor = db.query("SELECT id FROM journal_entries WHERE uuid = '' OR uuid IS NULL")
+                while (entriesCursor.moveToNext()) {
+                    val id = entriesCursor.getLong(0)
+                    val newUuid = java.util.UUID.randomUUID().toString()
+                    db.execSQL("UPDATE journal_entries SET uuid = '$newUuid' WHERE id = $id")
+                }
+                entriesCursor.close()
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_journal_entries_uuid ON journal_entries(uuid)")
+
+                // 2. tags table
+                db.execSQL("ALTER TABLE tags ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                val tagsCursor = db.query("SELECT id FROM tags WHERE uuid = '' OR uuid IS NULL")
+                while (tagsCursor.moveToNext()) {
+                    val id = tagsCursor.getLong(0)
+                    val newUuid = java.util.UUID.randomUUID().toString()
+                    db.execSQL("UPDATE tags SET uuid = '$newUuid' WHERE id = $id")
+                }
+                tagsCursor.close()
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_tags_uuid ON tags(uuid)")
+
+                // 3. entry_images table
+                db.execSQL("ALTER TABLE entry_images ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                val imagesCursor = db.query("SELECT id FROM entry_images WHERE uuid = '' OR uuid IS NULL")
+                while (imagesCursor.moveToNext()) {
+                    val id = imagesCursor.getLong(0)
+                    val newUuid = java.util.UUID.randomUUID().toString()
+                    db.execSQL("UPDATE entry_images SET uuid = '$newUuid' WHERE id = $id")
+                }
+                imagesCursor.close()
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_entry_images_uuid ON entry_images(uuid)")
             }
         }
     }

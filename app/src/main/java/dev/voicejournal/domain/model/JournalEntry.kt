@@ -1,6 +1,7 @@
 package dev.voicejournal.domain.model
 
 import androidx.compose.runtime.Stable
+import java.util.UUID
 
 @Stable
 data class JournalEntry(
@@ -27,7 +28,8 @@ data class JournalEntry(
     val audioTracks: List<AudioTrack> = emptyList(),
     val deletedAt: Long? = null,
     val isArchived: Boolean = false,
-    val isDraft: Boolean = false
+    val isDraft: Boolean = false,
+    val uuid: String = UUID.randomUUID().toString()
 ) {
     val isDeleted: Boolean get() = deletedAt != null
     val isEmpty: Boolean get() = title.isNullOrBlank() && userText.isNullOrBlank() && transcript.isNullOrBlank() && audioTracks.isEmpty() && images.isEmpty() && audioPath.isEmpty()

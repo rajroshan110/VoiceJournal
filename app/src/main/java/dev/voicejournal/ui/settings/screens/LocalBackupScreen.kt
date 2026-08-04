@@ -40,12 +40,7 @@ fun LocalBackupScreen(
         contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let {
-            val contentResolver = context.contentResolver
-            val tempFile = File(context.cacheDir, "export_temp.zip")
-            viewModel.exportBackup(tempFile)
-            contentResolver.openOutputStream(uri)?.use { os ->
-                if (tempFile.exists()) tempFile.inputStream().copyTo(os)
-            }
+            viewModel.exportBackupToUri(it)
         }
     }
 
@@ -53,11 +48,7 @@ fun LocalBackupScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            val tempFile = File(context.cacheDir, "import_temp.zip")
-            context.contentResolver.openInputStream(uri)?.use { isStream ->
-                tempFile.outputStream().use { os -> isStream.copyTo(os) }
-            }
-            viewModel.importBackup(tempFile)
+            viewModel.importBackupFromUri(it)
         }
     }
 
@@ -136,7 +127,7 @@ fun LocalBackupScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { exportLauncher.launch("Journal_Backup_${System.currentTimeMillis()}.zip") },
+                            onClick = { exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip") },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                             modifier = Modifier.weight(1f)
                         ) {

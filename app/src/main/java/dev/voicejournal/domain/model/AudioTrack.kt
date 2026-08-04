@@ -15,6 +15,8 @@ data class AudioTrack(
     val isTranscriptionFailed: Boolean = false,
     val rawWaveformAmplitudes: List<Byte> = emptyList()
 ) {
+    val uuid: String get() = id
+
     val waveformAmplitudes: List<Byte> by lazy {
         if (rawWaveformAmplitudes.size == 32) rawWaveformAmplitudes
         else List(32) { i ->

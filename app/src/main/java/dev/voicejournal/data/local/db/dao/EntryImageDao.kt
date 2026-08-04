@@ -20,4 +20,7 @@ interface EntryImageDao {
 
     @Query("DELETE FROM entry_images")
     suspend fun deleteAllEntryImages()
+
+    @Query("SELECT * FROM entry_images WHERE uuid = :uuid LIMIT 1")
+    suspend fun getImageByUuid(uuid: String): EntryImageEntity?
 }

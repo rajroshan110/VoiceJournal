@@ -25,6 +25,9 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE name = :name AND type = :type LIMIT 1")
     suspend fun getTagByNameAndType(name: String, type: String): TagEntity?
 
+    @Query("SELECT * FROM tags WHERE uuid = :uuid LIMIT 1")
+    suspend fun getTagByUuid(uuid: String): TagEntity?
+
     @Query("DELETE FROM tags WHERE id = :id")
     suspend fun deleteTag(id: Long)
 

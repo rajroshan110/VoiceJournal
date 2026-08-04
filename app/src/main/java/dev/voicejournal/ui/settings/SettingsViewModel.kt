@@ -1,6 +1,7 @@
 package dev.voicejournal.ui.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -343,6 +344,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun exportBackupToUri(targetUri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExporting = true, backupMessage = null)
+            val result = exportManager.exportToUri(targetUri)
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(isExporting = false, backupMessage = "Backup saved successfully!")
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(isExporting = false, backupMessage = "Export failed: ${err.localizedMessage}")
+            }
+        }
+    }
+
     fun importBackup(sourceFile: File) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isImporting = true, backupMessage = null)
@@ -351,6 +364,25 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isImporting = false, backupMessage = "Imported $count entries!")
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(isImporting = false, backupMessage = "Import failed: ${err.localizedMessage}")
+            }
+        }
+    }
+
+    fun importBackupFromUri(sourceUri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isImporting = true, backupMessage = null)
+            val result = importManager.importFromUri(sourceUri)
+            if (result.success) {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupMessage = "Imported ${result.stats.entriesRestored} entries & ${result.stats.attachmentsRestored} attachments!"
+                )
+            } else {
+                val errSummary = result.validationErrors.take(2).joinToString("; ")
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupMessage = "Import failed: $errSummary"
+                )
             }
         }
     }
