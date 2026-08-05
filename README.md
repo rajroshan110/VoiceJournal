@@ -5,7 +5,9 @@
 </p>
 
 <p align="center">
-  <strong>A private, offline-first voice journaling app powered by on-device AI.</strong>
+  <strong>
+    A privacy-first Android voice journaling app with fully offline AI transcription powered by Whisper.cpp.
+  </strong>
 </p>
 
 <p align="center">
@@ -14,6 +16,7 @@
 ![Min SDK](https://img.shields.io/badge/Min%20SDK-26-blue)
 ![Kotlin](https://img.shields.io/badge/Kotlin-100%25-purple)
 ![Material 3](https://img.shields.io/badge/Material%203-Jetpack%20Compose-blue)
+![Offline](https://img.shields.io/badge/Offline-First-success)
 
 </p>
 
@@ -33,7 +36,7 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 
 ---
 
-# Features
+## Features
 
 - 🎤 Record voice notes
 - 🤖 Offline AI transcription (Whisper.cpp)
@@ -50,7 +53,7 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 
 ---
 
-# Screenshots
+## Screenshots
 
 <div align="center"> 
 
@@ -62,8 +65,8 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 </td>
 
 <td align="center">
-<img src="assets/screenshots/notes.jpg" width="220" alt="notes-view">
-<br><b>note-view</b>
+<img src="assets/screenshots/notes.jpg" width="220" alt="Notes">
+<br><b>Notes</b>
 </td>
 
 <td align="center">
@@ -74,8 +77,8 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 
 <tr>
 <td align="center">
-<img src="assets/screenshots/organise.jpg" width="220" alt="organise">
-<br><b>organise</b>
+<img src="assets/screenshots/organize.jpg" width="220" alt="Organize">
+<br><b>Organize</b>
 </td>
 
 <td align="center">
@@ -84,8 +87,8 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 </td>
 
 <td align="center">
-<img src="assets/screenshots/import-export.jpg" width="220" alt="Import / Export">
-<br><b>Import / Export</b>
+<img src="assets/screenshots/import-export.jpg" width="220" alt="Import & Export">
+<br><b>Import & Export</b>
 </td>
 </tr>
 </table>
@@ -94,7 +97,7 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 
 ---
 
-# Why VoiceJournal?
+## Why VoiceJournal?
 
 Unlike many voice note applications, VoiceJournal is designed with privacy as the primary goal.
 
@@ -110,7 +113,7 @@ No audio is uploaded to external servers.
 
 ---
 
-# Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -126,33 +129,57 @@ No audio is uploaded to external servers.
 
 ---
 
-# Project Structure
+## Project Structure
+
+```text
+app/
+├── audio/            # Audio recording, playback & encoding
+├── data/             # Room database, repositories & import/export
+├── di/               # Hilt dependency injection
+├── domain/           # Models, repository interfaces & use cases
+├── service/          # Background services
+├── transcription/    # Offline Whisper.cpp engine
+├── ui/               # Jetpack Compose UI
+├── util/             # Shared utilities
+├── MainActivity.kt
+└── VoiceApp.kt
+```
+
+### Architecture
+
+VoiceJournal follows **Clean Architecture** with **MVVM**.
 
 ```
-app/
- ├── audio/
- ├── data/
- ├── database/
- ├── model/
- ├── repository/
- ├── service/
- ├── transcription/
- ├── ui/
- │    ├── screens/
- │    ├── components/
- │    └── theme/
- ├── utils/
- └── MainActivity.kt
+Presentation (Jetpack Compose)
+        │
+        ▼
+ViewModels
+        │
+        ▼
+Domain (Use Cases)
+        │
+        ▼
+Repositories
+        │
+        ▼
+Data Layer
+(Room • Preferences • Backup • Storage)
+        │
+        ▼
+Whisper.cpp / Local Storage
 ```
+
+For a complete package structure and architecture documentation, see
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ---
 
-# Installation
+## Installation
 
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VoiceJournal.git
+git clone https://github.com/rajroshan110/VoiceJournal.git
 ```
 
 Open using Android Studio.
@@ -161,7 +188,7 @@ Build and run on an Android device.
 
 ---
 
-# Requirements
+## Requirements
 
 - Android 8.0+
 - Android Studio
@@ -171,7 +198,7 @@ Build and run on an Android device.
 
 ---
 
-# Privacy
+## Privacy
 
 VoiceJournal follows an offline-first philosophy.
 
@@ -181,30 +208,31 @@ VoiceJournal follows an offline-first philosophy.
 - No ads
 - No audio uploaded
 - Local processing only
-- sandboxed data storage
+- Stored inside Android app sandbox
+- Never leaves your device unless exported
 
 Your data belongs to you.
 
 ---
 
-# Roadmap
+## Roadmap
 
 - [x] Audio recording
 - [x] Offline transcription
 - [x] Audio playback
 - [x] Dark mode
 - [x] Import & Export
-- [x] Tags supported Notes
+- [x] Note tags
 - [ ] Tags and Folder organization
 - [ ] Calendar view
 - [ ] Markdown export
-- [ ] Individual Notes Sharing
-- [ ] Multiple language transcription support
+- [ ] Individual note sharing
+- [ ] Multi-language transcription
 - [ ] Encrypted Backup & Restore
 
 ---
 
-# Contributing
+## Contributing
 
 Contributions are welcome.
 
@@ -231,7 +259,7 @@ git push -u origin feature/your-feature
 
 ---
 
-# Acknowledgements
+## Acknowledgements
 
 - OpenAI Whisper
 - whisper.cpp
