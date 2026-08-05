@@ -57,3 +57,6 @@ secrets.properties
 
 # Android Studio capturing
 /captures/
+
+#documents and notes
+notes/
