@@ -16,14 +16,14 @@ class ExportManager @Inject constructor(
     private val backupExporter: BackupExporter
 ) {
 
-    suspend fun exportData(outputZipFile: File): Result<File> {
-        return backupExporter.exportToFile(outputZipFile)
+    suspend fun exportData(outputZipFile: File, onProgress: ((String) -> Unit)? = null): Result<File> {
+        return backupExporter.exportToFile(outputZipFile, onProgress)
     }
 
-    suspend fun exportToUri(targetUri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun exportToUri(targetUri: Uri, onProgress: ((String) -> Unit)? = null): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             context.contentResolver.openOutputStream(targetUri)?.use { os ->
-                val result = backupExporter.exportToStream(os)
+                val result = backupExporter.exportToStream(os, onProgress)
                 if (result.isFailure) {
                     throw result.exceptionOrNull() ?: Exception("Export failed")
                 }

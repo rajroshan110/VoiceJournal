@@ -31,10 +31,36 @@ fun LocalBackupScreen(
 
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
-    LaunchedEffect(uiState.backupMessage) {
-        uiState.backupMessage?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-        }
+    if (uiState.backupResultDialog != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissBackupResultDialog() },
+            title = {
+                Text(
+                    text = uiState.backupResultDialog.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = uiState.backupResultDialog.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { viewModel.dismissBackupResultDialog() }
+                ) {
+                    Text(
+                        text = "OK",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = colors.surface
+        )
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -164,7 +190,7 @@ fun LocalBackupScreen(
                         CircularProgressIndicator(color = colors.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (uiState.isExporting) "Exporting backup ZIP..." else "Importing backup ZIP...",
+                            text = uiState.backupProgressText ?: (if (uiState.isExporting) "Preparing backup…" else "Validating backup…"),
                             color = colors.textSecondary,
                             fontSize = 13.sp
                         )

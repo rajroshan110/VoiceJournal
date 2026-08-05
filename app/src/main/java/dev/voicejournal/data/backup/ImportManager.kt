@@ -15,8 +15,8 @@ class ImportManager @Inject constructor(
     private val backupImporter: BackupImporter
 ) {
 
-    suspend fun importData(sourceFile: File): Result<Int> {
-        val importResult = backupImporter.importFromFile(sourceFile)
+    suspend fun importData(sourceFile: File, onProgress: ((String) -> Unit)? = null): Result<Int> {
+        val importResult = backupImporter.importFromFile(sourceFile, onProgress)
         return if (importResult.success) {
             Result.success(importResult.stats.entriesRestored)
         } else {
@@ -24,7 +24,7 @@ class ImportManager @Inject constructor(
         }
     }
 
-    suspend fun importFromUri(uri: Uri): ImportResult {
-        return backupImporter.importFromUri(uri)
+    suspend fun importFromUri(uri: Uri, onProgress: ((String) -> Unit)? = null): ImportResult {
+        return backupImporter.importFromUri(uri, onProgress)
     }
 }

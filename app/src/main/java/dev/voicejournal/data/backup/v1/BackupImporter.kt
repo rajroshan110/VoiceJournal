@@ -14,6 +14,8 @@ import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import android.util.Log
+
 @Singleton
 class BackupImporter @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -28,7 +30,14 @@ class BackupImporter @Inject constructor(
     /**
      * Imports journal data from an InputStream (e.g. from Storage Access Framework).
      */
-    suspend fun importFromStream(inputStream: InputStream): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFromStream(
+        inputStream: InputStream,
+        onProgress: ((String) -> Unit)? = null
+    ): ImportResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        Log.d("Backup", "Restore started")
+        onProgress?.invoke("Validating backup…")
+
         var stagingDir: File? = null
         try {
             // 1. Unpack Zip Archive safely
@@ -38,23 +47,34 @@ class BackupImporter @Inject constructor(
             val report = validator.validate(stagingDir)
             if (!report.isValid) {
                 unpacker.cleanup(stagingDir)
+                Log.d("Backup", "Validation failed")
+                report.errors.forEach { err -> Log.d("Backup", err) }
+                Log.d("Backup", "Restore aborted")
                 return@withContext ImportResult(
                     success = false,
                     validationErrors = report.errors
                 )
             }
+            Log.d("Backup", "Backup validated")
 
             // 3. Perform Atomic Restore
+            onProgress?.invoke("Reading backup…")
             val stats = restorer.restore(
                 stagingDir = stagingDir,
                 entries = report.entries,
                 tags = report.tags,
                 attachments = report.attachments,
-                preferences = report.preferences
+                preferences = report.preferences,
+                onProgress = onProgress
             )
 
             // 4. Clean up staging directory
+            onProgress?.invoke("Finalizing restore…")
             unpacker.cleanup(stagingDir)
+
+            val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
+            Log.d("Backup", "Restore completed in ${"%.1f".format(elapsedSec)} s")
+            onProgress?.invoke("Restore completed.")
 
             ImportResult(
                 success = true,
@@ -62,6 +82,7 @@ class BackupImporter @Inject constructor(
             )
         } catch (e: Exception) {
             unpacker.cleanup(stagingDir)
+            Log.e("Backup", "Restore failed: ${e.message}", e)
             ImportResult(
                 success = false,
                 validationErrors = listOf(e.localizedMessage ?: "Import failed due to an unexpected error.")
@@ -72,7 +93,10 @@ class BackupImporter @Inject constructor(
     /**
      * Imports journal data from a local [zipFile].
      */
-    suspend fun importFromFile(zipFile: File): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFromFile(
+        zipFile: File,
+        onProgress: ((String) -> Unit)? = null
+    ): ImportResult = withContext(Dispatchers.IO) {
         if (!zipFile.exists() || !zipFile.isFile) {
             return@withContext ImportResult(
                 success = false,
@@ -80,17 +104,20 @@ class BackupImporter @Inject constructor(
             )
         }
         FileInputStream(zipFile).use { fis ->
-            importFromStream(fis)
+            importFromStream(fis, onProgress)
         }
     }
 
     /**
      * Imports journal data from a Storage Access Framework [uri].
      */
-    suspend fun importFromUri(uri: Uri): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFromUri(
+        uri: Uri,
+        onProgress: ((String) -> Unit)? = null
+    ): ImportResult = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { isStream ->
-                importFromStream(isStream)
+                importFromStream(isStream, onProgress)
             } ?: ImportResult(
                 success = false,
                 validationErrors = listOf("Could not open input stream for URI: $uri")

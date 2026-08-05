@@ -27,6 +27,8 @@ import org.json.JSONArray
 import java.io.File
 import java.util.Locale
 
+import android.util.Log
+
 class BackupRestorer(
     private val context: Context,
     private val database: AppDatabase,
@@ -38,12 +40,14 @@ class BackupRestorer(
         entries: List<BackupEntry>,
         tags: List<BackupTag>,
         attachments: List<BackupAttachment>,
-        preferences: BackupPreferences?
+        preferences: BackupPreferences?,
+        onProgress: ((String) -> Unit)? = null
     ): RestoreStats {
         val copiedMediaFiles = mutableListOf<File>()
 
         try {
             // 1. Prepare Internal Media Directories & Clear Existing Media for Replace Restore
+            onProgress?.invoke("Restoring media…")
             val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
             val imagesDir = File(context.filesDir, "images").apply { if (!exists()) mkdirs() }
 
@@ -71,8 +75,10 @@ class BackupRestorer(
                     mediaPathMap[att.uuid] = targetFile.absolutePath
                 }
             }
+            Log.d("Backup", "Media restored: ${copiedMediaFiles.size}")
 
             // 2. Perform Single Room Database Transaction (Replace Restore)
+            onProgress?.invoke("Restoring notes…")
             var entriesCount = 0
             var tagsCount = 0
             var attachmentsCount = 0
@@ -214,10 +220,13 @@ class BackupRestorer(
                     attachmentsCount += entryAtts.size
                 }
             }
+            Log.d("Backup", "Database replaced")
 
             // 3. Restore DataStore Preferences (Excluding Credentials)
             if (preferences != null) {
+                onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
+                Log.d("Backup", "Preferences restored")
             }
 
             return RestoreStats(

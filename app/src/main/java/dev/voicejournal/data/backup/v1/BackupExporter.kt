@@ -14,6 +14,8 @@ import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import android.util.Log
+
 @Singleton
 class BackupExporter @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -30,17 +32,31 @@ class BackupExporter @Inject constructor(
      * Exports complete journal data into a byte-for-byte compliant Backup Format v1 archive
      * written directly to [outputStream] (e.g. from Storage Access Framework).
      */
-    suspend fun exportToStream(outputStream: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun exportToStream(
+        outputStream: OutputStream,
+        onProgress: ((String) -> Unit)? = null
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        Log.d("Backup", "Export started")
+        onProgress?.invoke("Preparing backup…")
+
         runCatching {
             // 1. Fetch entries and tags from database
+            onProgress?.invoke("Reading notes…")
             val entries = database.journalEntryDao().getAllEntriesForBackup()
             val tags = database.tagDao().getAllTagsSync()
+            Log.d("Backup", "Entries exported: ${entries.size}")
+            Log.d("Backup", "Tags exported: ${tags.size}")
 
             // 2. Collect media & construct attachment DTOs
             val collectedMedia = mediaCollector.collectMediaForEntries(entries)
             val attachmentsByEntryUuid = collectedMedia
                 .map { it.attachment }
                 .groupBy { it.entryUuid }
+
+            Log.d("Backup", "Attachments exported: ${collectedMedia.size}")
+            Log.d("Backup", "Media copied: ${collectedMedia.size}")
+            onProgress?.invoke("Copying media (${collectedMedia.size} / ${collectedMedia.size})…")
 
             // 3. Collect DataStore preferences
             val audioFormat = prefsManager.audioFormat.first().name
@@ -107,6 +123,7 @@ class BackupExporter @Inject constructor(
             val manifestJsonBytes = manifestJsonStr.toByteArray(StandardCharsets.UTF_8)
 
             // 6. Stream package into ZIP archive
+            onProgress?.invoke("Creating archive…")
             zipWriter.writeBackup(
                 outputStream = outputStream,
                 manifestJsonBytes = manifestJsonBytes,
@@ -116,6 +133,15 @@ class BackupExporter @Inject constructor(
                 preferencesJsonBytes = preferencesJsonBytes,
                 collectedMedia = collectedMedia
             )
+            Log.d("Backup", "Archive created")
+
+            onProgress?.invoke("Finalizing backup…")
+            val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
+            Log.d("Backup", "Export completed in ${"%.1f".format(elapsedSec)} s")
+            onProgress?.invoke("Backup completed.")
+            Unit
+        }.onFailure { e ->
+            Log.e("Backup", "Export failed: ${e.message}", e)
         }
     }
 
@@ -123,12 +149,15 @@ class BackupExporter @Inject constructor(
      * Exports complete journal data into a target local [targetFile].
      * Uses atomic temporary file writing to ensure partial archives are cleaned up on failure.
      */
-    suspend fun exportToFile(targetFile: File): Result<File> = withContext(Dispatchers.IO) {
+    suspend fun exportToFile(
+        targetFile: File,
+        onProgress: ((String) -> Unit)? = null
+    ): Result<File> = withContext(Dispatchers.IO) {
         val tempFile = File(targetFile.parentFile ?: context.cacheDir, "${targetFile.name}.tmp")
         try {
             if (tempFile.exists()) tempFile.delete()
             FileOutputStream(tempFile).use { fos ->
-                val result = exportToStream(fos)
+                val result = exportToStream(fos, onProgress)
                 if (result.isFailure) {
                     throw result.exceptionOrNull() ?: Exception("Export stream failed")
                 }
