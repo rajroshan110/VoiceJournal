@@ -224,8 +224,6 @@ Your data belongs to you.
 - [x] Import & Export
 - [x] Note tags
 - [ ] Tags and Folder organization
-- [ ] Calendar view
-- [ ] Markdown export
 - [ ] Individual note sharing
 - [ ] Multi-language transcription
 - [ ] Encrypted Backup & Restore
