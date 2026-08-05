@@ -27,12 +27,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val colors = AppTheme.colors
 
-    LaunchedEffect(uiState.backupMessage) {
-        uiState.backupMessage?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            viewModel.clearBackupMessage()
-        }
-    }
 
     SettingsHomeScreen(
         onBackClick = { navController.popBackStack() },

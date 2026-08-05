@@ -9,8 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,22 +29,45 @@ fun LocalBackupScreen(
     val colors = AppTheme.colors
     val context = LocalContext.current
 
-    LaunchedEffect(uiState.backupMessage) {
-        uiState.backupMessage?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-        }
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    if (uiState.backupResultDialog != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissBackupResultDialog() },
+            title = {
+                Text(
+                    text = uiState.backupResultDialog.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = uiState.backupResultDialog.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { viewModel.dismissBackupResultDialog() }
+                ) {
+                    Text(
+                        text = "OK",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = colors.surface
+        )
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let {
-            val contentResolver = context.contentResolver
-            val tempFile = File(context.cacheDir, "export_temp.zip")
-            viewModel.exportBackup(tempFile)
-            contentResolver.openOutputStream(uri)?.use { os ->
-                if (tempFile.exists()) tempFile.inputStream().copyTo(os)
-            }
+            viewModel.exportBackupToUri(it)
         }
     }
 
@@ -53,12 +75,55 @@ fun LocalBackupScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            val tempFile = File(context.cacheDir, "import_temp.zip")
-            context.contentResolver.openInputStream(uri)?.use { isStream ->
-                tempFile.outputStream().use { os -> isStream.copyTo(os) }
-            }
-            viewModel.importBackup(tempFile)
+            pendingImportUri = it
         }
+    }
+
+    if (pendingImportUri != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = {
+                Text(
+                    text = "Restore Backup",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val uriToImport = pendingImportUri
+                        pendingImportUri = null
+                        uriToImport?.let { viewModel.importBackupFromUri(it) }
+                    }
+                ) {
+                    Text(
+                        text = "Restore",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { pendingImportUri = null }
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = colors.surface
+        )
     }
 
     Column(
@@ -125,7 +190,7 @@ fun LocalBackupScreen(
                         CircularProgressIndicator(color = colors.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (uiState.isExporting) "Exporting backup ZIP..." else "Importing backup ZIP...",
+                            text = uiState.backupProgressText ?: (if (uiState.isExporting) "Preparing backup…" else "Validating backup…"),
                             color = colors.textSecondary,
                             fontSize = 13.sp
                         )
@@ -136,7 +201,7 @@ fun LocalBackupScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { exportLauncher.launch("Journal_Backup_${System.currentTimeMillis()}.zip") },
+                            onClick = { exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip") },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                             modifier = Modifier.weight(1f)
                         ) {

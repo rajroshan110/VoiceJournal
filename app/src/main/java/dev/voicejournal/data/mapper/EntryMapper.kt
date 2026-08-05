@@ -89,6 +89,7 @@ fun String.toAudioTracks(): List<AudioTrack> {
 fun TagEntity.toDomain(): Tag {
     return Tag(
         id = id,
+        uuid = uuid,
         name = name,
         type = try { TagType.valueOf(type) } catch (e: Exception) { TagType.TOPIC }
     )
@@ -97,6 +98,7 @@ fun TagEntity.toDomain(): Tag {
 fun Tag.toEntity(): TagEntity {
     return TagEntity(
         id = id,
+        uuid = uuid,
         name = name,
         type = type.name
     )
@@ -105,6 +107,7 @@ fun Tag.toEntity(): TagEntity {
 fun EntryImageEntity.toDomain(): EntryImage {
     return EntryImage(
         id = id,
+        uuid = uuid,
         entryId = entryId,
         imagePath = imagePath,
         displayOrder = displayOrder
@@ -114,6 +117,7 @@ fun EntryImageEntity.toDomain(): EntryImage {
 fun EntryImage.toEntity(entryId: Long): EntryImageEntity {
     return EntryImageEntity(
         id = id,
+        uuid = uuid,
         entryId = entryId,
         imagePath = imagePath,
         displayOrder = displayOrder
@@ -145,6 +149,7 @@ fun JournalEntryEntity.toDomain(tags: List<Tag> = emptyList(), images: List<Entr
 
     return JournalEntry(
         id = id,
+        uuid = uuid,
         createdAt = createdAt,
         updatedAt = updatedAt,
         title = title,
@@ -181,6 +186,7 @@ fun JournalEntry.toEntity(): JournalEntryEntity {
 
     return JournalEntryEntity(
         id = id,
+        uuid = uuid,
         createdAt = createdAt,
         updatedAt = updatedAt,
         title = title,

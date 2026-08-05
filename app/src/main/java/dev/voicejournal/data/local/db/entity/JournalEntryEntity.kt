@@ -1,12 +1,18 @@
 package dev.voicejournal.data.local.db.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
-@Entity(tableName = "journal_entries")
+@Entity(
+    tableName = "journal_entries",
+    indices = [Index(value = ["uuid"], unique = true)]
+)
 data class JournalEntryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val uuid: String = UUID.randomUUID().toString(),
     val createdAt: Long,
     val updatedAt: Long,
     val title: String? = null,

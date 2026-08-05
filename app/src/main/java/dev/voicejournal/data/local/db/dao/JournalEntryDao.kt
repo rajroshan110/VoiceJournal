@@ -36,6 +36,10 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isDraft = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesWithTagsAndImagesList(): List<EntryWithTagsAndImages>
 
+    @Transaction
+    @Query("SELECT * FROM journal_entries ORDER BY createdAt DESC")
+    suspend fun getAllEntriesForBackup(): List<EntryWithTagsAndImages>
+
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isDraft = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesSync(): List<JournalEntryEntity>
 
@@ -50,6 +54,14 @@ interface JournalEntryDao {
     @Transaction
     @Query("SELECT * FROM journal_entries WHERE id = :id")
     fun getEntryById(id: Long): Flow<EntryWithTagsAndImages?>
+
+    @Transaction
+    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid")
+    fun getEntryByUuid(uuid: String): Flow<EntryWithTagsAndImages?>
+
+    @Transaction
+    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid LIMIT 1")
+    suspend fun getEntryByUuidSync(uuid: String): EntryWithTagsAndImages?
 
     @Transaction
     @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 AND isDraft = 0 AND date(createdAt / 1000, 'unixepoch') = :dateStr ORDER BY createdAt DESC")

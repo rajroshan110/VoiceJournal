@@ -1,6 +1,7 @@
 package dev.voicejournal.ui.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +29,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
+data class BackupResultDialog(
+    val title: String,
+    val message: String
+)
+
 data class SettingsUiState(
     val searchQuery: String = "",
     val isSearching: Boolean = false,
@@ -52,7 +58,8 @@ data class SettingsUiState(
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
     val isWipingData: Boolean = false,
-    val backupMessage: String? = null,
+    val backupProgressText: String? = null,
+    val backupResultDialog: BackupResultDialog? = null,
     val showDeleteConfirmationDialog: Boolean = false,
     val showPinSetupDialog: Boolean = false
 )
@@ -296,8 +303,7 @@ class SettingsViewModel @Inject constructor(
             userPreferencesManager.setWhisperModel("NONE")
             _uiState.value = _uiState.value.copy(
                 isModelDownloaded = false,
-                sttModelDownloadState = ModelDownloadState.Idle,
-                backupMessage = "Speech-to-Text model binary deleted from storage."
+                sttModelDownloadState = ModelDownloadState.Idle
             )
         }
     }
@@ -325,37 +331,140 @@ class SettingsViewModel @Inject constructor(
             )
             journalRepository.wipeAllData()
             _uiState.value = _uiState.value.copy(
-                isWipingData = false,
-                backupMessage = "All journal entries and local media have been permanently wiped."
+                isWipingData = false
             )
         }
     }
 
     fun exportBackup(targetFile: File) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isExporting = true, backupMessage = null)
-            val result = exportManager.exportData(targetFile)
+            _uiState.value = _uiState.value.copy(isExporting = true, backupProgressText = "Preparing backup…", backupResultDialog = null)
+            val result = exportManager.exportData(targetFile) { progress ->
+                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+            }
             result.onSuccess {
-                _uiState.value = _uiState.value.copy(isExporting = false, backupMessage = "Backup saved successfully!")
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = BackupResultDialog(
+                        title = "Backup Completed",
+                        message = "Your backup has been created successfully."
+                    )
+                )
             }.onFailure { err ->
-                _uiState.value = _uiState.value.copy(isExporting = false, backupMessage = "Export failed: ${err.localizedMessage}")
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = mapImportErrorToDialog(emptyList(), err)
+                )
+            }
+        }
+    }
+
+    fun exportBackupToUri(targetUri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExporting = true, backupProgressText = "Preparing backup…", backupResultDialog = null)
+            val result = exportManager.exportToUri(targetUri) { progress ->
+                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+            }
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = BackupResultDialog(
+                        title = "Backup Completed",
+                        message = "Your backup has been created successfully."
+                    )
+                )
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = mapImportErrorToDialog(emptyList(), err)
+                )
             }
         }
     }
 
     fun importBackup(sourceFile: File) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isImporting = true, backupMessage = null)
-            val result = importManager.importData(sourceFile)
-            result.onSuccess { count ->
-                _uiState.value = _uiState.value.copy(isImporting = false, backupMessage = "Imported $count entries!")
+            _uiState.value = _uiState.value.copy(isImporting = true, backupProgressText = "Validating backup…", backupResultDialog = null)
+            val result = importManager.importData(sourceFile) { progress ->
+                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+            }
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = BackupResultDialog(
+                        title = "Backup Restored",
+                        message = "Your backup has been restored successfully."
+                    )
+                )
             }.onFailure { err ->
-                _uiState.value = _uiState.value.copy(isImporting = false, backupMessage = "Import failed: ${err.localizedMessage}")
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = mapImportErrorToDialog(listOf(err.localizedMessage ?: ""), err)
+                )
             }
         }
     }
 
-    fun clearBackupMessage() {
-        _uiState.value = _uiState.value.copy(backupMessage = null)
+    fun importBackupFromUri(sourceUri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isImporting = true, backupProgressText = "Validating backup…", backupResultDialog = null)
+            val result = importManager.importFromUri(sourceUri) { progress ->
+                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+            }
+            if (result.success) {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = BackupResultDialog(
+                        title = "Backup Restored",
+                        message = "Your backup has been restored successfully."
+                    )
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = mapImportErrorToDialog(result.validationErrors, null)
+                )
+            }
+        }
+    }
+
+    fun dismissBackupResultDialog() {
+        _uiState.value = _uiState.value.copy(backupResultDialog = null)
+    }
+
+    private fun mapImportErrorToDialog(errors: List<String>, exception: Throwable?): BackupResultDialog {
+        val joined = errors.joinToString(" ").lowercase()
+        val exMsg = exception?.localizedMessage?.lowercase() ?: ""
+
+        return when {
+            joined.contains("unsupported format_version") || joined.contains("min_reader_version") -> BackupResultDialog(
+                title = "Unsupported Backup",
+                message = "This backup was created by a newer version of Voice Journal and cannot be restored by this version."
+            )
+            joined.contains("sha-256 mismatch") || joined.contains("size mismatch") || joined.contains("integrity") -> BackupResultDialog(
+                title = "Backup Verification Failed",
+                message = "One or more files failed integrity verification. The restore has been cancelled to protect your existing data."
+            )
+            joined.contains("corrupted") || joined.contains("missing required file") || joined.contains("failed to parse") || joined.contains("invalid format_name") -> BackupResultDialog(
+                title = "Backup Corrupted",
+                message = "This backup file is incomplete, corrupted, or has been modified and cannot be restored."
+            )
+            exMsg.contains("enospc") || exMsg.contains("no space left") || exMsg.contains("storage") -> BackupResultDialog(
+                title = "Insufficient Storage",
+                message = "There isn't enough storage space available to complete the restore."
+            )
+            else -> BackupResultDialog(
+                title = "Restore Failed",
+                message = "The backup could not be restored. Your existing data has not been modified."
+            )
+        }
     }
 }
