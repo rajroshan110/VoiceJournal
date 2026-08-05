@@ -18,12 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.settings.components.CategoryNavCard
 import dev.voicejournal.ui.settings.components.SettingSearchRow
-import dev.voicejournal.ui.settings.components.SettingsSearchBar
 import dev.voicejournal.ui.settings.model.SettingsSubScreen
 import dev.voicejournal.ui.settings.screens.GeneralSettingsScreen
 import dev.voicejournal.ui.settings.screens.LocalBackupScreen
@@ -39,15 +40,21 @@ fun SettingsHomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val colors = AppTheme.colors
+    val focusManager = LocalFocusManager.current
     val configuration = LocalConfiguration.current
     val isExpanded = configuration.screenWidthDp >= 600
 
     var selectedCompactSubScreen by remember { mutableStateOf<SettingsSubScreen?>(null) }
+    var isSearchFocused by remember { mutableStateOf(false) }
+
+    val isSearchActive = isSearchFocused || uiState.isSearching || uiState.searchQuery.isNotEmpty()
 
     // System Back Button Interceptor
-    BackHandler(enabled = uiState.isSearching || uiState.isViewingAppLockDetail || (!isExpanded && selectedCompactSubScreen != null)) {
-        if (uiState.isSearching) {
+    BackHandler(enabled = isSearchActive || uiState.isViewingAppLockDetail || (!isExpanded && selectedCompactSubScreen != null)) {
+        if (isSearchActive) {
+            focusManager.clearFocus()
             viewModel.clearSearch()
+            isSearchFocused = false
         } else if (uiState.isViewingAppLockDetail) {
             viewModel.setViewingAppLockDetail(false)
         } else if (!isExpanded && selectedCompactSubScreen != null) {
@@ -73,8 +80,10 @@ fun SettingsHomeScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = {
-                            if (uiState.isSearching) {
+                            if (isSearchActive) {
+                                focusManager.clearFocus()
                                 viewModel.clearSearch()
+                                isSearchFocused = false
                             } else if (!isExpanded && selectedCompactSubScreen != null) {
                                 selectedCompactSubScreen = null
                             } else {
@@ -101,14 +110,16 @@ fun SettingsHomeScreen(
         ) {
             // Search Bar Header - ONLY visible on main settings dashboard tab (selectedCompactSubScreen == null)
             if ((selectedCompactSubScreen == null || isExpanded) && !uiState.isViewingAppLockDetail) {
-                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    SettingsSearchBar(
+                Box(modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 12.dp)) {
+                    SearchBar(
                         query = uiState.searchQuery,
                         onQueryChange = { viewModel.updateSearchQuery(it) },
-                        onClearQuery = { viewModel.clearSearch() }
+                        placeholder = "Search settings...",
+                        requestFocusOnLaunch = false,
+                        onFocusChanged = { isSearchFocused = it },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
             // Main Content Area

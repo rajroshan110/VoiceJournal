@@ -16,19 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.theme.AppTheme
 
@@ -89,17 +86,7 @@ fun JournalHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
     var sortMenuExpanded by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isSearchActive) {
-        if (isSearchActive) {
-            focusRequester.requestFocus()
-            keyboardController?.show()
-        }
-    }
 
     Surface(
         color = colors.background,
@@ -115,49 +102,14 @@ fun JournalHeader(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             if (isSearchActive) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    placeholder = {
-                        Text(
-                            "Search notes...",
-                            color = colors.textSecondary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.primary,
-                        unfocusedBorderColor = colors.border,
-                        focusedContainerColor = colors.surfaceVariant,
-                        unfocusedContainerColor = colors.surfaceVariant,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    shape = RoundedCornerShape(Radius.RadiusPill),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                    }),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            if (searchQuery.isNotEmpty()) {
-                                onSearchQueryChange("")
-                            } else {
-                                onSearchToggle()
-                                keyboardController?.hide()
-                            }
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close search", tint = colors.textSecondary)
-                        }
-                    },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = colors.textPrimary
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(focusRequester)
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    placeholder = "Search notes...",
+                    showLeadingIcon = false,
+                    requestFocusOnLaunch = true,
+                    onClose = onSearchToggle,
+                    modifier = Modifier.weight(1f)
                 )
             } else {
                 Row(

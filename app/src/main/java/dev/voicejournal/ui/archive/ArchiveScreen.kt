@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.ui.components.getArchiveIcon
+import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.folders.components.FolderNoteCard
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
@@ -114,14 +116,26 @@ fun ArchiveScreen(
                     }
                 } else {
                     // Standard Top Bar
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isSearchVisible) {
+                            SearchBar(
+                                query = uiState.searchQuery,
+                                onQueryChange = { viewModel.setSearchQuery(it) },
+                                placeholder = "Search archived notes...",
+                                requestFocusOnLaunch = true,
+                                onClose = {
+                                    isSearchVisible = false
+                                    viewModel.setSearchQuery("")
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { navController.popBackStack() }) {
                                     Icon(
@@ -139,34 +153,13 @@ fun ArchiveScreen(
                                 )
                             }
 
-                            IconButton(onClick = { isSearchVisible = !isSearchVisible }) {
+                            IconButton(onClick = { isSearchVisible = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Search Archived Notes",
-                                    tint = if (isSearchVisible) colors.primary else colors.textSecondary
+                                    tint = colors.textSecondary
                                 )
                             }
-                        }
-
-                        if (isSearchVisible) {
-                            OutlinedTextField(
-                                value = uiState.searchQuery,
-                                onValueChange = { viewModel.setSearchQuery(it) },
-                                placeholder = { Text("Search archived notes...", color = colors.textSecondary, fontSize = 14.sp) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = colors.primary,
-                                    unfocusedBorderColor = colors.border,
-                                    focusedContainerColor = colors.surfaceVariant,
-                                    unfocusedContainerColor = colors.surfaceVariant,
-                                    focusedTextColor = colors.textPrimary,
-                                    unfocusedTextColor = colors.textPrimary
-                                ),
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
                         }
                     }
                 }
