@@ -151,9 +151,10 @@ fun NoteDetailHeader(
             // Close / Clear Selection Button (Circle X)
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(colors.surfaceVariant, CircleShape)
-                    .clickable { onClearSelection() },
+                    .size(48.dp)
+                    .clickable { onClearSelection() }
+                    .padding(4.dp)
+                    .background(colors.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Clear Selection", tint = colors.textPrimary)
@@ -170,9 +171,10 @@ fun NoteDetailHeader(
             // Delete Selected Tracks Button (Circle 🗑)
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
-                    .clickable { onDeleteSelectedTracks() },
+                    .size(48.dp)
+                    .clickable { onDeleteSelectedTracks() }
+                    .padding(4.dp)
+                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -200,9 +202,10 @@ fun NoteDetailHeader(
                 // Minimalist Close Button (Circle X)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(colors.surfaceVariant, CircleShape)
-                        .clickable { onClose() },
+                        .size(48.dp)
+                        .clickable { onClose() }
+                        .padding(4.dp)
+                        .background(colors.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textPrimary)
@@ -212,9 +215,10 @@ fun NoteDetailHeader(
                 Box {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .background(colors.surfaceVariant, CircleShape)
-                            .clickable { moodMenuExpanded = true },
+                            .size(48.dp)
+                            .clickable { moodMenuExpanded = true }
+                            .padding(4.dp)
+                            .background(colors.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(text = currentMood, fontSize = 20.sp)
@@ -240,9 +244,10 @@ fun NoteDetailHeader(
                 // Minimalist Archive Button (Circle Archive)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(colors.surfaceVariant, CircleShape)
-                        .clickable { onArchiveClick() },
+                        .size(48.dp)
+                        .clickable { onArchiveClick() }
+                        .padding(4.dp)
+                        .background(colors.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -255,9 +260,10 @@ fun NoteDetailHeader(
                 // Minimalist Attachment Button (Circle +)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(colors.surfaceVariant, CircleShape)
-                        .clickable { onAddPhoto() },
+                        .size(48.dp)
+                        .clickable { onAddPhoto() }
+                        .padding(4.dp)
+                        .background(colors.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Item", tint = colors.textPrimary)
@@ -290,9 +296,10 @@ fun NoteDetailHeader(
                 Box {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .background(colors.surfaceVariant, CircleShape)
-                            .clickable { moreMenuExpanded = true },
+                            .size(48.dp)
+                            .clickable { moreMenuExpanded = true }
+                            .padding(4.dp)
+                            .background(colors.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More Options", tint = colors.textPrimary)

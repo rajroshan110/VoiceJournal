@@ -3,6 +3,7 @@ package dev.voicejournal.ui.designsystem.components.audio
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.*
@@ -32,11 +33,10 @@ fun WaveformVisualizer(
 
     val currentFraction = if (isDragging) dragFraction else progress.coerceIn(0f, 1f)
 
-    Canvas(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(32.dp)
-            .clipToBounds()
+            .height(48.dp)
             .semantics {
                 contentDescription = "Audio Waveform Visualizer"
                 stateDescription = "${(currentFraction * 100).toInt()}% played"
@@ -77,8 +77,15 @@ fun WaveformVisualizer(
                         dragFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                     }
                 )
-            }
+            },
+        contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .clipToBounds()
+        ) {
         if (amplitudes.isEmpty()) return@Canvas
 
         val barCount = amplitudes.size
@@ -109,4 +116,5 @@ fun WaveformVisualizer(
             )
         }
     }
+}
 }

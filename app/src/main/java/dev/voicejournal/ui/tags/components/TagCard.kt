@@ -161,8 +161,7 @@ fun TagCardGrid(
                     if (onRename != null || onMerge != null) {
                         Box {
                             IconButton(
-                                onClick = { menuExpanded = true },
-                                modifier = Modifier.size(32.dp)
+                                onClick = { menuExpanded = true }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
