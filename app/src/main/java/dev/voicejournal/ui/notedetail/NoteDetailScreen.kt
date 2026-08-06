@@ -103,7 +103,7 @@ fun NoteDetailScreen(
             return
         }
 
-        val isNewOrDraft = uiState.isDraft || entryId <= 0
+        val isNewOrDraft = uiState.isDraft || uiState.entryId <= 0
         if (isNewOrDraft) {
             if (viewModel.hasContentModifications()) {
                 viewModel.saveDraftOnExit {

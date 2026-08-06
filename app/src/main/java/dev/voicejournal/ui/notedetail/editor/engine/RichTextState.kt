@@ -21,6 +21,9 @@ class RichTextState(
     var selection by mutableStateOf(initialSelection)
         private set
 
+    var composition by mutableStateOf<TextRange?>(null)
+        private set
+
     var pendingActiveStyles by mutableStateOf<Set<SpanType>>(emptySet())
         private set
 
@@ -30,7 +33,7 @@ class RichTextState(
     val canRedo: Boolean get() = undoRedoManager.canRedo
 
     val textFieldValue: TextFieldValue
-        get() = TextFieldValue(text = document.text, selection = selection)
+        get() = TextFieldValue(text = document.text, selection = selection, composition = composition)
 
     fun isSpanActive(spanType: SpanType): Boolean {
         val start = minOf(selection.start, selection.end)
@@ -81,6 +84,7 @@ class RichTextState(
     fun setDocument(newDocument: RichTextDocument, newSelection: TextRange = TextRange(newDocument.length)) {
         document = newDocument
         selection = newSelection
+        composition = null
         pendingActiveStyles = emptySet()
         undoRedoManager.clear()
     }
@@ -91,8 +95,9 @@ class RichTextState(
         val newSelection = newValue.selection
 
         if (oldText == newText) {
-            // Selection or cursor position change
+            // Selection, cursor position, or composition change
             selection = newSelection
+            composition = newValue.composition
             updateActiveStylesForCursor(newSelection)
             return
         }
@@ -138,6 +143,7 @@ class RichTextState(
         }
 
         selection = newSelection
+        composition = newValue.composition
         updateActiveStylesForCursor(newSelection)
     }
 
@@ -167,6 +173,7 @@ class RichTextState(
         val snapshot = undoRedoManager.undo(document, selection) ?: return
         document = snapshot.document
         selection = snapshot.selection
+        composition = null
         pendingActiveStyles = emptySet()
     }
 
@@ -174,6 +181,7 @@ class RichTextState(
         val snapshot = undoRedoManager.redo(document, selection) ?: return
         document = snapshot.document
         selection = snapshot.selection
+        composition = null
         pendingActiveStyles = emptySet()
     }
 

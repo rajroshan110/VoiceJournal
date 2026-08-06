@@ -125,6 +125,7 @@ class NoteDetailViewModel @Inject constructor(
 
     private val pendingFileDeletions = mutableSetOf<String>()
     private val pendingFileAdditions = mutableSetOf<String>()
+    @Volatile private var isSaving = false
 
     init {
         viewModelScope.launch {
@@ -1003,8 +1004,14 @@ class NoteDetailViewModel @Inject constructor(
             deletedAt = state.entry?.deletedAt
         )
 
+        // Commit files synchronously before launching coroutine to prevent
+        // onLeaveScreen() race condition from deleting saved audio files
+        val committedAdditions = pendingFileAdditions.toSet()
+        pendingFileAdditions.clear()
+        isSaving = true
+
         viewModelScope.launch {
-            saveEntryUseCase(entryToSave)
+            val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
 
             // Physically execute queued file deletions upon explicit Save
@@ -1012,9 +1019,7 @@ class NoteDetailViewModel @Inject constructor(
                 deletePhysicalFile(path)
             }
             pendingFileDeletions.clear()
-            pendingFileAdditions.clear()
 
-            val savedId = if (entryToSave.id > 0) entryToSave.id else System.currentTimeMillis()
             val savedEntry = entryToSave.copy(id = savedId)
 
             _uiState.value = _uiState.value.copy(
@@ -1028,6 +1033,7 @@ class NoteDetailViewModel @Inject constructor(
             )
             initialSnapshot = createCurrentSnapshot()
             clearTrackSelection()
+            isSaving = false
             onFeedback("Note saved")
         }
     }
@@ -1047,6 +1053,11 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun saveDraftOnExit(onSuccess: () -> Unit) {
+        // If a save is already in progress, just wait for it to finish
+        if (isSaving) {
+            onSuccess()
+            return
+        }
         if (!hasContentModifications()) {
             onSuccess()
             return
@@ -1094,9 +1105,18 @@ class NoteDetailViewModel @Inject constructor(
             deletedAt = null
         )
 
+        // Clear synchronously before coroutine to prevent onLeaveScreen race
+        pendingFileAdditions.clear()
+
         viewModelScope.launch {
             val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
+
+            pendingFileDeletions.forEach { path ->
+                deletePhysicalFile(path)
+            }
+            pendingFileDeletions.clear()
+
             _uiState.value = _uiState.value.copy(entryId = savedId, isDraft = true, hasUnsavedChanges = false)
             onSuccess()
         }
@@ -1121,6 +1141,10 @@ class NoteDetailViewModel @Inject constructor(
     fun archiveCurrentNote(onSuccess: () -> Unit) {
         if (isEntryEmpty() || _uiState.value.isDraft) return
         val state = _uiState.value
+
+        // Clear synchronously before coroutine to prevent onLeaveScreen race
+        pendingFileAdditions.clear()
+
         viewModelScope.launch {
             if (state.entryId > 0) {
                 val existing = state.entry
@@ -1161,6 +1185,10 @@ class NoteDetailViewModel @Inject constructor(
                 )
                 saveEntryUseCase(entryToSave)
             }
+            pendingFileDeletions.forEach { path ->
+                deletePhysicalFile(path)
+            }
+            pendingFileDeletions.clear()
             onSuccess()
         }
     }
