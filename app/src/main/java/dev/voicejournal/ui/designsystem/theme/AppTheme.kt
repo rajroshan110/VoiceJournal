@@ -45,7 +45,8 @@ fun VoiceTheme(
             onBackground = appColors.textPrimary,
             onSurface = appColors.textPrimary,
             onPrimary = appColors.onPrimary,
-            outline = appColors.divider
+            outline = appColors.divider,
+            error = appColors.error
         )
     } else {
         darkColorScheme(
@@ -55,7 +56,8 @@ fun VoiceTheme(
             onBackground = appColors.textPrimary,
             onSurface = appColors.textPrimary,
             onPrimary = appColors.onPrimary,
-            outline = appColors.divider
+            outline = appColors.divider,
+            error = appColors.error
         )
     }
 

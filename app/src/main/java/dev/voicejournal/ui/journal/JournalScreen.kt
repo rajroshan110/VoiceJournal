@@ -343,14 +343,14 @@ fun JournalScreen(
                         Text(
                             text = "No journal entries yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Capture your thoughts and voice notes to start your journal.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
+                            color = AppTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -384,14 +384,14 @@ fun JournalScreen(
                         Text(
                             text = "No matching entries found",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Try clearing active search or filters to see all notes.",
+                            text = "Try adjusting your filters or search terms.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
+                            color = AppTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
