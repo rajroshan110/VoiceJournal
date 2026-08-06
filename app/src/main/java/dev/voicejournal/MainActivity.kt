@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,7 +63,7 @@ class MainActivity : FragmentActivity() {
             val customPin by userPreferencesManager.customPin.collectAsState(initial = null)
 
             val appLockMode = appLockModeState.value
-            var isAppUnlocked by remember { mutableStateOf(false) }
+            var isAppUnlocked by rememberSaveable { mutableStateOf(false) }
             var isInitialCheckDone by remember { mutableStateOf(false) }
             val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -256,7 +257,7 @@ fun CustomPinLockScreen(
     onUnlocked: () -> Unit
 ) {
     val colors = AppTheme.colors
-    var enteredPin by remember { mutableStateOf("") }
+    var enteredPin by rememberSaveable { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
     Column(

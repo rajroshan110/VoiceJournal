@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +49,7 @@ fun TagsScreen(
     val colors = AppTheme.colors
 
     var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
-    var isSearchVisible by remember { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
 
     // System Back Press handling across 3 hierarchy levels
     BackHandler(enabled = uiState.selectedTag != null || uiState.selectedCategory != null || isSearchVisible) {
@@ -389,7 +390,7 @@ fun TagsScreen(
 
     // Create Tag Dialog
     if (uiState.isCreateTagDialogOpen && selectedCategory != null) {
-        var tagNameInput by remember { mutableStateOf("") }
+        var tagNameInput by rememberSaveable { mutableStateOf("") }
         val categoryLabel = if (selectedCategory == TagType.TOPIC) "Topic" else "Person"
 
         AlertDialog(

@@ -36,9 +36,9 @@ import dev.voicejournal.ui.theme.AppTheme
 fun SettingsHomeScreen(
     onBackClick: () -> Unit,
     viewModel: SettingsViewModel,
+    uiState: SettingsUiState,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val colors = AppTheme.colors
     val focusManager = LocalFocusManager.current
     val configuration = LocalConfiguration.current
