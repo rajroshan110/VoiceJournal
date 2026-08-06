@@ -30,7 +30,8 @@ fun SettingsScreen(
 
     SettingsHomeScreen(
         onBackClick = { navController.popBackStack() },
-        viewModel = viewModel
+        viewModel = viewModel,
+        uiState = uiState
     )
 
     // Modal Progress Overlay during Database Wipe

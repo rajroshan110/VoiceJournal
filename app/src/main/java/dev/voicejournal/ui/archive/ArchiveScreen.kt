@@ -41,7 +41,7 @@ fun ArchiveScreen(
     viewModel: ArchiveViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectionState by viewModel.selectionState.collectAsState()
+    val selectionState by viewModel.selectionState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
     var isSearchVisible by remember { mutableStateOf(false) }

@@ -148,7 +148,6 @@ app/src/main/java/dev/voicejournal/
 ├── MainActivity.kt                      # Single activity entry point
 ├── VoiceApp.kt                          # Hilt Application class
 ├── audio/                               # Low-level audio recording & playback system
-│   ├── AmplitudeExtractor.kt            # Extracts peak amplitude values for waveforms
 │   ├── AudioFileRepair.kt               # Validates & repairs corrupted WAV file headers
 │   ├── AudioFocusManager.kt             # Handles Android system audio focus requests
 │   ├── AudioPlaybackService.kt          # Foreground service for continuous playback
