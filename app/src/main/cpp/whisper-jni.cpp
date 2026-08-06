@@ -75,13 +75,15 @@ Java_dev_voicejournal_transcription_WhisperLib_initContext(JNIEnv *env, jobject 
 
     whisper_context_params cparams = whisper_context_default_params();
     struct whisper_context *ctx = whisper_init_from_file_with_params(path, cparams);
+    
+    std::string path_str(path);
     env->ReleaseStringUTFChars(model_path, path);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 
     if (ctx == nullptr) {
-        LOGE("Failed to initialize whisper_context from file: %s (Time: %lld ms)", path, (long long)duration_ms);
+        LOGE("Failed to initialize whisper_context from file: %s (Time: %lld ms)", path_str.c_str(), (long long)duration_ms);
     } else {
         LOGI("Successfully initialized whisper_context ptr: %p (Load Time: %lld ms)", ctx, (long long)duration_ms);
     }
@@ -262,7 +264,7 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_dev_voicejournal_transcription_WhisperLib_freeContext(JNIEnv *env, jobject thiz, jstring context_ptr) {
+Java_dev_voicejournal_transcription_WhisperLib_freeContext(JNIEnv *env, jobject thiz, jlong context_ptr) {
     struct whisper_context *ctx = reinterpret_cast<struct whisper_context *>(context_ptr);
     if (ctx != nullptr) {
         LOGI("freeContext freeing ptr: %p", ctx);
