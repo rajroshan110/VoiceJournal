@@ -60,3 +60,5 @@ secrets.properties
 
 #documents and notes
 notes/
+
+.agents/
