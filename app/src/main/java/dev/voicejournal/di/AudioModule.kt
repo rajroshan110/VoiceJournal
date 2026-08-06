@@ -6,7 +6,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import dev.voicejournal.audio.AmplitudeExtractor
 import dev.voicejournal.audio.AudioFocusManager
 import dev.voicejournal.audio.AudioPlayerManager
 import dev.voicejournal.audio.AudioRecorderManager
@@ -32,11 +31,5 @@ object AudioModule {
     @Singleton
     fun provideAudioPlayerManager(@ApplicationContext context: Context): AudioPlayerManager {
         return AudioPlayerManager(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideAmplitudeExtractor(): AmplitudeExtractor {
-        return AmplitudeExtractor()
     }
 }

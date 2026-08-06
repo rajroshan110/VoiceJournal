@@ -4,12 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
 
 object PermissionUtils {
     fun getRequiredPermissions(): Array<String> {
@@ -32,24 +27,4 @@ object PermissionUtils {
     }
 }
 
-@Composable
-fun RequestAppPermissions(
-    onPermissionsResult: (Boolean) -> Unit
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        val allGranted = results.values.all { it }
-        onPermissionsResult(allGranted)
-    }
-
-    SideEffect {
-        if (!PermissionUtils.hasAllPermissions(context)) {
-            launcher.launch(PermissionUtils.getRequiredPermissions())
-        } else {
-            onPermissionsResult(true)
-        }
-    }
-}
