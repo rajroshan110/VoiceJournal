@@ -360,7 +360,7 @@ fun JournalScreen(
                             shape = RoundedCornerShape(24.dp),
                             modifier = Modifier.minimumInteractiveComponentSize()
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
+                            Icon(Icons.Default.Add, contentDescription = "Create new entry")
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Record Your First Note")
                         }
