@@ -1,11 +1,13 @@
 package dev.voicejournal.ui.navigation
 
+import android.net.Uri
+
 sealed class Screen(val route: String) {
     object Journal : Screen("Journal?person={person}&tag={tag}") {
         fun createRoute(person: String? = null, tag: String? = null): String {
             val params = mutableListOf<String>()
-            if (!person.isNullOrEmpty()) params.add("person=$person")
-            if (!tag.isNullOrEmpty()) params.add("tag=$tag")
+            if (!person.isNullOrEmpty()) params.add("person=${Uri.encode(person)}")
+            if (!tag.isNullOrEmpty()) params.add("tag=${Uri.encode(tag)}")
             return if (params.isNotEmpty()) "Journal?${params.joinToString("&")}" else "Journal"
         }
     }
@@ -25,9 +27,9 @@ sealed class Screen(val route: String) {
             initialTagType: String? = null
         ): String {
             val params = mutableListOf<String>()
-            if (!initialFolder.isNullOrEmpty()) params.add("initialFolder=$initialFolder")
-            if (!initialTag.isNullOrEmpty()) params.add("initialTag=$initialTag")
-            if (!initialTagType.isNullOrEmpty()) params.add("initialTagType=$initialTagType")
+            if (!initialFolder.isNullOrEmpty()) params.add("initialFolder=${Uri.encode(initialFolder)}")
+            if (!initialTag.isNullOrEmpty()) params.add("initialTag=${Uri.encode(initialTag)}")
+            if (!initialTagType.isNullOrEmpty()) params.add("initialTagType=${Uri.encode(initialTagType)}")
             return if (params.isNotEmpty()) "NoteDetail/$entryId?${params.joinToString("&")}" else "NoteDetail/$entryId"
         }
     }
