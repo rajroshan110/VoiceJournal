@@ -861,19 +861,21 @@ class NoteDetailViewModel @Inject constructor(
         }
     }
 
-    private fun saveAudioToInternalStorage(uriString: String): File? {
-        return try {
-            val uri = android.net.Uri.parse(uriString)
-            val destFile = MediaStorageManager.generateRecordingFile(context, "m4a")
+    private suspend fun saveAudioToInternalStorage(uriString: String): File? {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val uri = android.net.Uri.parse(uriString)
+                val destFile = dev.voicejournal.data.storage.MediaStorageManager.generateRecordingFile(context, ".m4a")
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                destFile.outputStream().use { output ->
-                    input.copyTo(output)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
+                destFile
+            } catch (e: Exception) {
+                null
             }
-            destFile
-        } catch (e: Exception) {
-            null
         }
     }
 
