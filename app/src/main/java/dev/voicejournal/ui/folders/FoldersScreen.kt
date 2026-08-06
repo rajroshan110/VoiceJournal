@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,7 +51,7 @@ fun FoldersScreen(
     val colors = AppTheme.colors
 
     var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
-    var isSearchVisible by remember { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
 
     // Handle system back button to exit selected folder first, or navigate back
     BackHandler(enabled = uiState.selectedFolder != null || isSearchVisible) {
@@ -329,7 +330,7 @@ fun FoldersScreen(
 
     // Create Folder Dialog
     if (uiState.isCreateFolderDialogOpen) {
-        var folderNameInput by remember { mutableStateOf("") }
+        var folderNameInput by rememberSaveable { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { viewModel.setCreateFolderDialogOpen(false) },

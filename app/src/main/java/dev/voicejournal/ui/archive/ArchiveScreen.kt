@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,8 +45,8 @@ fun ArchiveScreen(
     val selectionState by viewModel.selectionState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
-    var isSearchVisible by remember { mutableStateOf(false) }
-    var showUnarchiveConfirmDialog by remember { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
+    var showUnarchiveConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selectionState.isSelectionMode || isSearchVisible) {
