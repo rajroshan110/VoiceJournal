@@ -91,7 +91,7 @@ class TagsViewModel @Inject constructor(
         val explicitTopics = allTags.filter { it.type == TagType.TOPIC }
         val entryTopics = allEntries.flatMap { entry -> entry.tags.filter { it.type == TagType.TOPIC } }
         val allTopicsByName = (explicitTopics + entryTopics)
-            .distinctBy { it.name.lowercase() }
+            .distinctBy { it.id }
             .sortedBy { it.name }
 
         val topicItems = allTopicsByName.map { tag ->
@@ -115,7 +115,7 @@ class TagsViewModel @Inject constructor(
         val explicitPeople = allTags.filter { it.type == TagType.PERSON }
         val entryPeople = allEntries.flatMap { entry -> entry.tags.filter { it.type == TagType.PERSON } }
         val allPeopleByName = (explicitPeople + entryPeople)
-            .distinctBy { it.name.lowercase() }
+            .distinctBy { it.id }
             .sortedBy { it.name }
 
         val personItems = allPeopleByName.map { tag ->

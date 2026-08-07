@@ -98,7 +98,7 @@ class FoldersViewModel @Inject constructor(
         }
 
         val allFolderTagsByName = (explicitFolderTags + entryFolderTags)
-            .distinctBy { it.name.lowercase() }
+            .distinctBy { it.id }
             .sortedBy { it.name }
 
         val folderItems = allFolderTagsByName.map { folderTag ->
