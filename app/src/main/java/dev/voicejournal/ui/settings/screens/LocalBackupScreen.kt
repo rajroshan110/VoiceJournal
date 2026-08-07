@@ -8,11 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.settings.SettingsUiState
@@ -180,6 +182,28 @@ fun LocalBackupScreen(
                     color = colors.textSecondary,
                     fontSize = 12.sp
                 )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Security Warning
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Warning",
+                        tint = colors.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Backups are unencrypted. Store them securely.",
+                        color = colors.error,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (uiState.isExporting || uiState.isImporting) {
@@ -207,7 +231,7 @@ fun LocalBackupScreen(
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export Backup", fontSize = 13.sp)
+                            Text("Export (Unencrypted ZIP)", fontSize = 11.sp, maxLines = 1)
                         }
 
                         OutlinedButton(

@@ -63,9 +63,17 @@ object MediaStorageManager {
         return File(context.cacheDir, DIR_TRANSCRIBE_CACHE).apply { if (!exists()) mkdirs() }
     }
     
-    // Check if path is internal
+    // Check if path is internal and strictly within app storage
     fun isInternalMedia(context: Context, path: String): Boolean {
-        return path.startsWith("/") || path.startsWith(context.filesDir.absolutePath) || path.startsWith(context.cacheDir.absolutePath)
+        return try {
+            val file = File(path)
+            val canonicalPath = file.canonicalPath
+            val filesCanonical = context.filesDir.canonicalPath
+            val cacheCanonical = context.cacheDir.canonicalPath
+            canonicalPath.startsWith(filesCanonical) || canonicalPath.startsWith(cacheCanonical)
+        } catch (e: Exception) {
+            false
+        }
     }
 
     // Completely clear all generated media

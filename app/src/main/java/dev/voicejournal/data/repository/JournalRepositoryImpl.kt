@@ -225,22 +225,62 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun permanentlyDeleteEntries(ids: List<Long>) {
         if (ids.isEmpty()) return
+        
+        val pathsToDelete = mutableListOf<String>()
+        
         appDatabase.withTransaction {
             ids.forEach { id ->
+                // Collect media paths before deletion
+                val entryWithDetails = journalEntryDao.getEntryByIdSync(id)
+                if (entryWithDetails != null) {
+                    val entry = entryWithDetails.entry
+                    if (entry.audioPath.isNotBlank()) pathsToDelete.add(entry.audioPath)
+                    
+                    val tracksJson = entry.audioTracksJson
+                    if (!tracksJson.isNullOrBlank()) {
+                        try {
+                            val array = org.json.JSONArray(tracksJson)
+                            for (i in 0 until array.length()) {
+                                val path = array.optJSONObject(i)?.optString("path")
+                                if (!path.isNullOrBlank()) pathsToDelete.add(path)
+                            }
+                        } catch (e: Exception) {}
+                    }
+                    
+                    entryWithDetails.images.forEach { image ->
+                        if (image.imagePath.isNotBlank()) pathsToDelete.add(image.imagePath)
+                    }
+                }
+                
                 journalEntryDao.deleteEntryTagCrossRefs(id)
                 entryImageDao.deleteEntryImages(id)
                 journalEntryDao.deleteEntry(id)
             }
         }
+        
+        // Safely delete collected files
+        withContext(Dispatchers.IO) {
+            pathsToDelete.forEach { path ->
+                if (MediaStorageManager.isInternalMedia(context, path)) {
+                    try {
+                        val file = File(path)
+                        if (file.exists()) file.delete()
+                    } catch (e: Exception) {}
+                }
+            }
+        }
     }
 
     override suspend fun emptyTrash() {
-        journalEntryDao.deleteAllTrashEntries()
+        // Fetch all trash entry IDs first so their media is deleted
+        val trashIds = journalEntryDao.getAllTrashEntryIds()
+        permanentlyDeleteEntries(trashIds)
     }
 
     override suspend fun purgeExpiredTrashEntries(retentionDays: Int) {
         val threshold = System.currentTimeMillis() - (retentionDays * 24 * 60 * 60 * 1000L)
-        journalEntryDao.deleteExpiredTrashEntries(threshold)
+        val expiredIds = journalEntryDao.getExpiredTrashEntryIds(threshold)
+        permanentlyDeleteEntries(expiredIds)
     }
 
     override suspend fun wipeAllData() {

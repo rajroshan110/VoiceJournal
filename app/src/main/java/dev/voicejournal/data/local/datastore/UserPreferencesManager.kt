@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dev.voicejournal.data.security.KeyStoreHelper
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
 import dev.voicejournal.domain.model.AudioFormat
@@ -43,7 +44,8 @@ class UserPreferencesManager @Inject constructor(
         val START_OF_WEEK = stringPreferencesKey("start_of_week")
         val APP_LOCK_MODE = stringPreferencesKey("app_lock_mode")
         val APP_LOCK_TIMEOUT = stringPreferencesKey("app_lock_timeout")
-        val CUSTOM_PIN = stringPreferencesKey("custom_pin")
+        val CUSTOM_PIN = stringPreferencesKey("custom_pin") // Legacy plaintext PIN
+        val CUSTOM_PIN_ENCRYPTED = stringPreferencesKey("custom_pin_encrypted")
         val IS_SCREEN_PRIVACY_ENABLED = booleanPreferencesKey("is_screen_privacy_enabled")
         val IS_SPEECH_TO_TEXT_ENABLED = booleanPreferencesKey("is_speech_to_text_enabled")
     }
@@ -143,7 +145,12 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val customPin: Flow<String?> = dataStore.data.map { prefs ->
-        prefs[CUSTOM_PIN]
+        val encrypted = prefs[CUSTOM_PIN_ENCRYPTED]
+        if (encrypted != null) {
+            KeyStoreHelper.decrypt(encrypted)
+        } else {
+            prefs[CUSTOM_PIN] // Legacy plaintext
+        }
     }
 
     val isScreenPrivacyEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -235,8 +242,20 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setCustomPin(pin: String?) {
         dataStore.edit { prefs ->
             if (pin != null) {
-                prefs[CUSTOM_PIN] = pin
+                val encrypted = KeyStoreHelper.encrypt(pin)
+                prefs[CUSTOM_PIN_ENCRYPTED] = encrypted
+                prefs.remove(CUSTOM_PIN)
             } else {
+                prefs.remove(CUSTOM_PIN_ENCRYPTED)
+                prefs.remove(CUSTOM_PIN)
+            }
+        }
+    }
+
+    suspend fun migratePinIfNeeded(verifiedPin: String) {
+        dataStore.edit { prefs ->
+            if (prefs.contains(CUSTOM_PIN)) {
+                prefs[CUSTOM_PIN_ENCRYPTED] = KeyStoreHelper.encrypt(verifiedPin)
                 prefs.remove(CUSTOM_PIN)
             }
         }

@@ -22,7 +22,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EntryImageEntity::class
     ],
     version = 8,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun journalEntryDao(): JournalEntryDao

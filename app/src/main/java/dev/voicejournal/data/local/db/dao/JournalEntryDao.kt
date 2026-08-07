@@ -56,6 +56,10 @@ interface JournalEntryDao {
     fun getEntryById(id: Long): Flow<EntryWithTagsAndImages?>
 
     @Transaction
+    @Query("SELECT * FROM journal_entries WHERE id = :id")
+    suspend fun getEntryByIdSync(id: Long): EntryWithTagsAndImages?
+
+    @Transaction
     @Query("SELECT * FROM journal_entries WHERE uuid = :uuid")
     fun getEntryByUuid(uuid: String): Flow<EntryWithTagsAndImages?>
 
@@ -109,8 +113,14 @@ interface JournalEntryDao {
     @Query("DELETE FROM journal_entries WHERE deletedAt IS NOT NULL")
     suspend fun deleteAllTrashEntries()
 
-    @Query("DELETE FROM journal_entries WHERE deletedAt IS NOT NULL AND deletedAt <= :thresholdTime")
+    @Query("SELECT id FROM journal_entries WHERE deletedAt IS NOT NULL")
+    suspend fun getAllTrashEntryIds(): List<Long>
+
+    @Query("DELETE FROM journal_entries WHERE deletedAt IS NOT NULL AND deletedAt < :thresholdTime")
     suspend fun deleteExpiredTrashEntries(thresholdTime: Long)
+
+    @Query("SELECT id FROM journal_entries WHERE deletedAt IS NOT NULL AND deletedAt < :thresholdTime")
+    suspend fun getExpiredTrashEntryIds(thresholdTime: Long): List<Long>
 
     @Query("DELETE FROM journal_entries")
     suspend fun deleteAllJournalEntries()

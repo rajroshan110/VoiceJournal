@@ -45,18 +45,14 @@ class BackupRestorer(
     ): RestoreStats {
         val copiedMediaFiles = mutableListOf<File>()
 
-        try {
-            // 1. Prepare Internal Media Directories & Clear Existing Media for Replace Restore
-            onProgress?.invoke("Restoring media…")
-            val audioDir = File(context.filesDir, "audio").apply { if (!exists()) mkdirs() }
-            val imagesDir = File(context.filesDir, "images").apply { if (!exists()) mkdirs() }
+        val stagingAudioDir = File(context.filesDir, "audio_staging_${System.currentTimeMillis()}")
+        val stagingImagesDir = File(context.filesDir, "images_staging_${System.currentTimeMillis()}")
 
-            audioDir.listFiles()?.forEach { file ->
-                if (file.isFile) file.delete()
-            }
-            imagesDir.listFiles()?.forEach { file ->
-                if (file.isFile) file.delete()
-            }
+        try {
+            // 1. Prepare Internal Media Directories for Staged Restore
+            onProgress?.invoke("Restoring media…")
+            stagingAudioDir.mkdirs()
+            stagingImagesDir.mkdirs()
 
             val attachmentsByEntryUuid = attachments.groupBy { it.entryUuid }
             val mediaPathMap = mutableMapOf<String, String>() // attachmentUuid -> canonical absolute target path
@@ -64,18 +60,23 @@ class BackupRestorer(
             attachments.forEach { att ->
                 val sourceFile = File(stagingDir, att.archivePath)
                 if (sourceFile.exists()) {
-                    val subFolder = if (att.type == "image") "images" else "audio"
-                    val ext = sourceFile.extension.ifBlank { if (att.type == "image") "jpg" else "wav" }
-                    val targetFile = File(context.filesDir, "$subFolder/${att.uuid}.$ext")
-                    targetFile.parentFile?.mkdirs()
-
-                    sourceFile.copyTo(targetFile, overwrite = true)
-                    copiedMediaFiles.add(targetFile)
-                    // Store canonical absolute path matching freshly created files
-                    mediaPathMap[att.uuid] = targetFile.absolutePath
+                    val isImage = att.type == "image"
+                    val subFolder = if (isImage) "images" else "audio"
+                    val ext = sourceFile.extension.ifBlank { if (isImage) "jpg" else "wav" }
+                    
+                    // Copy to staging directory
+                    val targetStagingDir = if (isImage) stagingImagesDir else stagingAudioDir
+                    val stagingFile = File(targetStagingDir, "${att.uuid}.$ext")
+                    sourceFile.copyTo(stagingFile, overwrite = true)
+                    
+                    // Calculate the FINAL active path for the database
+                    val finalActiveFile = File(context.filesDir, "$subFolder/${att.uuid}.$ext")
+                    mediaPathMap[att.uuid] = finalActiveFile.absolutePath
+                    
+                    copiedMediaFiles.add(stagingFile)
                 }
             }
-            Log.d("Backup", "Media restored: ${copiedMediaFiles.size}")
+            Log.d("Backup", "Media staged: ${copiedMediaFiles.size}")
 
             // 2. Perform Single Room Database Transaction (Replace Restore)
             onProgress?.invoke("Restoring notes…")
@@ -222,7 +223,19 @@ class BackupRestorer(
             }
             Log.d("Backup", "Database replaced")
 
-            // 3. Restore DataStore Preferences (Excluding Credentials)
+            // 3. Swap Staging Directories to Active
+            val audioDir = File(context.filesDir, "audio")
+            val imagesDir = File(context.filesDir, "images")
+            
+            // Delete old active directories
+            if (audioDir.exists()) audioDir.deleteRecursively()
+            if (imagesDir.exists()) imagesDir.deleteRecursively()
+            
+            // Rename staging to active
+            stagingAudioDir.renameTo(audioDir)
+            stagingImagesDir.renameTo(imagesDir)
+
+            // 4. Restore DataStore Preferences (Excluding Credentials)
             if (preferences != null) {
                 onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
@@ -236,12 +249,9 @@ class BackupRestorer(
                 mediaFilesRestored = copiedMediaFiles.size
             )
         } catch (e: Exception) {
-            // Atomic Rollback: Delete any newly copied media files
-            copiedMediaFiles.forEach { file ->
-                if (file.exists()) {
-                    try { file.delete() } catch (_: Exception) {}
-                }
-            }
+            // Atomic Rollback: Delete the staging directories
+            if (stagingAudioDir.exists()) stagingAudioDir.deleteRecursively()
+            if (stagingImagesDir.exists()) stagingImagesDir.deleteRecursively()
             throw e
         }
     }

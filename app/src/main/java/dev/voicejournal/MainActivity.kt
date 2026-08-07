@@ -127,7 +127,12 @@ class MainActivity : FragmentActivity() {
                         } else if (activeMode == AppLockMode.CUSTOM_PIN) {
                             CustomPinLockScreen(
                                 correctPin = customPin ?: "",
-                                onUnlocked = { isAppUnlocked = true }
+                                onUnlocked = { verifiedPin ->
+                                    lifecycleScope.launch {
+                                        userPreferencesManager.migratePinIfNeeded(verifiedPin)
+                                    }
+                                    isAppUnlocked = true 
+                                }
                             )
                         }
                     }
@@ -254,11 +259,24 @@ fun BiometricLockScreen(
 @Composable
 fun CustomPinLockScreen(
     correctPin: String,
-    onUnlocked: () -> Unit
+    onUnlocked: (String) -> Unit
 ) {
     val colors = AppTheme.colors
     var enteredPin by rememberSaveable { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
+    var failedAttempts by rememberSaveable { mutableStateOf(0) }
+    var lockoutEndTime by rememberSaveable { mutableStateOf(0L) }
+    var remainingLockout by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(lockoutEndTime) {
+        while (lockoutEndTime > System.currentTimeMillis()) {
+            remainingLockout = lockoutEndTime - System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000)
+        }
+        remainingLockout = 0L
+    }
+
+    val isLockedOut = remainingLockout > 0
 
     Column(
         modifier = Modifier
@@ -287,8 +305,10 @@ fun CustomPinLockScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (isError) "Incorrect PIN. Try again." else "Enter your 4-digit security PIN",
-            color = if (isError) colors.error else colors.textSecondary,
+            text = if (isLockedOut) "Too many attempts. Try again in ${remainingLockout / 1000}s" 
+                   else if (isError) "Incorrect PIN. Try again." 
+                   else "Enter your 4-digit security PIN",
+            color = if (isError || isLockedOut) colors.error else colors.textSecondary,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
@@ -332,6 +352,8 @@ fun CustomPinLockScreen(
                         } else {
                             Surface(
                                 onClick = {
+                                    if (isLockedOut) return@Surface
+                                    
                                     if (key == "⌫") {
                                         if (enteredPin.isNotEmpty()) {
                                             enteredPin = enteredPin.dropLast(1)
@@ -342,10 +364,15 @@ fun CustomPinLockScreen(
                                         isError = false
                                         if (enteredPin.length == 4) {
                                             if (enteredPin == correctPin) {
-                                                onUnlocked()
+                                                failedAttempts = 0
+                                                onUnlocked(enteredPin)
                                             } else {
                                                 isError = true
                                                 enteredPin = ""
+                                                failedAttempts++
+                                                if (failedAttempts >= 5) {
+                                                    lockoutEndTime = System.currentTimeMillis() + 30000L
+                                                }
                                             }
                                         }
                                     }
