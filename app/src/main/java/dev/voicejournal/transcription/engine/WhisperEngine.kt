@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import dev.voicejournal.BuildConfig
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,15 +28,20 @@ class WhisperEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) : SpeechToTextEngine {
 
-    private val TAG = "WhisperEngine"
-    private val PERF_TAG = "WhisperPerf"
+    companion object {
+        private const val TAG = "WhisperEngine"
+        private const val PERF_TAG = "WhisperPerf"
+        // TODO: The developer must provide the verified SHA-256 for ggml-base-q5_1.bin here
+        private const val WHISPER_MODEL_EXPECTED_SHA256 = "TODO_DEVELOPER_INSERT_SHA256_HERE"
+
+        private val MODEL_URLS = listOf(
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
+            "https://github.com/ggerganov/whisper.cpp/raw/master/models/ggml-base-q5_1.bin"
+        )
+    }
 
     // Quantized 5-bit Multilingual Model (~59.7 MB, supports English & Hindi)
     private val modelFile = File(context.filesDir, "models/ggml-base-q5_1.bin")
-    private val MODEL_URLS = listOf(
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
-        "https://huggingface.co/datasets/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"
-    )
     private val MODEL_NAME = "Whisper Base Q5 (Bilingual)"
     private val MODEL_VERSION = "1.0-q5_1"
 
@@ -50,9 +57,24 @@ class WhisperEngine @Inject constructor(
     override val isModelDownloaded: StateFlow<Boolean> = _isModelDownloaded.asStateFlow()
 
     private fun isModelValid(file: File): Boolean {
+        // Only do a basic size check for existing models since hashing on every startup is slow.
+        // Hashing is strictly enforced post-download before it becomes the production model.
         val valid = file.exists() && file.length() > 25_000_000L
         Log.d(TAG, "isModelValid for ${file.absolutePath}: $valid (size=${file.length()} bytes)")
         return valid
+    }
+
+    private fun calculateSha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { fis ->
+            val buffer = ByteArray(8192)
+            var bytesRead = fis.read(buffer)
+            while (bytesRead != -1) {
+                digest.update(buffer, 0, bytesRead)
+                bytesRead = fis.read(buffer)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     override fun isModelDownloadedSync(): Boolean {
@@ -92,70 +114,89 @@ class WhisperEngine @Inject constructor(
                 var redirects = 0
                 val maxRedirects = 5
 
-                while (redirects < maxRedirects) {
-                    val url = URL(currentUrl)
-                    connection = url.openConnection() as HttpURLConnection
-                    connection.connectTimeout = 15000
-                    connection.readTimeout = 30000
-                    connection.instanceFollowRedirects = true
-                    connection.setRequestProperty(
-                        "User-Agent",
-                        "Mozilla/5.0 (Android; Mobile; rv:109.0) Gecko/109.0 Firefox/115.0"
-                    )
-
-                    val status = connection.responseCode
-                    Log.d(TAG, "HTTP status $status for $currentUrl")
-                    if (status in 300..399) {
-                        val newUrl = connection.getHeaderField("Location")
-                        connection.disconnect()
-                        if (!newUrl.isNullOrEmpty()) {
-                            Log.d(TAG, "Redirecting to: $newUrl")
-                            currentUrl = newUrl
-                            redirects++
-                            continue
+                try {
+                    while (redirects < maxRedirects) {
+                        val url = URL(currentUrl)
+                        connection = url.openConnection() as HttpURLConnection
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 30000
+                        connection.instanceFollowRedirects = true
+                        connection.setRequestProperty(
+                            "User-Agent",
+                            "Mozilla/5.0 (Android; Mobile; rv:109.0) Gecko/109.0 Firefox/115.0"
+                        )
+    
+                        val status = connection.responseCode
+                        Log.d(TAG, "HTTP status $status for $currentUrl")
+                        if (status in 300..399) {
+                            val newUrl = connection.getHeaderField("Location")
+                            connection.disconnect()
+                            if (!newUrl.isNullOrEmpty()) {
+                                Log.d(TAG, "Redirecting to: $newUrl")
+                                currentUrl = newUrl
+                                redirects++
+                                continue
+                            }
+                        }
+                        break
+                    }
+    
+                    val finalConn = connection ?: continue
+                    val responseCode = finalConn.responseCode
+                    if (responseCode !in 200..299) {
+                        Log.e(TAG, "Failed HTTP download with code $responseCode")
+                        continue
+                    }
+    
+                    val fileLength = finalConn.contentLengthLong
+                    Log.d(TAG, "Download started, expected size: $fileLength bytes")
+    
+                    finalConn.inputStream.use { input ->
+                        FileOutputStream(tempFile).use { output ->
+                            val data = ByteArray(16384)
+                            var total: Long = 0
+                            var count: Int
+                            while (input.read(data).also { count = it } != -1) {
+                                total += count
+                                if (fileLength > 0) {
+                                    _downloadProgress.value = (total.toFloat() / fileLength.toFloat()).coerceIn(0f, 1f)
+                                }
+                                output.write(data, 0, count)
+                            }
+                            output.flush()
                         }
                     }
-                    break
+                } finally {
+                    connection?.disconnect()
                 }
-
-                val finalConn = connection ?: continue
-                val responseCode = finalConn.responseCode
-                if (responseCode !in 200..299) {
-                    Log.e(TAG, "Failed HTTP download with code $responseCode")
-                    finalConn.disconnect()
-                    continue
-                }
-
-                val fileLength = finalConn.contentLengthLong
-                Log.d(TAG, "Download started, expected size: $fileLength bytes")
-
-                val input = finalConn.getInputStream()
-                val output = FileOutputStream(tempFile)
-
-                val data = ByteArray(16384)
-                var total: Long = 0
-                var count: Int
-                while (input.read(data).also { count = it } != -1) {
-                    total += count
-                    if (fileLength > 0) {
-                        _downloadProgress.value = (total.toFloat() / fileLength.toFloat()).coerceIn(0f, 1f)
-                    }
-                    output.write(data, 0, count)
-                }
-                output.flush()
-                output.close()
-                input.close()
-                finalConn.disconnect()
 
                 Log.d(TAG, "Finished downloading temp file size: ${tempFile.length()} bytes")
 
                 if (tempFile.exists() && tempFile.length() > 25_000_000L) {
+                    val actualSha = calculateSha256(tempFile)
+
+                    if (WHISPER_MODEL_EXPECTED_SHA256 == "TODO_DEVELOPER_INSERT_SHA256_HERE") {
+                        if (BuildConfig.DEBUG) {
+                            Log.w(TAG, "Skipping SHA-256 validation because the developer has not provided the trusted hash yet. Actual SHA-256: $actualSha")
+                        } else {
+                            throw Exception("SHA-256 verification failed! Release builds cannot bypass integrity checks with a placeholder constant. Provide the actual SHA-256.")
+                        }
+                    } else if (actualSha != WHISPER_MODEL_EXPECTED_SHA256) {
+                        throw Exception("SHA-256 verification failed! Expected $WHISPER_MODEL_EXPECTED_SHA256, got $actualSha")
+                    }
+                    
                     if (modelFile.exists()) modelFile.delete()
-                    tempFile.renameTo(modelFile)
-                    _isModelDownloaded.value = true
-                    _downloadProgress.value = null
-                    Log.d(TAG, "Successfully saved Q5_1 model to ${modelFile.absolutePath}")
-                    return@withContext true
+                    val renamed = tempFile.renameTo(modelFile)
+                    if (renamed) {
+                        _isModelDownloaded.value = true
+                        _downloadProgress.value = null
+                        Log.d(TAG, "Successfully saved Q5_1 model to ${modelFile.absolutePath}")
+                        return@withContext true
+                    } else {
+                        throw Exception("Failed to rename temporary model file.")
+                    }
+                } else {
+                    throw Exception("Downloaded file is too small or does not exist.")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error downloading model from $urlStr: ${e.message}", e)

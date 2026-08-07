@@ -31,11 +31,6 @@
         </activity>
 
         <service
-            android:name=".service.RecordingForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
-        <service
             android:name=".audio.AudioPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />

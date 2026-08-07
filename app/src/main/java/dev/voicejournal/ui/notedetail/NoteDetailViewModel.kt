@@ -393,7 +393,9 @@ class NoteDetailViewModel @Inject constructor(
         initialTagType: String? = null
     ) {
         audioPlayerManager.stop()
-        audioRecorderManager.cancelRecording()
+        viewModelScope.launch {
+            audioRecorderManager.cancelRecording()
+        }
         pausedRecordingAccumulatedMs = 0L
         pendingFileDeletions.clear()
         pendingFileAdditions.clear()
@@ -539,48 +541,54 @@ class NoteDetailViewModel @Inject constructor(
     fun saveCurrentRecordingTrack(onLimitReached: () -> Unit) {
         val currentTracks = _uiState.value.audioTracks
         if (currentTracks.size >= 3) {
-            audioRecorderManager.cancelRecording()
-            pausedRecordingAccumulatedMs = 0L
-            _uiState.value = _uiState.value.copy(micFabState = MicFabState.IDLE, isRecording = false)
-            onLimitReached()
+            viewModelScope.launch {
+                audioRecorderManager.cancelRecording()
+                pausedRecordingAccumulatedMs = 0L
+                _uiState.value = _uiState.value.copy(micFabState = MicFabState.IDLE, isRecording = false)
+                onLimitReached()
+            }
             return
         }
 
-        val resultFile = audioRecorderManager.stopRecording()
-        val totalDur = _uiState.value.recordingDurationMs
-        pausedRecordingAccumulatedMs = 0L
+        viewModelScope.launch {
+            val resultFile = audioRecorderManager.stopRecording()
+            val totalDur = _uiState.value.recordingDurationMs
+            pausedRecordingAccumulatedMs = 0L
 
-        if (resultFile != null && resultFile.exists() && resultFile.length() > 0L) {
-            val newTrack = AudioTrack(
-                path = resultFile.absolutePath,
-                durationMs = if (totalDur > 0) totalDur else 1000L
-            )
-            pendingFileAdditions.add(resultFile.absolutePath)
-            val updatedTracks = (currentTracks + newTrack).take(3)
-            _uiState.value = _uiState.value.copy(
-                audioTracks = updatedTracks,
-                micFabState = MicFabState.IDLE,
-                isRecording = false,
-                recordingDurationMs = 0L
-            )
-            updateUnsavedChangesState()
-        } else {
-            _uiState.value = _uiState.value.copy(
-                micFabState = MicFabState.IDLE,
-                isRecording = false,
-                recordingDurationMs = 0L
-            )
+            if (resultFile != null && resultFile.exists() && resultFile.length() > 0L) {
+                val newTrack = AudioTrack(
+                    path = resultFile.absolutePath,
+                    durationMs = if (totalDur > 0) totalDur else 1000L
+                )
+                pendingFileAdditions.add(resultFile.absolutePath)
+                val updatedTracks = (currentTracks + newTrack).take(3)
+                _uiState.value = _uiState.value.copy(
+                    audioTracks = updatedTracks,
+                    micFabState = MicFabState.IDLE,
+                    isRecording = false,
+                    recordingDurationMs = 0L
+                )
+                updateUnsavedChangesState()
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    micFabState = MicFabState.IDLE,
+                    isRecording = false,
+                    recordingDurationMs = 0L
+                )
+            }
         }
     }
 
     fun discardRecordingAndReset() {
-        audioRecorderManager.cancelRecording()
-        pausedRecordingAccumulatedMs = 0L
-        _uiState.value = _uiState.value.copy(
-            micFabState = MicFabState.IDLE,
-            isRecording = false,
-            recordingDurationMs = 0L
-        )
+        viewModelScope.launch {
+            audioRecorderManager.cancelRecording()
+            pausedRecordingAccumulatedMs = 0L
+            _uiState.value = _uiState.value.copy(
+                micFabState = MicFabState.IDLE,
+                isRecording = false,
+                recordingDurationMs = 0L
+            )
+        }
     }
 
     fun togglePlaybackForTrack(track: AudioTrack) {
@@ -955,68 +963,64 @@ class NoteDetailViewModel @Inject constructor(
 
     fun saveEntryWithFeedback(onFeedback: (String) -> Unit) {
         val state = _uiState.value
-
-        var updatedTracks = state.audioTracks
-        if (state.micFabState != MicFabState.IDLE) {
-            val resultFile = audioRecorderManager.stopRecording()
-            val totalDur = state.recordingDurationMs
-            if (resultFile != null && resultFile.exists() && resultFile.length() > 0L && updatedTracks.size < 3) {
-                val newTrack = AudioTrack(path = resultFile.absolutePath, durationMs = totalDur)
-                pendingFileAdditions.add(resultFile.absolutePath)
-                updatedTracks = (updatedTracks + newTrack).take(3)
-            }
-        }
-
-        val primaryTrack = updatedTracks.firstOrNull()
-        val primaryAudioPath = primaryTrack?.path ?: ""
-        val primaryDuration = primaryTrack?.durationMs ?: 0L
-
-        val userTextToSave = RichTextHtmlSerializer.toHtml(richTextState.document)
-        val plainText = RichTextHtmlSerializer.toPlainText(richTextState.document)
-
-        val isEmpty = state.titleText.isBlank() && plainText.isBlank() && updatedTracks.isEmpty() && state.attachedImages.isEmpty()
-        if (isEmpty) {
-            onFeedback("Empty note!")
-            return
-        }
-
-        val entryToSave = JournalEntry(
-            id = if (state.entryId > 0) state.entryId else 0L,
-            createdAt = state.createdAt,
-            updatedAt = System.currentTimeMillis(),
-            title = state.titleText.ifBlank { null },
-            audioPath = primaryAudioPath,
-            audioFormat = state.audioFormat,
-            duration = primaryDuration,
-            transcript = primaryTrack?.transcript,
-            transcriptCreatedAt = primaryTrack?.transcriptCreatedAt,
-            transcriptModel = primaryTrack?.transcriptModel,
-            transcriptLanguage = primaryTrack?.transcriptLanguage,
-            transcriptVersion = primaryTrack?.transcriptVersion,
-            userText = userTextToSave,
-            moodEmoji = state.selectedMood,
-            hasTranscript = !primaryTrack?.transcript.isNullOrEmpty(),
-            tags = state.tags,
-            images = state.attachedImages.mapIndexed { index, path ->
-                EntryImage(entryId = if (state.entryId > 0) state.entryId else 0L, imagePath = path, displayOrder = index)
-            },
-            audioTracks = updatedTracks,
-            isArchived = state.entry?.isArchived ?: false,
-            isDraft = false,
-            deletedAt = state.entry?.deletedAt
-        )
-
-        // Commit files synchronously before launching coroutine to prevent
-        // onLeaveScreen() race condition from deleting saved audio files
-        val committedAdditions = pendingFileAdditions.toSet()
-        pendingFileAdditions.clear()
-        isSaving = true
-
         viewModelScope.launch {
+            var updatedTracks = state.audioTracks
+            if (state.micFabState != MicFabState.IDLE) {
+                val resultFile = audioRecorderManager.stopRecording()
+                val totalDur = state.recordingDurationMs
+                if (resultFile != null && resultFile.exists() && resultFile.length() > 0L && updatedTracks.size < 3) {
+                    val newTrack = AudioTrack(path = resultFile.absolutePath, durationMs = totalDur)
+                    pendingFileAdditions.add(resultFile.absolutePath)
+                    updatedTracks = (updatedTracks + newTrack).take(3)
+                }
+            }
+
+            val primaryTrack = updatedTracks.firstOrNull()
+            val primaryAudioPath = primaryTrack?.path ?: ""
+            val primaryDuration = primaryTrack?.durationMs ?: 0L
+
+            val userTextToSave = RichTextHtmlSerializer.toHtml(richTextState.document)
+            val plainText = RichTextHtmlSerializer.toPlainText(richTextState.document)
+
+            val isEmpty = state.titleText.isBlank() && plainText.isBlank() && updatedTracks.isEmpty() && state.attachedImages.isEmpty()
+            if (isEmpty) {
+                onFeedback("Empty note!")
+                return@launch
+            }
+
+            val entryToSave = JournalEntry(
+                id = if (state.entryId > 0) state.entryId else 0L,
+                createdAt = state.createdAt,
+                updatedAt = System.currentTimeMillis(),
+                title = state.titleText.ifBlank { null },
+                audioPath = primaryAudioPath,
+                audioFormat = state.audioFormat,
+                duration = primaryDuration,
+                transcript = primaryTrack?.transcript,
+                transcriptCreatedAt = primaryTrack?.transcriptCreatedAt,
+                transcriptModel = primaryTrack?.transcriptModel,
+                transcriptLanguage = primaryTrack?.transcriptLanguage,
+                transcriptVersion = primaryTrack?.transcriptVersion,
+                userText = userTextToSave,
+                moodEmoji = state.selectedMood,
+                hasTranscript = !primaryTrack?.transcript.isNullOrEmpty(),
+                tags = state.tags,
+                images = state.attachedImages.mapIndexed { index, path ->
+                    EntryImage(entryId = if (state.entryId > 0) state.entryId else 0L, imagePath = path, displayOrder = index)
+                },
+                audioTracks = updatedTracks,
+                isArchived = state.entry?.isArchived ?: false,
+                isDraft = false,
+                deletedAt = state.entry?.deletedAt
+            )
+
+            val committedAdditions = pendingFileAdditions.toSet()
+            pendingFileAdditions.clear()
+            isSaving = true
+
             val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
 
-            // Physically execute queued file deletions upon explicit Save
             pendingFileDeletions.forEach { path ->
                 deletePhysicalFile(path)
             }
@@ -1055,7 +1059,6 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun saveDraftOnExit(onSuccess: () -> Unit) {
-        // If a save is already in progress, just wait for it to finish
         if (isSaving) {
             onSuccess()
             return
@@ -1065,52 +1068,53 @@ class NoteDetailViewModel @Inject constructor(
             return
         }
         val state = _uiState.value
-        var updatedTracks = state.audioTracks
-        if (state.micFabState != MicFabState.IDLE) {
-            val resultFile = audioRecorderManager.stopRecording()
-            val totalDur = state.recordingDurationMs
-            if (resultFile != null && resultFile.exists() && resultFile.length() > 0L && updatedTracks.size < 3) {
-                val newTrack = AudioTrack(path = resultFile.absolutePath, durationMs = totalDur)
-                pendingFileAdditions.add(resultFile.absolutePath)
-                updatedTracks = (updatedTracks + newTrack).take(3)
-            }
-        }
-
-        val primaryTrack = updatedTracks.firstOrNull()
-        val primaryAudioPath = primaryTrack?.path ?: ""
-        val primaryDuration = primaryTrack?.durationMs ?: 0L
-        val userTextToSave = RichTextHtmlSerializer.toHtml(richTextState.document)
-
-        val entryToSave = JournalEntry(
-            id = if (state.entryId > 0) state.entryId else 0L,
-            createdAt = state.createdAt,
-            updatedAt = System.currentTimeMillis(),
-            title = state.titleText.ifBlank { null },
-            audioPath = primaryAudioPath,
-            audioFormat = state.audioFormat,
-            duration = primaryDuration,
-            transcript = primaryTrack?.transcript,
-            transcriptCreatedAt = primaryTrack?.transcriptCreatedAt,
-            transcriptModel = primaryTrack?.transcriptModel,
-            transcriptLanguage = primaryTrack?.transcriptLanguage,
-            transcriptVersion = primaryTrack?.transcriptVersion,
-            userText = userTextToSave,
-            moodEmoji = state.selectedMood,
-            hasTranscript = !primaryTrack?.transcript.isNullOrEmpty(),
-            tags = state.tags,
-            images = state.attachedImages.mapIndexed { index, path ->
-                EntryImage(entryId = if (state.entryId > 0) state.entryId else 0L, imagePath = path, displayOrder = index)
-            },
-            audioTracks = updatedTracks,
-            isArchived = false,
-            isDraft = true,
-            deletedAt = null
-        )
-
-        // Clear synchronously before coroutine to prevent onLeaveScreen race
-        pendingFileAdditions.clear()
-
+        
         viewModelScope.launch {
+            var updatedTracks = state.audioTracks
+            if (state.micFabState != MicFabState.IDLE) {
+                val resultFile = audioRecorderManager.stopRecording()
+                val totalDur = state.recordingDurationMs
+                if (resultFile != null && resultFile.exists() && resultFile.length() > 0L && updatedTracks.size < 3) {
+                    val newTrack = AudioTrack(path = resultFile.absolutePath, durationMs = totalDur)
+                    pendingFileAdditions.add(resultFile.absolutePath)
+                    updatedTracks = (updatedTracks + newTrack).take(3)
+                }
+            }
+
+            val primaryTrack = updatedTracks.firstOrNull()
+            val primaryAudioPath = primaryTrack?.path ?: ""
+            val primaryDuration = primaryTrack?.durationMs ?: 0L
+            val userTextToSave = RichTextHtmlSerializer.toHtml(richTextState.document)
+    
+            val entryToSave = JournalEntry(
+                id = if (state.entryId > 0) state.entryId else 0L,
+                createdAt = state.createdAt,
+                updatedAt = System.currentTimeMillis(),
+                title = state.titleText.ifBlank { null },
+                audioPath = primaryAudioPath,
+                audioFormat = state.audioFormat,
+                duration = primaryDuration,
+                transcript = primaryTrack?.transcript,
+                transcriptCreatedAt = primaryTrack?.transcriptCreatedAt,
+                transcriptModel = primaryTrack?.transcriptModel,
+                transcriptLanguage = primaryTrack?.transcriptLanguage,
+                transcriptVersion = primaryTrack?.transcriptVersion,
+                userText = userTextToSave,
+                moodEmoji = state.selectedMood,
+                hasTranscript = !primaryTrack?.transcript.isNullOrEmpty(),
+                tags = state.tags,
+                images = state.attachedImages.mapIndexed { index, path ->
+                    EntryImage(entryId = if (state.entryId > 0) state.entryId else 0L, imagePath = path, displayOrder = index)
+                },
+                audioTracks = updatedTracks,
+                isArchived = false,
+                isDraft = true,
+                deletedAt = null
+            )
+    
+            // Clear synchronously before coroutine to prevent onLeaveScreen race
+            pendingFileAdditions.clear()
+
             val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
 

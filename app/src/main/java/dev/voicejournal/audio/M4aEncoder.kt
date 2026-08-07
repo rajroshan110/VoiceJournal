@@ -74,10 +74,19 @@ class M4aEncoder {
         val codec = mediaCodec ?: return
         val muxer = mediaMuxer ?: return
 
+        var retryCount = 0
         while (true) {
             val encoderStatus = codec.dequeueOutputBuffer(bufferInfo, 10000)
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                if (!endOfStream) break else continue
+                if (!endOfStream) {
+                    break
+                } else {
+                    retryCount++
+                    if (retryCount > 50) {
+                        break // Safety limit to prevent infinite loop
+                    }
+                    continue
+                }
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 if (muxerStarted) throw IllegalStateException("format changed twice")
                 val newFormat = codec.outputFormat
