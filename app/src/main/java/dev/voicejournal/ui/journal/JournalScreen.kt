@@ -125,7 +125,7 @@ fun JournalScreen(
     val scope = rememberCoroutineScope()
 
     var activeSheet by rememberSaveable { mutableStateOf(ActiveSheet.NONE) }
-    var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
+    var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showCategorizeSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -158,7 +158,7 @@ fun JournalScreen(
         }
     }
 
-    var pendingNavEntryId by remember { mutableStateOf<Long?>(null) }
+    var pendingNavEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // Handle back button presses for navigation drawer, selection mode and search bar
     BackHandler(enabled = drawerState.isOpen || selectionState.isSelectionMode || uiState.isSearchActive) {

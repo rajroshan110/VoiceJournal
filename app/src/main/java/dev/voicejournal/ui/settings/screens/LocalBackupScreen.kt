@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.settings.screens
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,7 +32,7 @@ fun LocalBackupScreen(
     val colors = AppTheme.colors
     val context = LocalContext.current
 
-    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
 
     if (uiState.backupResultDialog != null) {
         androidx.compose.material3.AlertDialog(

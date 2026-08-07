@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.tags.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -106,7 +107,7 @@ fun TagCardGrid(
     onMerge: (() -> Unit)? = null
 ) {
     val colors = AppTheme.colors
-    var menuExpanded by remember { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val iconEmoji = when (tagItem.tag.type) {
         TagType.TOPIC -> "🏷️"
         TagType.PERSON -> "👤"
@@ -242,7 +243,7 @@ fun TagCardList(
     onMerge: (() -> Unit)? = null
 ) {
     val colors = AppTheme.colors
-    var menuExpanded by remember { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val iconEmoji = when (tagItem.tag.type) {
         TagType.TOPIC -> "🏷️"
         TagType.PERSON -> "👤"

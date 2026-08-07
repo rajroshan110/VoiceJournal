@@ -89,7 +89,7 @@ fun MergeItemDialog(
 ) {
     val colors = AppTheme.colors
     var selectedTarget by remember { mutableStateOf<Tag?>(targetCandidates.firstOrNull()) }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

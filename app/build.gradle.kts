@@ -103,5 +103,6 @@ dependencies {
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.8")
     debugImplementation(libs.androidx.ui.tooling)
 }

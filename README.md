@@ -215,6 +215,18 @@ Your data belongs to you.
 
 ---
 
+## Security & Architecture
+
+VoiceJournal employs a defense-in-depth approach to protect user data and ensure architectural stability:
+
+- **Keystore-Backed PIN Protection**: Access can be secured via a 4-digit PIN, heavily rate-limited (lockouts after 5 failed attempts) using standard `androidx.security.crypto` backed by the Android Keystore to prevent brute-force attacks.
+- **Transaction-Based Integrity**: Rather than relying on rigid database-level `ForeignKey` constraints (which risk catastrophic migration failures on mismatched data), VoiceJournal guarantees integrity at the application layer. All multi-step operations (tag assignment, deletion, and folder categorization) are wrapped in robust Room `withTransaction` blocks. This was an intentional architectural decision to prioritize safe upgrades over theoretical database constraints.
+- **Backup Protections**: Import and Export functionality is guarded against Zip Slip (path traversal) and Zip Bomb (decompression ratio limits and extraction size limits) attacks. Restores use a two-step staged process to ensure atomic safety, rolling back entirely if the import is corrupt.
+- **Media Deletion Safety**: Deletions are transactional. The database is only updated if physical files (images/audio) are successfully deleted from internal storage, preventing orphan records and path traversal during deletion.
+- **Whisper Integrity Verification**: The Whisper.cpp model is downloaded offline and verified against a trusted SHA-256 hash. Release builds strictly enforce this integrity check before executing the AI model.
+
+---
+
 ## Roadmap
 
 - [x] Audio recording

@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.folders.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,7 +29,7 @@ fun FolderCardGrid(
     onMerge: (() -> Unit)? = null
 ) {
     val colors = AppTheme.colors
-    var menuExpanded by remember { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     Surface(
         color = colors.surface,
@@ -167,7 +168,7 @@ fun FolderCardList(
     onMerge: (() -> Unit)? = null
 ) {
     val colors = AppTheme.colors
-    var menuExpanded by remember { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     Surface(
         color = colors.surface,
