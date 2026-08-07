@@ -20,6 +20,7 @@ import dev.voicejournal.ui.components.getTagIcon
 import dev.voicejournal.ui.theme.AppTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,10 +41,10 @@ fun BatchCategorizeSheet(
 ) {
     val colors = AppTheme.colors
 
-    var activeTab by remember { mutableStateOf(0) } // 0: Folders, 1: Topics, 2: People
+    var activeTab by rememberSaveable { mutableStateOf(0) } // 0: Folders, 1: Topics, 2: People
 
     var selectedFolder by remember(appliedFolder) { mutableStateOf<String?>(appliedFolder) }
-    var customFolderInput by remember { mutableStateOf("") }
+    var customFolderInput by rememberSaveable { mutableStateOf("") }
 
     val cleanAppliedTags = remember(appliedTagNames) {
         appliedTagNames.map { it.trim().removePrefix("#").removePrefix("@") }.toSet()

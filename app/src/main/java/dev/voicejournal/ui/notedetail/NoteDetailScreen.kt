@@ -23,8 +23,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,18 +74,18 @@ fun NoteDetailScreen(
     val context = LocalContext.current
 
     var showTagsDialog by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var datePickerTab by remember { mutableIntStateOf(0) }
     var showAddItemSheet by remember { mutableStateOf(false) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteSelectedTracksDialog by remember { mutableStateOf(false) }
-    var showArchiveConfirmDialog by remember { mutableStateOf(false) }
+    var showArchiveConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
-    var showUnsavedPromptDialog by remember { mutableStateOf(false) }
-    var showDiscardRecordingConfirmDialog by remember { mutableStateOf(false) }
+    var showUnsavedPromptDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardRecordingConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     fun handleExit() {
         if (trackSelectionState.isSelectionMode) {

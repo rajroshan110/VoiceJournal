@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -125,10 +126,10 @@ fun JournalScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    var activeSheet by remember { mutableStateOf(ActiveSheet.NONE) }
+    var activeSheet by rememberSaveable { mutableStateOf(ActiveSheet.NONE) }
     var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showCategorizeSheet by remember { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showCategorizeSheet by rememberSaveable { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
