@@ -19,8 +19,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import dev.voicejournal.ui.theme.AppTheme
 
-private val BookIcon: ImageVector
-    get() = ImageVector.Builder(
+private val BookIcon: ImageVector = ImageVector.Builder(
         name = "Book",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
@@ -48,8 +47,7 @@ private val BookIcon: ImageVector
         }
     }.build()
 
-private val CalendarIcon: ImageVector
-    get() = ImageVector.Builder(
+private val CalendarIcon: ImageVector = ImageVector.Builder(
         name = "CalendarToday",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
@@ -84,8 +82,7 @@ private val CalendarIcon: ImageVector
         }
     }.build()
 
-private val AnalyticsIcon: ImageVector
-    get() = ImageVector.Builder(
+private val AnalyticsIcon: ImageVector = ImageVector.Builder(
         name = "Analytics",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,

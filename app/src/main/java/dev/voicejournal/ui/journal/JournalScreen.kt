@@ -44,8 +44,7 @@ import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
-private val MicIcon: ImageVector
-    get() = ImageVector.Builder(
+private val MicIcon: ImageVector = ImageVector.Builder(
         name = "Mic",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
@@ -75,8 +74,7 @@ private val MicIcon: ImageVector
         }
     }.build()
 
-private val FilterOffIcon: ImageVector
-    get() = ImageVector.Builder(
+private val FilterOffIcon: ImageVector = ImageVector.Builder(
         name = "FilterOff",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
