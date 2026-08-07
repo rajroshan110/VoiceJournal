@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
 fun PrivacySecurityScreen(

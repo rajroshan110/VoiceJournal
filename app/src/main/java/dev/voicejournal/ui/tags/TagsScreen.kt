@@ -36,7 +36,7 @@ import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.tags.components.CategoryFolderCard
 import dev.voicejournal.ui.tags.components.TagCardGrid
 import dev.voicejournal.ui.tags.components.TagCardList
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
