@@ -19,6 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import androidx.room.withTransaction
+import dev.voicejournal.data.local.db.AppDatabase
 import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
@@ -28,7 +30,8 @@ class JournalRepositoryImpl @Inject constructor(
     private val journalEntryDao: JournalEntryDao,
     private val tagDao: TagDao,
     private val entryImageDao: EntryImageDao,
-    private val prefs: UserPreferencesManager
+    private val prefs: UserPreferencesManager,
+    private val appDatabase: AppDatabase
 ) : JournalRepository {
 
     override fun getAllEntries(): Flow<List<JournalEntry>> {
@@ -90,76 +93,80 @@ class JournalRepositoryImpl @Inject constructor(
     ) {
         if (ids.isEmpty()) return
 
-        // 1. Process Folder Removal
-        if (!folderToRemove.isNullOrBlank()) {
-            journalEntryDao.removeFolderCrossRefs(ids, folderToRemove)
-        }
-
-        // 2. Process Tag Removals
-        if (tagsToRemove.isNotEmpty()) {
-            tagsToRemove.forEach { tag ->
-                val cleanName = tag.name.trim().removePrefix("#").removePrefix("@")
-                val normalizedName = when (tag.type) {
-                    TagType.TOPIC -> "#$cleanName"
-                    TagType.PERSON -> "@$cleanName"
-                    else -> cleanName
-                }
-                val existingTag = tagDao.getTagByNameAndType(normalizedName, tag.type.name)
-                    ?: tagDao.getTagByNameAndType(cleanName, tag.type.name)
-                if (existingTag != null) {
-                    journalEntryDao.deleteSpecificTagCrossRefs(ids, existingTag.id)
-                }
+        appDatabase.withTransaction {
+            // 1. Process Folder Removal
+            if (!folderToRemove.isNullOrBlank()) {
+                journalEntryDao.removeFolderCrossRefs(ids, folderToRemove)
             }
-        }
 
-        // 3. Process Tag & Folder Additions
-        val allTagsToApply = mutableListOf<Tag>()
-        if (!targetFolder.isNullOrBlank() && targetFolder != folderToRemove) {
-            allTagsToApply.add(Tag(name = targetFolder, type = TagType.FOLDER))
-        }
-        allTagsToApply.addAll(tagsToAssign)
-
-        if (allTagsToApply.isNotEmpty()) {
-            val existingCrossRefs = journalEntryDao.getAllEntryTagCrossRefsSync().toSet()
-            val newCrossRefs = mutableListOf<EntryTagCrossRef>()
-
-            allTagsToApply.forEach { tag ->
-                val tagId = getOrCreateTag(tag.name, tag.type).id
-                ids.forEach { entryId ->
-                    val ref = EntryTagCrossRef(entryId, tagId)
-                    if (!existingCrossRefs.contains(ref)) {
-                        newCrossRefs.add(ref)
+            // 2. Process Tag Removals
+            if (tagsToRemove.isNotEmpty()) {
+                tagsToRemove.forEach { tag ->
+                    val cleanName = tag.name.trim().removePrefix("#").removePrefix("@")
+                    val normalizedName = when (tag.type) {
+                        TagType.TOPIC -> "#$cleanName"
+                        TagType.PERSON -> "@$cleanName"
+                        else -> cleanName
+                    }
+                    val existingTag = tagDao.getTagByNameAndType(normalizedName, tag.type.name)
+                        ?: tagDao.getTagByNameAndType(cleanName, tag.type.name)
+                    if (existingTag != null) {
+                        journalEntryDao.deleteSpecificTagCrossRefs(ids, existingTag.id)
                     }
                 }
             }
 
-            if (newCrossRefs.isNotEmpty()) {
-                journalEntryDao.insertEntryTagCrossRefs(newCrossRefs)
+            // 3. Process Tag & Folder Additions
+            val allTagsToApply = mutableListOf<Tag>()
+            if (!targetFolder.isNullOrBlank() && targetFolder != folderToRemove) {
+                allTagsToApply.add(Tag(name = targetFolder, type = TagType.FOLDER))
+            }
+            allTagsToApply.addAll(tagsToAssign)
+
+            if (allTagsToApply.isNotEmpty()) {
+                val existingCrossRefs = journalEntryDao.getAllEntryTagCrossRefsSync().toSet()
+                val newCrossRefs = mutableListOf<EntryTagCrossRef>()
+
+                allTagsToApply.forEach { tag ->
+                    val tagId = getOrCreateTag(tag.name, tag.type).id
+                    ids.forEach { entryId ->
+                        val ref = EntryTagCrossRef(entryId, tagId)
+                        if (!existingCrossRefs.contains(ref)) {
+                            newCrossRefs.add(ref)
+                        }
+                    }
+                }
+
+                if (newCrossRefs.isNotEmpty()) {
+                    journalEntryDao.insertEntryTagCrossRefs(newCrossRefs)
+                }
             }
         }
     }
 
     override suspend fun saveEntry(entry: JournalEntry): Long {
-        val entryId = if (entry.id == 0L) {
-            journalEntryDao.insertEntry(entry.toEntity())
-        } else {
-            journalEntryDao.updateEntry(entry.toEntity())
-            journalEntryDao.deleteEntryTagCrossRefs(entry.id)
-            entryImageDao.deleteEntryImages(entry.id)
-            entry.id
-        }
+        return appDatabase.withTransaction {
+            val entryId = if (entry.id == 0L) {
+                journalEntryDao.insertEntry(entry.toEntity())
+            } else {
+                journalEntryDao.updateEntry(entry.toEntity())
+                journalEntryDao.deleteEntryTagCrossRefs(entry.id)
+                entryImageDao.deleteEntryImages(entry.id)
+                entry.id
+            }
 
-        entry.tags.forEach { tag ->
-            val tagId = getOrCreateTag(tag.name, tag.type).id
-            journalEntryDao.insertEntryTagCrossRef(EntryTagCrossRef(entryId, tagId))
-        }
+            entry.tags.forEach { tag ->
+                val tagId = getOrCreateTag(tag.name, tag.type).id
+                journalEntryDao.insertEntryTagCrossRef(EntryTagCrossRef(entryId, tagId))
+            }
 
-        val images = entry.images.map { it.toEntity(entryId) }
-        if (images.isNotEmpty()) {
-            entryImageDao.insertEntryImages(images)
-        }
+            val images = entry.images.map { it.toEntity(entryId) }
+            if (images.isNotEmpty()) {
+                entryImageDao.insertEntryImages(images)
+            }
 
-        return entryId
+            entryId
+        }
     }
 
     override fun getTrashEntries(): Flow<List<JournalEntry>> {
@@ -218,10 +225,12 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun permanentlyDeleteEntries(ids: List<Long>) {
         if (ids.isEmpty()) return
-        ids.forEach { id ->
-            journalEntryDao.deleteEntryTagCrossRefs(id)
-            entryImageDao.deleteEntryImages(id)
-            journalEntryDao.deleteEntry(id)
+        appDatabase.withTransaction {
+            ids.forEach { id ->
+                journalEntryDao.deleteEntryTagCrossRefs(id)
+                entryImageDao.deleteEntryImages(id)
+                journalEntryDao.deleteEntry(id)
+            }
         }
     }
 
@@ -236,10 +245,12 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun wipeAllData() {
         withContext(Dispatchers.IO) {
-            journalEntryDao.deleteAllJournalEntries()
-            journalEntryDao.deleteAllCrossRefs()
-            tagDao.deleteAllTags()
-            entryImageDao.deleteAllEntryImages()
+            appDatabase.withTransaction {
+                journalEntryDao.deleteAllJournalEntries()
+                journalEntryDao.deleteAllCrossRefs()
+                tagDao.deleteAllTags()
+                entryImageDao.deleteAllEntryImages()
+            }
 
             try {
                 MediaStorageManager.clearAllMedia(context)
@@ -258,20 +269,29 @@ class JournalRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getOrCreateTag(name: String, type: TagType): Tag {
-        val cleanName = name.trim().removePrefix("#").removePrefix("@")
-        val normalizedName = when (type) {
-            TagType.TOPIC -> "#$cleanName"
-            TagType.PERSON -> "@$cleanName"
-            else -> cleanName
+        return appDatabase.withTransaction {
+            val cleanName = name.trim().removePrefix("#").removePrefix("@")
+            val normalizedName = when (type) {
+                TagType.TOPIC -> "#$cleanName"
+                TagType.PERSON -> "@$cleanName"
+                else -> cleanName
+            }
+            val existing = tagDao.getTagByNameAndType(normalizedName, type.name)
+                ?: tagDao.getTagByNameAndType(cleanName, type.name)
+            if (existing != null) {
+                return@withTransaction existing.toDomain()
+            }
+            val newTag = TagEntity(name = normalizedName, type = type.name)
+            val id = tagDao.insertTag(newTag)
+            
+            if (id == -1L) {
+                val racedTag = tagDao.getTagByNameAndType(normalizedName, type.name)
+                    ?: tagDao.getTagByNameAndType(cleanName, type.name)
+                if (racedTag != null) return@withTransaction racedTag.toDomain()
+            }
+            
+            newTag.copy(id = id).toDomain()
         }
-        val existing = tagDao.getTagByNameAndType(normalizedName, type.name)
-            ?: tagDao.getTagByNameAndType(cleanName, type.name)
-        if (existing != null) {
-            return existing.toDomain()
-        }
-        val newTag = TagEntity(name = normalizedName, type = type.name)
-        val id = tagDao.insertTag(newTag)
-        return newTag.copy(id = id).toDomain()
     }
 
     override suspend fun renameTag(tagId: Long, newName: String, type: TagType) {
@@ -283,15 +303,17 @@ class JournalRepositoryImpl @Inject constructor(
             else -> cleanName
         }
 
-        val existing = tagDao.getTagByNameAndType(normalizedName, type.name)
-            ?: tagDao.getTagByNameAndType(cleanName, type.name)
+        appDatabase.withTransaction {
+            val existing = tagDao.getTagByNameAndType(normalizedName, type.name)
+                ?: tagDao.getTagByNameAndType(cleanName, type.name)
 
-        if (existing != null && existing.id != tagId) {
-            // Target tag already exists: merge into existing target tag
-            tagDao.mergeTags(tagId, existing.id)
-        } else {
-            // Rename tag
-            tagDao.updateTagName(tagId, normalizedName)
+            if (existing != null && existing.id != tagId) {
+                // Target tag already exists: merge into existing target tag
+                tagDao.mergeTags(tagId, existing.id)
+            } else {
+                // Rename tag
+                tagDao.updateTagName(tagId, normalizedName)
+            }
         }
     }
 

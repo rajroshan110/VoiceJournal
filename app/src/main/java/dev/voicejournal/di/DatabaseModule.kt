@@ -54,8 +54,9 @@ object DatabaseModule {
         journalEntryDao: JournalEntryDao,
         tagDao: TagDao,
         entryImageDao: EntryImageDao,
-        prefs: UserPreferencesManager
+        prefs: UserPreferencesManager,
+        appDatabase: AppDatabase
     ): JournalRepository {
-        return JournalRepositoryImpl(context, journalEntryDao, tagDao, entryImageDao, prefs)
+        return JournalRepositoryImpl(context, journalEntryDao, tagDao, entryImageDao, prefs, appDatabase)
     }
 }
