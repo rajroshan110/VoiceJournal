@@ -4,6 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.voicejournal.data.security.KeyStoreHelper
 import dev.voicejournal.domain.model.AppLockMode
@@ -48,6 +50,10 @@ class UserPreferencesManager @Inject constructor(
         val CUSTOM_PIN_ENCRYPTED = stringPreferencesKey("custom_pin_encrypted")
         val IS_SCREEN_PRIVACY_ENABLED = booleanPreferencesKey("is_screen_privacy_enabled")
         val IS_SPEECH_TO_TEXT_ENABLED = booleanPreferencesKey("is_speech_to_text_enabled")
+        
+        // Lockout State
+        val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
+        val PIN_LOCKOUT_END_TIME = longPreferencesKey("pin_lockout_end_time")
     }
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -161,6 +167,14 @@ class UserPreferencesManager @Inject constructor(
         prefs[IS_SPEECH_TO_TEXT_ENABLED] ?: true
     }
 
+    val pinFailedAttempts: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[PIN_FAILED_ATTEMPTS] ?: 0
+    }
+
+    val pinLockoutEndTime: Flow<Long> = dataStore.data.map { prefs ->
+        prefs[PIN_LOCKOUT_END_TIME] ?: 0L
+    }
+
     suspend fun setInsightDateRangeMode(mode: InsightDateRangeMode) {
         dataStore.edit { prefs ->
             prefs[INSIGHT_DATE_RANGE_MODE] = mode.name
@@ -258,6 +272,23 @@ class UserPreferencesManager @Inject constructor(
                 prefs[CUSTOM_PIN_ENCRYPTED] = KeyStoreHelper.encrypt(verifiedPin)
                 prefs.remove(CUSTOM_PIN)
             }
+        }
+    }
+
+    suspend fun registerFailedPinAttempt(lockoutDurationMs: Long = 30000L) {
+        dataStore.edit { prefs ->
+            val attempts = (prefs[PIN_FAILED_ATTEMPTS] ?: 0) + 1
+            prefs[PIN_FAILED_ATTEMPTS] = attempts
+            if (attempts >= 5) {
+                prefs[PIN_LOCKOUT_END_TIME] = System.currentTimeMillis() + lockoutDurationMs
+            }
+        }
+    }
+
+    suspend fun clearFailedPinAttempts() {
+        dataStore.edit { prefs ->
+            prefs[PIN_FAILED_ATTEMPTS] = 0
+            prefs[PIN_LOCKOUT_END_TIME] = 0L
         }
     }
 

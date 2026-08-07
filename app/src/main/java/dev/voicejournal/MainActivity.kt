@@ -125,13 +125,24 @@ class MainActivity : FragmentActivity() {
                                 onAutoAuthNeeded = { triggerBiometricAuth { isAppUnlocked = true } }
                             )
                         } else if (activeMode == AppLockMode.CUSTOM_PIN) {
+                            val pinFailedAttempts by userPreferencesManager.pinFailedAttempts.collectAsState(initial = 0)
+                            val pinLockoutEndTime by userPreferencesManager.pinLockoutEndTime.collectAsState(initial = 0L)
+                            
                             CustomPinLockScreen(
                                 correctPin = customPin ?: "",
+                                failedAttempts = pinFailedAttempts,
+                                lockoutEndTime = pinLockoutEndTime,
                                 onUnlocked = { verifiedPin ->
                                     lifecycleScope.launch {
+                                        userPreferencesManager.clearFailedPinAttempts()
                                         userPreferencesManager.migratePinIfNeeded(verifiedPin)
                                     }
                                     isAppUnlocked = true 
+                                },
+                                onFailedAttempt = {
+                                    lifecycleScope.launch {
+                                        userPreferencesManager.registerFailedPinAttempt()
+                                    }
                                 }
                             )
                         }
@@ -259,13 +270,14 @@ fun BiometricLockScreen(
 @Composable
 fun CustomPinLockScreen(
     correctPin: String,
-    onUnlocked: (String) -> Unit
+    failedAttempts: Int,
+    lockoutEndTime: Long,
+    onUnlocked: (String) -> Unit,
+    onFailedAttempt: () -> Unit
 ) {
     val colors = AppTheme.colors
     var enteredPin by rememberSaveable { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
-    var failedAttempts by rememberSaveable { mutableStateOf(0) }
-    var lockoutEndTime by rememberSaveable { mutableStateOf(0L) }
     var remainingLockout by remember { mutableStateOf(0L) }
 
     LaunchedEffect(lockoutEndTime) {
@@ -304,9 +316,11 @@ fun CustomPinLockScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        val attemptsLeft = 5 - failedAttempts
         Text(
             text = if (isLockedOut) "Too many attempts. Try again in ${remainingLockout / 1000}s" 
-                   else if (isError) "Incorrect PIN. Try again." 
+                   else if (isError) "Incorrect PIN. $attemptsLeft attempts left." 
+                   else if (failedAttempts > 0) "$attemptsLeft attempts left."
                    else "Enter your 4-digit security PIN",
             color = if (isError || isLockedOut) colors.error else colors.textSecondary,
             fontSize = 14.sp,
@@ -364,15 +378,11 @@ fun CustomPinLockScreen(
                                         isError = false
                                         if (enteredPin.length == 4) {
                                             if (enteredPin == correctPin) {
-                                                failedAttempts = 0
                                                 onUnlocked(enteredPin)
                                             } else {
                                                 isError = true
                                                 enteredPin = ""
-                                                failedAttempts++
-                                                if (failedAttempts >= 5) {
-                                                    lockoutEndTime = System.currentTimeMillis() + 30000L
-                                                }
+                                                onFailedAttempt()
                                             }
                                         }
                                     }
