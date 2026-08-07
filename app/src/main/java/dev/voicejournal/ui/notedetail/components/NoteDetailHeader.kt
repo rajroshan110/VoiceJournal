@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import dev.voicejournal.domain.model.TimeFormat
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
 import java.text.SimpleDateFormat
 import java.util.Date

@@ -23,7 +23,7 @@ import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.journal.CardPlaybackState
 import dev.voicejournal.ui.journal.PlaybackStatus
 import dev.voicejournal.ui.journal.components.ShimmerSkeletonCard
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

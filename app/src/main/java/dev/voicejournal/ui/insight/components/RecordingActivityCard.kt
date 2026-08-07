@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.DailyActivityCount
 import dev.voicejournal.domain.usecase.TimePeriod
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.util.Locale
 
 @Composable

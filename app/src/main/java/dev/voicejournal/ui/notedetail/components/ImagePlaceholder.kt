@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
 fun ImagePlaceholder(onClick: (() -> Unit)? = null) {

@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 private fun getCameraIcon(tintColor: Color): ImageVector {
     return ImageVector.Builder(

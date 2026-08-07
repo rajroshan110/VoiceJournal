@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.renderer.RichTextVisualTransformation
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
 fun UserTextInput(

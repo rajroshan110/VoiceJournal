@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.io.File
 
 @Composable

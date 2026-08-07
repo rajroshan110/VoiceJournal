@@ -22,7 +22,7 @@ import androidx.navigation.NavController
 import dev.voicejournal.ui.insight.components.*
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

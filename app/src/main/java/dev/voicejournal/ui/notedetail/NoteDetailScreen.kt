@@ -54,7 +54,7 @@ import dev.voicejournal.ui.notedetail.components.MicFabState
 import dev.voicejournal.ui.notedetail.components.MicRecordingPill
 import dev.voicejournal.ui.notedetail.components.NoteDetailHeader
 import dev.voicejournal.ui.notedetail.components.UserTextInput
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.voicejournal.util.TimeFormatter
 import java.io.File

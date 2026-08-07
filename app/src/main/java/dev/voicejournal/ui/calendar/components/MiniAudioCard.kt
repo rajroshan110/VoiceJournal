@@ -24,7 +24,7 @@ import dev.voicejournal.ui.designsystem.tokens.Border
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
 
 private fun getChevronRightIcon(tintColor: Color): ImageVector {

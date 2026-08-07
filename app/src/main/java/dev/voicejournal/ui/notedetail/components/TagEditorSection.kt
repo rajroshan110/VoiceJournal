@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.TagChip
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
 fun TagEditorSection(

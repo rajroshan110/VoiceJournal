@@ -34,7 +34,7 @@ import dev.voicejournal.ui.settings.components.DestructiveActionRow
 import dev.voicejournal.ui.settings.components.SettingDayPickerRow
 import dev.voicejournal.ui.settings.components.SettingSegmentedRow
 import dev.voicejournal.ui.settings.components.SettingToggleRow
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.theme.AppThemeMode
 
 @Composable

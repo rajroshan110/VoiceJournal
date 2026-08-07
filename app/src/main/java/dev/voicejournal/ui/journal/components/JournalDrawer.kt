@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getTagIcon
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete

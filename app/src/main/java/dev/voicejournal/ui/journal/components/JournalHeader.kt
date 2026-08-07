@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.designsystem.tokens.Spacing
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 enum class SortOption(val label: String) {
     CREATED_DESC("Created Date (Newest First)"),

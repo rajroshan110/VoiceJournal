@@ -17,7 +17,7 @@ import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getTagIcon
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable

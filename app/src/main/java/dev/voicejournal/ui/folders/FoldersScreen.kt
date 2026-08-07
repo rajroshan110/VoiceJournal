@@ -38,7 +38,7 @@ import dev.voicejournal.ui.journal.components.EntryCard
 import dev.voicejournal.ui.journal.components.LightboxDialog
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

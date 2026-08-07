@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.DailyMoodPoint
 import dev.voicejournal.domain.usecase.MoodMetric
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.util.Locale
 
 // 5 Canonical Emojis used in VoiceJournal filter & note detail (ordered top to bottom: 5 to 1)

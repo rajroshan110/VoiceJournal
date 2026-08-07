@@ -25,7 +25,7 @@ import dev.voicejournal.ui.journal.components.PeopleFilterBottomSheet
 import dev.voicejournal.ui.journal.components.TopicFilterBottomSheet
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.LocalDate
 
 @Composable

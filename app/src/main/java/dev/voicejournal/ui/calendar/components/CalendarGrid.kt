@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.ui.calendar.CalendarDayItem
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields

@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import dev.voicejournal.domain.usecase.TimeOfDayMetric
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.util.Locale
 
 @Composable

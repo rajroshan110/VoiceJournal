@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Spacing
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

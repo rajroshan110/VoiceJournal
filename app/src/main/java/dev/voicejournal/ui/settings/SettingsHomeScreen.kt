@@ -30,7 +30,7 @@ import dev.voicejournal.ui.settings.model.SettingsSubScreen
 import dev.voicejournal.ui.settings.screens.GeneralSettingsScreen
 import dev.voicejournal.ui.settings.screens.LocalBackupScreen
 import dev.voicejournal.ui.settings.screens.PrivacySecurityScreen
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

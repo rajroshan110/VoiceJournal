@@ -26,7 +26,7 @@ import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 private val FingerprintIcon: ImageVector by lazy {
     ImageVector.Builder(

@@ -36,8 +36,8 @@ import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
 import dev.voicejournal.ui.theme.AppThemeMode
 import dev.voicejournal.ui.navigation.AppNavHost
-import dev.voicejournal.ui.theme.AppTheme
-import dev.voicejournal.ui.theme.VoiceTheme
+import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.VoiceTheme
 import javax.inject.Inject
 
 import android.content.Intent
