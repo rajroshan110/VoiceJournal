@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,7 +45,7 @@ fun SettingsHomeScreen(
     val configuration = LocalConfiguration.current
     val isExpanded = configuration.screenWidthDp >= 600
 
-    var selectedCompactSubScreen by remember { mutableStateOf<SettingsSubScreen?>(null) }
+    var selectedCompactSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
     var isSearchFocused by remember { mutableStateOf(false) }
 
     val isSearchActive = isSearchFocused || uiState.isSearching || uiState.searchQuery.isNotEmpty()

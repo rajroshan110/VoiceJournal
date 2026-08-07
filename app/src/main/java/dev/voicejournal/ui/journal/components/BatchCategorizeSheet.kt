@@ -55,14 +55,14 @@ fun BatchCategorizeSheet(
             addAll(cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#") == tag && it.type != TagType.PERSON && it.type != TagType.FOLDER } })
         }
     }
-    var newTopicInput by remember { mutableStateOf("") }
+    var newTopicInput by rememberSaveable { mutableStateOf("") }
 
     val selectedPeople = remember(appliedTagNames) {
         mutableStateListOf<String>().apply {
             addAll(cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("@") == person } })
         }
     }
-    var newPersonInput by remember { mutableStateOf("") }
+    var newPersonInput by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,

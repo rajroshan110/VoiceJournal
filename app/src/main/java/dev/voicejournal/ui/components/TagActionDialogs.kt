@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,7 +19,7 @@ fun RenameItemDialog(
     onConfirm: (String) -> Unit
 ) {
     val colors = AppTheme.colors
-    var nameInput by remember { mutableStateOf(currentName.removePrefix("#").removePrefix("@")) }
+    var nameInput by rememberSaveable { mutableStateOf(currentName.removePrefix("#").removePrefix("@")) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

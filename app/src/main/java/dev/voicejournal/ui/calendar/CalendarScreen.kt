@@ -6,8 +6,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -36,10 +38,11 @@ fun CalendarScreen(
     val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var activeSheet by remember { mutableStateOf(ActiveSheet.NONE) }
+    var activeSheet by rememberSaveable { mutableStateOf(ActiveSheet.NONE) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var pendingNavEntryId by remember { mutableStateOf<Long?>(null) }
+    val listState = rememberLazyListState()
+    var pendingNavEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     DisposableEffect(pendingNavEntryId) {
         onDispose {

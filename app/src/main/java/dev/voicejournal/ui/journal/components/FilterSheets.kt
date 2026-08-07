@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +31,7 @@ fun TopicFilterBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val colors = AppTheme.colors
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // Sort so selected tags appear first
     val sortedTags = remember(availableTags, selectedTagNames) {
@@ -192,7 +193,7 @@ fun PeopleFilterBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val colors = AppTheme.colors
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // Sort so selected people appear first
     val sortedPeople = remember(availablePeople, selectedPeople) {

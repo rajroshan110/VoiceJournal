@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,8 +30,8 @@ fun TagEditorSection(
     onRemoveTag: (Tag) -> Unit
 ) {
     val colors = AppTheme.colors
-    var showInput by remember { mutableStateOf(false) }
-    var tagInput by remember { mutableStateOf("") }
+    var showInput by rememberSaveable { mutableStateOf(false) }
+    var tagInput by rememberSaveable { mutableStateOf("") }
 
     Column(
         modifier = Modifier

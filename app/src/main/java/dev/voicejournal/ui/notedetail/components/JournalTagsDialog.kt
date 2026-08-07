@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,9 +40,9 @@ fun JournalTagsDialog(
 ) {
     var localTags by remember { mutableStateOf(tags) }
     // Topics is active by default -> initialize tagInput to "#" with cursor positioned at index 1 (#|)
-    var tagInput by remember { mutableStateOf(TextFieldValue("#", selection = TextRange(1))) }
-    var activeCategory by remember { mutableStateOf(TagType.TOPIC) }
-    var pendingNewFolderTagName by remember { mutableStateOf<String?>(null) }
+    var tagInput by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("#", selection = TextRange(1))) }
+    var activeCategory by rememberSaveable { mutableStateOf(TagType.TOPIC) }
+    var pendingNewFolderTagName by rememberSaveable { mutableStateOf<String?>(null) }
     val colors = AppTheme.colors
 
     // Compute suggestion list matching current user input prefix and text

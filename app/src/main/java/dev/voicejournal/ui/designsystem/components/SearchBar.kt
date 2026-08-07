@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -41,7 +42,7 @@ fun SearchBar(
     val focusRequester = remember { FocusRequester() }
 
     // Maintain a local TextFieldValue to prevent cursor jumping during rapid typing
-    var textFieldValue by remember { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
+    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
 
     // Sync external updates (e.g. cleared externally) to our local state
     LaunchedEffect(query) {
