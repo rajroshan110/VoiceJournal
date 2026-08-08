@@ -32,7 +32,7 @@ fun UserTextInput(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 450.dp)
+            .defaultMinSize(minHeight = 150.dp)
             .clickable { focusRequester.requestFocus() }
             .padding(vertical = 4.dp)
     ) {

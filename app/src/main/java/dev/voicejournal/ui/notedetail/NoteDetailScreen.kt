@@ -275,13 +275,29 @@ fun NoteDetailScreen(
             )
         }
     ) { paddingValues ->
+        val isKeyboardOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        val bottomPadding = if (isKeyboardOpen) {
+            100.dp
+        } else {
+            paddingValues.calculateBottomPadding() + 100.dp
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                .padding(paddingValues)
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    start = paddingValues.calculateStartPadding(androidx.compose.ui.platform.LocalLayoutDirection.current),
+                    end = paddingValues.calculateEndPadding(androidx.compose.ui.platform.LocalLayoutDirection.current)
+                )
                 .imePadding(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(
+                top = 16.dp,
+                start = 16.dp,
+                end = 16.dp,
+                bottom = bottomPadding
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Photo Mosaic Section

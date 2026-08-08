@@ -93,7 +93,9 @@ class AudioRecorderManager(private val context: Context) {
                                 wavWriter?.writePcmChunk(buffer, read)
                                 m4aEncoder?.encodePcmChunk(buffer, read)
     
-                                val activeSegment = (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+                                val activeSegment = if (segmentStartTimeMs > 0L) {
+                                    (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+                                } else 0L
                                 val liveDur = totalActiveDurationMs + activeSegment
                                 val amplitude = calculateRms(buffer, read)
                                 _state.value = RecordingState.Recording(liveDur, amplitude)

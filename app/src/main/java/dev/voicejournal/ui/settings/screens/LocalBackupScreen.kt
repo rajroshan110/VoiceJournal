@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.settings.screens
 
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -227,22 +228,16 @@ fun LocalBackupScreen(
                     ) {
                         OutlinedButton(
                             onClick = { exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip") },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export Backup", maxLines = 1)
+                            Text("Export\nBackup", textAlign = TextAlign.Center)
                         }
 
                         OutlinedButton(
                             onClick = { importLauncher.launch(arrayOf("application/zip")) },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import Backup", maxLines = 1)
+                            Text("Import\nBackup", textAlign = TextAlign.Center)
                         }
                     }
                 }
