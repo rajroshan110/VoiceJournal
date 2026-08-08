@@ -18,6 +18,10 @@ interface EntryImageDao {
     @Query("SELECT * FROM entry_images WHERE entryId = :entryId ORDER BY displayOrder ASC")
     fun getEntryImages(entryId: Long): Flow<List<EntryImageEntity>>
 
+    @Query("SELECT * FROM entry_images")
+    suspend fun getAllEntryImagesSync(): List<EntryImageEntity>
+
+
     @Query("DELETE FROM entry_images")
     suspend fun deleteAllEntryImages()
 

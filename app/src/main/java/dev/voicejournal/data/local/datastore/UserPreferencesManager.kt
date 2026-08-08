@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -301,6 +303,18 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setSpeechToTextEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[IS_SPEECH_TO_TEXT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun getRawPreferencesSnapshot(): Preferences {
+
+        return dataStore.data.first()
+    }
+
+    suspend fun restoreRawPreferences(snapshot: Preferences) {
+        dataStore.edit { prefs ->
+            prefs.clear()
+            snapshot.asMap().forEach { (key, value) -> prefs[key as androidx.datastore.preferences.core.Preferences.Key<Any>] = value }
         }
     }
 }

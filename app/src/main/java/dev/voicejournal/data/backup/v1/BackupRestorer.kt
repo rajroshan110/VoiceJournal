@@ -19,6 +19,7 @@ import dev.voicejournal.data.local.db.entity.EntryImageEntity
 import dev.voicejournal.data.local.db.entity.EntryTagCrossRef
 import dev.voicejournal.data.local.db.entity.JournalEntryEntity
 import dev.voicejournal.data.local.db.entity.TagEntity
+import dev.voicejournal.BuildConfig
 import dev.voicejournal.data.mapper.toTracksJson
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
@@ -40,6 +41,32 @@ class BackupRestorer(
     private val database: AppDatabase,
     private val prefsManager: UserPreferencesManager
 ) {
+    private class RestoreRollbackManager {
+        private val actions = mutableListOf<suspend () -> Unit>()
+
+        fun register(action: suspend () -> Unit) {
+            actions.add(0, action)
+        }
+
+        suspend fun executeRollback() {
+            if (actions.isEmpty()) return
+            Log.i("Backup", "Initiating rollback of ${actions.size} actions")
+            var rollbackSuccess = true
+            actions.forEachIndexed { index, action ->
+                try {
+                    action()
+                    Log.i("Backup", "Rollback action ${index + 1} succeeded")
+                } catch (e: Exception) {
+                    rollbackSuccess = false
+                    Log.e("Backup", "CRITICAL: Rollback action ${index + 1} failed!", e)
+                }
+            }
+            if (!rollbackSuccess) {
+                throw IOException("Restore failed AND rollback partially failed. App may be in an inconsistent state.")
+            }
+        }
+    }
+
 
     suspend fun restore(
         stagingDir: File,
@@ -53,71 +80,77 @@ class BackupRestorer(
 
         val stagingRecordingsDir = File(context.filesDir, "recordings_staging_${System.currentTimeMillis()}")
         val stagingImagesDir = File(context.filesDir, "images_staging_${System.currentTimeMillis()}")
+        val rollbackManager = RestoreRollbackManager()
+
+        // Debug Failure Simulation Flags
+        val simulateFailureAfterDb = false
+        val simulateFailureAfterMedia = false
+        val simulateFailureAfterPrefs = false
 
         try {
+            // PHASE 1: Prepare In-Memory Snapshots
+            Log.i("Backup", "Phase 1: Preparing snapshots")
+            onProgress?.invoke("Preparing restore environment…")
+            
+            val dbEntriesSnapshot = database.journalEntryDao().getAllEntriesSync()
+            val dbTagsSnapshot = database.tagDao().getAllTagsSync()
+            val dbImagesSnapshot = database.entryImageDao().getAllEntryImagesSync()
+            val dbCrossRefsSnapshot = database.journalEntryDao().getAllEntryTagCrossRefsSync()
+            val prefsSnapshot = prefsManager.getRawPreferencesSnapshot()
+
             // 1. Prepare Internal Media Directories for Staged Restore
-            onProgress?.invoke("Restoring media…")
+            onProgress?.invoke("Staging media…")
             stagingRecordingsDir.mkdirs()
             stagingImagesDir.mkdirs()
 
             val attachmentsByEntryUuid = attachments.groupBy { it.entryUuid }
-            val mediaPathMap = mutableMapOf<String, String>() // attachmentUuid -> canonical absolute target path
+            val mediaPathMap = mutableMapOf<String, String>()
 
             attachments.forEach { att ->
                 val sourceFile = File(stagingDir, att.archivePath)
                 if (sourceFile.exists()) {
                     val isImage = att.type == "image"
                     val ext = sourceFile.extension.ifBlank { if (isImage) "jpg" else "wav" }
-                    
-                    // Copy to staging directory
                     val targetStagingDir = if (isImage) stagingImagesDir else stagingRecordingsDir
                     val stagingFile = File(targetStagingDir, "${att.uuid}.$ext")
                     sourceFile.copyTo(stagingFile, overwrite = true)
                     
-                    // Calculate the FINAL active path for the database
                     val finalActiveDir = if (isImage) MediaStorageManager.getImagesDir(context) else MediaStorageManager.getRecordingsDir(context)
                     val finalActiveFile = File(finalActiveDir, "${att.uuid}.$ext")
                     mediaPathMap[att.uuid] = finalActiveFile.absolutePath
-                    
                     copiedMediaFiles.add(stagingFile)
                 }
             }
             Log.d("Backup", "Media staged: ${copiedMediaFiles.size}")
 
-            // 2. Perform Single Room Database Transaction (Replace Restore)
-            onProgress?.invoke("Restoring notes…")
             var entriesCount = 0
             var tagsCount = 0
             var attachmentsCount = 0
 
+            // PHASE 2: Database Replace
+            Log.i("Backup", "Phase 2: Database Replace")
+            onProgress?.invoke("Restoring notes…")
+            
             database.withTransaction {
-                // Clear existing database contents for Replace Restore
                 database.journalEntryDao().deleteAllJournalEntries()
                 database.tagDao().deleteAllTags()
                 database.entryImageDao().deleteAllEntryImages()
                 database.journalEntryDao().deleteAllCrossRefs()
 
-                // A. Restore Tags
-                val tagIdMap = mutableMapOf<String, Long>() // tagUuid -> tagDbId
+                val tagIdMap = mutableMapOf<String, Long>()
                 tags.forEach { bTag ->
                     val tagTypeStr = bTag.type.uppercase(Locale.ROOT)
-                    val newEntity = TagEntity(
-                        name = bTag.name,
-                        type = tagTypeStr,
-                        uuid = bTag.uuid
-                    )
+                    val newEntity = TagEntity(name = bTag.name, type = tagTypeStr, uuid = bTag.uuid)
                     val tagId = database.tagDao().insertTag(newEntity)
                     tagIdMap[bTag.uuid] = tagId
                     tagsCount++
                 }
 
-                // B. Restore Entries & Attachments
                 entries.forEach { bEntry ->
                     val entryAtts = attachmentsByEntryUuid[bEntry.uuid] ?: emptyList()
                     val audioAtts = entryAtts.filter { it.type == "audio" }
                     val imageAtts = entryAtts.filter { it.type == "image" }
 
-                    // Construct Audio Tracks JSON or Legacy Audio Path
                     var legacyAudioPath = ""
                     var duration = 0L
                     var transcriptText: String? = null
@@ -164,7 +197,6 @@ class BackupRestorer(
                     }
 
                     val audioTracksJsonStr = audioTracksList.toTracksJson()
-
                     val deletedAt = when (bEntry.status) {
                         "trashed" -> bEntry.deletedAt ?: bEntry.createdAt
                         else -> null
@@ -199,7 +231,6 @@ class BackupRestorer(
                     val entryDbId = database.journalEntryDao().insertEntry(entryEntity)
                     entriesCount++
 
-                    // Restore Entry Images
                     database.entryImageDao().deleteEntryImages(entryDbId)
                     val imageEntities = imageAtts.mapIndexed { idx, att ->
                         val relPath = mediaPathMap[att.uuid] ?: ""
@@ -214,7 +245,6 @@ class BackupRestorer(
                         database.entryImageDao().insertEntryImages(imageEntities)
                     }
 
-                    // Restore Entry Tags Junction
                     bEntry.tagUuids.forEach { tUuid ->
                         val tagDbId = tagIdMap[tUuid]
                         if (tagDbId != null) {
@@ -223,13 +253,30 @@ class BackupRestorer(
                             )
                         }
                     }
-
                     attachmentsCount += entryAtts.size
                 }
             }
-            Log.d("Backup", "Database replaced")
+            
+            // Database Replace succeeded. Register rollback to restore original DB snapshot.
+            rollbackManager.register {
+                database.withTransaction {
+                    database.journalEntryDao().deleteAllJournalEntries()
+                    database.tagDao().deleteAllTags()
+                    database.entryImageDao().deleteAllEntryImages()
+                    database.journalEntryDao().deleteAllCrossRefs()
+                    
+                    dbEntriesSnapshot.forEach { database.journalEntryDao().insertEntry(it) }
+                    dbTagsSnapshot.forEach { database.tagDao().insertTag(it) }
+                    if (dbImagesSnapshot.isNotEmpty()) database.entryImageDao().insertEntryImages(dbImagesSnapshot)
+                    if (dbCrossRefsSnapshot.isNotEmpty()) database.journalEntryDao().insertEntryTagCrossRefs(dbCrossRefsSnapshot)
+                }
+            }
+            Log.d("Backup", "Database replaced successfully")
 
-            // 3. Swap Staging Directories to Active atomically
+            if (simulateFailureAfterDb) throw IOException("Simulated failure after database restore")
+
+            // PHASE 3: Swap Staging Directories to Active atomically
+            Log.i("Backup", "Phase 3: Media Swap")
             val finalRecordingsDir = MediaStorageManager.getRecordingsDir(context)
             val finalImagesDir = MediaStorageManager.getImagesDir(context)
             val legacyAudioDir = File(context.filesDir, "audio")
@@ -241,61 +288,53 @@ class BackupRestorer(
             val backupLegacyAudioDir = File(context.filesDir, "audio_backup_$timestamp")
             val backupTranscribeCacheDir = File(context.cacheDir, "audio_transcribe_cache_backup_$timestamp")
 
-            val rollbackActions = mutableListOf<() -> Unit>()
-
-            try {
-                // Step A: Backup existing directories
-                if (finalRecordingsDir.exists()) {
-                    if (!moveDirSafe(finalRecordingsDir, backupRecordingsDir)) throw IOException("Failed to backup recordings")
-                    rollbackActions.add(0) { moveDirSafe(backupRecordingsDir, finalRecordingsDir) }
-                }
-                
-                if (finalImagesDir.exists()) {
-                    if (!moveDirSafe(finalImagesDir, backupImagesDir)) throw IOException("Failed to backup images")
-                    rollbackActions.add(0) { moveDirSafe(backupImagesDir, finalImagesDir) }
-                }
-                
-                if (legacyAudioDir.exists()) {
-                    if (!moveDirSafe(legacyAudioDir, backupLegacyAudioDir)) throw IOException("Failed to backup legacy audio")
-                    rollbackActions.add(0) { moveDirSafe(backupLegacyAudioDir, legacyAudioDir) }
-                }
-
-                if (transcribeCacheDir.exists()) {
-                    if (!moveDirSafe(transcribeCacheDir, backupTranscribeCacheDir)) throw IOException("Failed to backup transcribe cache")
-                    rollbackActions.add(0) { moveDirSafe(backupTranscribeCacheDir, transcribeCacheDir) }
-                }
-
-                // Step B: Promote staging directories
-                if (stagingRecordingsDir.exists()) {
-                    if (!moveDirSafe(stagingRecordingsDir, finalRecordingsDir)) throw IOException("Failed to promote staging recordings")
-                    rollbackActions.add(0) { moveDirSafe(finalRecordingsDir, stagingRecordingsDir) }
-                }
-
-                if (stagingImagesDir.exists()) {
-                    if (!moveDirSafe(stagingImagesDir, finalImagesDir)) throw IOException("Failed to promote staging images")
-                    // If this fails, we throw. If it succeeds, it's the last step.
-                }
-
-                // Step C: Success verified! Clean up backups safely.
-                backupRecordingsDir.deleteRecursively()
-                backupImagesDir.deleteRecursively()
-                backupLegacyAudioDir.deleteRecursively()
-                backupTranscribeCacheDir.deleteRecursively()
-
-            } catch (e: Exception) {
-                // Rollback in reverse order of success
-                rollbackActions.forEach { action ->
-                    try { action() } catch (rollbackEx: Exception) { Log.e("Backup", "Rollback action failed", rollbackEx) }
-                }
-                throw IOException("Media restore swap failed, rolled back to pre-restore state", e)
+            if (finalRecordingsDir.exists()) {
+                if (!moveDirSafe(finalRecordingsDir, backupRecordingsDir)) throw IOException("Failed to backup recordings")
+                rollbackManager.register { moveDirSafe(backupRecordingsDir, finalRecordingsDir) }
+            }
+            if (finalImagesDir.exists()) {
+                if (!moveDirSafe(finalImagesDir, backupImagesDir)) throw IOException("Failed to backup images")
+                rollbackManager.register { moveDirSafe(backupImagesDir, finalImagesDir) }
+            }
+            if (legacyAudioDir.exists()) {
+                if (!moveDirSafe(legacyAudioDir, backupLegacyAudioDir)) throw IOException("Failed to backup legacy audio")
+                rollbackManager.register { moveDirSafe(backupLegacyAudioDir, legacyAudioDir) }
+            }
+            if (transcribeCacheDir.exists()) {
+                if (!moveDirSafe(transcribeCacheDir, backupTranscribeCacheDir)) throw IOException("Failed to backup transcribe cache")
+                rollbackManager.register { moveDirSafe(backupTranscribeCacheDir, transcribeCacheDir) }
             }
 
-            // 4. Restore DataStore Preferences (Excluding Credentials)
+            if (stagingRecordingsDir.exists()) {
+                if (!moveDirSafe(stagingRecordingsDir, finalRecordingsDir)) throw IOException("Failed to promote staging recordings")
+                rollbackManager.register { moveDirSafe(finalRecordingsDir, stagingRecordingsDir) }
+            }
+            if (stagingImagesDir.exists()) {
+                if (!moveDirSafe(stagingImagesDir, finalImagesDir)) throw IOException("Failed to promote staging images")
+                rollbackManager.register { moveDirSafe(finalImagesDir, stagingImagesDir) }
+            }
+
+            if (simulateFailureAfterMedia) throw IOException("Simulated failure after media swap")
+
+            // PHASE 4: Restore DataStore Preferences
+            Log.i("Backup", "Phase 4: Preferences Replace")
             if (preferences != null) {
                 onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
-                Log.d("Backup", "Preferences restored")
+                rollbackManager.register { prefsManager.restoreRawPreferences(prefsSnapshot) }
+                Log.d("Backup", "Preferences replaced successfully")
             }
+
+            if (simulateFailureAfterPrefs) throw IOException("Simulated failure after preferences restore")
+
+            // PHASE 5: Cleanup Backups safely
+            Log.i("Backup", "Phase 5: Cleanup")
+            backupRecordingsDir.deleteRecursively()
+            backupImagesDir.deleteRecursively()
+            backupLegacyAudioDir.deleteRecursively()
+            backupTranscribeCacheDir.deleteRecursively()
+            stagingRecordingsDir.deleteRecursively()
+            stagingImagesDir.deleteRecursively()
 
             return RestoreStats(
                 entriesRestored = entriesCount,
@@ -304,10 +343,14 @@ class BackupRestorer(
                 mediaFilesRestored = copiedMediaFiles.size
             )
         } catch (e: Exception) {
-            // Atomic Rollback: Delete the staging directories
+            Log.e("Backup", "Restore workflow failed, executing rollback saga…", e)
+            rollbackManager.executeRollback()
+            
+            // Cleanup staging directories after successful rollback
             if (stagingRecordingsDir.exists()) stagingRecordingsDir.deleteRecursively()
             if (stagingImagesDir.exists()) stagingImagesDir.deleteRecursively()
-            throw e
+            
+            throw IOException("Restore failed, successfully rolled back to pre-restore state", e)
         }
     }
 
