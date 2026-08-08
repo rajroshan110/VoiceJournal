@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.journal.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -86,7 +87,7 @@ fun JournalHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    var sortMenuExpanded by remember { mutableStateOf(false) }
+    var sortMenuExpanded by rememberSaveable { mutableStateOf(false) }
 
     Surface(
         color = colors.background,

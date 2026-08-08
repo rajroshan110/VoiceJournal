@@ -48,7 +48,7 @@ fun TagsScreen(
     val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
-    var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
+    var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
 
     // System Back Press handling across 3 hierarchy levels

@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.journal.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -38,7 +39,7 @@ fun LightboxDialog(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(1f, 5f)

@@ -61,8 +61,8 @@ fun SettingsScreen(
     // Set Custom PIN Dialog
     if (uiState.showPinSetupDialog) {
         var pinInput by rememberSaveable { mutableStateOf("") }
-        var confirmInput by remember { mutableStateOf("") }
-        var errorMessage by remember { mutableStateOf<String?>(null) }
+        var confirmInput by rememberSaveable { mutableStateOf("") }
+        var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { viewModel.dismissPinSetupDialog() },
@@ -135,7 +135,7 @@ fun SettingsScreen(
 
     // Two-Step Explicit Text Confirmation Dialog ("DELETE") for Delete All Journals
     if (uiState.showDeleteConfirmationDialog) {
-        var inputCode by remember { mutableStateOf("") }
+        var inputCode by rememberSaveable { mutableStateOf("") }
         val isConfirmEnabled = inputCode.trim() == "DELETE"
 
         AlertDialog(

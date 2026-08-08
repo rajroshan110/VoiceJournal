@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.notedetail.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -115,8 +116,8 @@ fun NoteDetailHeader(
 ) {
     val colors = AppTheme.colors
     val context = LocalContext.current
-    var moodMenuExpanded by remember { mutableStateOf(false) }
-    var moreMenuExpanded by remember { mutableStateOf(false) }
+    var moodMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var moreMenuExpanded by rememberSaveable { mutableStateOf(false) }
 
     val formattedCreated = remember(createdAt, timeFormat, context) {
         if (createdAt > 0) {

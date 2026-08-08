@@ -73,15 +73,15 @@ fun NoteDetailScreen(
     val trackSelectionState by viewModel.trackSelectionState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var showTagsDialog by remember { mutableStateOf(false) }
+    var showTagsDialog by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var datePickerTab by remember { mutableIntStateOf(0) }
-    var showAddItemSheet by remember { mutableStateOf(false) }
+    var showAddItemSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
-    var showDeleteSelectedTracksDialog by remember { mutableStateOf(false) }
+    var showDeleteSelectedTracksDialog by rememberSaveable { mutableStateOf(false) }
     var showArchiveConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
-    var selectedLightboxImage by remember { mutableStateOf<String?>(null) }
+    var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var showUnsavedPromptDialog by rememberSaveable { mutableStateOf(false) }
@@ -153,7 +153,7 @@ fun NoteDetailScreen(
         }
     }
 
-    var currentPhotoFile by remember { mutableStateOf<File?>(null) }
+    var currentPhotoFile by rememberSaveable { mutableStateOf<File?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -275,12 +275,29 @@ fun NoteDetailScreen(
             )
         }
     ) { paddingValues ->
+        val isKeyboardOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        val bottomPadding = if (isKeyboardOpen) {
+            100.dp
+        } else {
+            paddingValues.calculateBottomPadding() + 100.dp
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    start = paddingValues.calculateStartPadding(androidx.compose.ui.platform.LocalLayoutDirection.current),
+                    end = paddingValues.calculateEndPadding(androidx.compose.ui.platform.LocalLayoutDirection.current)
+                )
+                .imePadding(),
+            contentPadding = PaddingValues(
+                top = 16.dp,
+                start = 16.dp,
+                end = 16.dp,
+                bottom = bottomPadding
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Photo Mosaic Section

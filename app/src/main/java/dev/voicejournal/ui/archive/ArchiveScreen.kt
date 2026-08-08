@@ -47,7 +47,7 @@ fun ArchiveScreen(
 
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
     var showUnarchiveConfirmDialog by rememberSaveable { mutableStateOf(false) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     BackHandler(enabled = selectionState.isSelectionMode || isSearchVisible) {
         if (selectionState.isSelectionMode) {
