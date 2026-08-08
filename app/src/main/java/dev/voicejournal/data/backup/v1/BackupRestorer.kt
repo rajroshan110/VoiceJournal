@@ -7,6 +7,12 @@ import dev.voicejournal.data.backup.v1.dto.BackupEntry
 import dev.voicejournal.data.backup.v1.dto.BackupPreferences
 import dev.voicejournal.data.backup.v1.dto.BackupTag
 import dev.voicejournal.data.backup.v1.dto.RestoreStats
+import dev.voicejournal.data.storage.MediaStorageManager
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.data.local.db.AppDatabase
 import dev.voicejournal.data.local.db.entity.EntryImageEntity
@@ -45,13 +51,13 @@ class BackupRestorer(
     ): RestoreStats {
         val copiedMediaFiles = mutableListOf<File>()
 
-        val stagingAudioDir = File(context.filesDir, "audio_staging_${System.currentTimeMillis()}")
+        val stagingRecordingsDir = File(context.filesDir, "recordings_staging_${System.currentTimeMillis()}")
         val stagingImagesDir = File(context.filesDir, "images_staging_${System.currentTimeMillis()}")
 
         try {
             // 1. Prepare Internal Media Directories for Staged Restore
             onProgress?.invoke("Restoring media…")
-            stagingAudioDir.mkdirs()
+            stagingRecordingsDir.mkdirs()
             stagingImagesDir.mkdirs()
 
             val attachmentsByEntryUuid = attachments.groupBy { it.entryUuid }
@@ -61,16 +67,16 @@ class BackupRestorer(
                 val sourceFile = File(stagingDir, att.archivePath)
                 if (sourceFile.exists()) {
                     val isImage = att.type == "image"
-                    val subFolder = if (isImage) "images" else "audio"
                     val ext = sourceFile.extension.ifBlank { if (isImage) "jpg" else "wav" }
                     
                     // Copy to staging directory
-                    val targetStagingDir = if (isImage) stagingImagesDir else stagingAudioDir
+                    val targetStagingDir = if (isImage) stagingImagesDir else stagingRecordingsDir
                     val stagingFile = File(targetStagingDir, "${att.uuid}.$ext")
                     sourceFile.copyTo(stagingFile, overwrite = true)
                     
                     // Calculate the FINAL active path for the database
-                    val finalActiveFile = File(context.filesDir, "$subFolder/${att.uuid}.$ext")
+                    val finalActiveDir = if (isImage) MediaStorageManager.getImagesDir(context) else MediaStorageManager.getRecordingsDir(context)
+                    val finalActiveFile = File(finalActiveDir, "${att.uuid}.$ext")
                     mediaPathMap[att.uuid] = finalActiveFile.absolutePath
                     
                     copiedMediaFiles.add(stagingFile)
@@ -223,17 +229,66 @@ class BackupRestorer(
             }
             Log.d("Backup", "Database replaced")
 
-            // 3. Swap Staging Directories to Active
-            val audioDir = File(context.filesDir, "audio")
-            val imagesDir = File(context.filesDir, "images")
-            
-            // Delete old active directories
-            if (audioDir.exists()) audioDir.deleteRecursively()
-            if (imagesDir.exists()) imagesDir.deleteRecursively()
-            
-            // Rename staging to active
-            stagingAudioDir.renameTo(audioDir)
-            stagingImagesDir.renameTo(imagesDir)
+            // 3. Swap Staging Directories to Active atomically
+            val finalRecordingsDir = MediaStorageManager.getRecordingsDir(context)
+            val finalImagesDir = MediaStorageManager.getImagesDir(context)
+            val legacyAudioDir = File(context.filesDir, "audio")
+            val transcribeCacheDir = MediaStorageManager.getTranscribeCacheDir(context)
+
+            val timestamp = System.currentTimeMillis()
+            val backupRecordingsDir = File(context.filesDir, "recordings_backup_$timestamp")
+            val backupImagesDir = File(context.filesDir, "images_backup_$timestamp")
+            val backupLegacyAudioDir = File(context.filesDir, "audio_backup_$timestamp")
+            val backupTranscribeCacheDir = File(context.cacheDir, "audio_transcribe_cache_backup_$timestamp")
+
+            val rollbackActions = mutableListOf<() -> Unit>()
+
+            try {
+                // Step A: Backup existing directories
+                if (finalRecordingsDir.exists()) {
+                    if (!moveDirSafe(finalRecordingsDir, backupRecordingsDir)) throw IOException("Failed to backup recordings")
+                    rollbackActions.add(0) { moveDirSafe(backupRecordingsDir, finalRecordingsDir) }
+                }
+                
+                if (finalImagesDir.exists()) {
+                    if (!moveDirSafe(finalImagesDir, backupImagesDir)) throw IOException("Failed to backup images")
+                    rollbackActions.add(0) { moveDirSafe(backupImagesDir, finalImagesDir) }
+                }
+                
+                if (legacyAudioDir.exists()) {
+                    if (!moveDirSafe(legacyAudioDir, backupLegacyAudioDir)) throw IOException("Failed to backup legacy audio")
+                    rollbackActions.add(0) { moveDirSafe(backupLegacyAudioDir, legacyAudioDir) }
+                }
+
+                if (transcribeCacheDir.exists()) {
+                    if (!moveDirSafe(transcribeCacheDir, backupTranscribeCacheDir)) throw IOException("Failed to backup transcribe cache")
+                    rollbackActions.add(0) { moveDirSafe(backupTranscribeCacheDir, transcribeCacheDir) }
+                }
+
+                // Step B: Promote staging directories
+                if (stagingRecordingsDir.exists()) {
+                    if (!moveDirSafe(stagingRecordingsDir, finalRecordingsDir)) throw IOException("Failed to promote staging recordings")
+                    rollbackActions.add(0) { moveDirSafe(finalRecordingsDir, stagingRecordingsDir) }
+                }
+
+                if (stagingImagesDir.exists()) {
+                    if (!moveDirSafe(stagingImagesDir, finalImagesDir)) throw IOException("Failed to promote staging images")
+                    // If this fails, we throw. If it succeeds, it's the last step.
+                }
+
+                // Step C: Success verified! Clean up backups safely.
+                backupRecordingsDir.deleteRecursively()
+                backupImagesDir.deleteRecursively()
+                backupLegacyAudioDir.deleteRecursively()
+                backupTranscribeCacheDir.deleteRecursively()
+
+            } catch (e: Exception) {
+                // Rollback in reverse order of success
+                rollbackActions.forEach { action ->
+                    try { action() } catch (rollbackEx: Exception) { Log.e("Backup", "Rollback action failed", rollbackEx) }
+                }
+                throw IOException("Media restore swap failed, rolled back to pre-restore state", e)
+            }
 
             // 4. Restore DataStore Preferences (Excluding Credentials)
             if (preferences != null) {
@@ -250,7 +305,7 @@ class BackupRestorer(
             )
         } catch (e: Exception) {
             // Atomic Rollback: Delete the staging directories
-            if (stagingAudioDir.exists()) stagingAudioDir.deleteRecursively()
+            if (stagingRecordingsDir.exists()) stagingRecordingsDir.deleteRecursively()
             if (stagingImagesDir.exists()) stagingImagesDir.deleteRecursively()
             throw e
         }
@@ -316,5 +371,20 @@ class BackupRestorer(
 
         // Data Management
         prefsManager.setDailyReminder(p.dataManagement.dailyReminder)
+    }
+
+    private fun moveDirSafe(src: File, dest: File): Boolean {
+        if (!src.exists()) return true
+        return try {
+            Files.move(src.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            true
+        } catch (e: Exception) {
+            try {
+                Files.move(src.toPath(), dest.toPath())
+                true
+            } catch (e2: Exception) {
+                src.renameTo(dest)
+            }
+        }
     }
 }
