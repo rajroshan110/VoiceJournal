@@ -121,6 +121,7 @@ class AudioRecorderManager(private val context: Context) {
     fun pauseRecording() {
         if (!isPaused && segmentStartTimeMs > 0L) {
             totalActiveDurationMs += (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+            segmentStartTimeMs = 0L
             isPaused = true
             _state.value = RecordingState.Recording(totalActiveDurationMs, 0f)
         }
@@ -136,6 +137,7 @@ class AudioRecorderManager(private val context: Context) {
     suspend fun stopRecording(): File? {
         if (!isPaused && segmentStartTimeMs > 0L) {
             totalActiveDurationMs += (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
+            segmentStartTimeMs = 0L
         }
         isPaused = false
 

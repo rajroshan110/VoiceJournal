@@ -279,7 +279,8 @@ fun NoteDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .imePadding(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {

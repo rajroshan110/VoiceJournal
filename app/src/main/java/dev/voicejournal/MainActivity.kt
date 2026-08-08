@@ -91,15 +91,16 @@ class MainActivity : FragmentActivity() {
 
             DisposableEffect(lifecycleOwner, appLockMode, appLockTimeout) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_STOP) {
-                        lastStopTimestamp = System.currentTimeMillis()
-                    } else if (event == Lifecycle.Event.ON_START) {
+                    if (event == Lifecycle.Event.ON_PAUSE) {
+                        lastStopTimestamp = android.os.SystemClock.elapsedRealtime()
+                    } else if (event == Lifecycle.Event.ON_RESUME) {
                         val currentMode = appLockMode ?: AppLockMode.NONE
                         if (currentMode != AppLockMode.NONE && lastStopTimestamp > 0L) {
-                            val elapsed = System.currentTimeMillis() - lastStopTimestamp
+                            val elapsed = android.os.SystemClock.elapsedRealtime() - lastStopTimestamp
                             if (elapsed >= appLockTimeout.timeoutMillis) {
                                 isAppUnlocked = false
                             }
+                            lastStopTimestamp = 0L
                         }
                     }
                 }

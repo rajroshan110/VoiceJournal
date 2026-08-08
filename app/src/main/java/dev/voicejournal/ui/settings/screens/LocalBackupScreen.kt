@@ -232,7 +232,7 @@ fun LocalBackupScreen(
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export (Unencrypted ZIP)", fontSize = 11.sp, maxLines = 1)
+                            Text("Export Backup", maxLines = 1)
                         }
 
                         OutlinedButton(
@@ -242,7 +242,7 @@ fun LocalBackupScreen(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import Backup", fontSize = 13.sp)
+                            Text("Import Backup", maxLines = 1)
                         }
                     }
                 }
