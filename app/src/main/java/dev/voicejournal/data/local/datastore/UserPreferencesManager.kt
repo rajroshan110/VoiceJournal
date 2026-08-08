@@ -24,9 +24,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
+import dev.voicejournal.data.security.KeystoreInvalidatedException
+import kotlinx.coroutines.flow.catch
+import android.util.Log
 
 import javax.inject.Inject
 import javax.inject.Singleton
+
+enum class SecurityRecoveryReason {
+    NONE,
+    KEYSTORE_INVALIDATED
+}
 
 @Singleton
 class UserPreferencesManager @Inject constructor(
@@ -47,6 +55,7 @@ class UserPreferencesManager @Inject constructor(
         val TIME_FORMAT = stringPreferencesKey("time_format")
         val START_OF_WEEK = stringPreferencesKey("start_of_week")
         val APP_LOCK_MODE = stringPreferencesKey("app_lock_mode")
+        val SECURITY_RECOVERY_REASON = stringPreferencesKey("security_recovery_reason")
         val APP_LOCK_TIMEOUT = stringPreferencesKey("app_lock_timeout")
         val CUSTOM_PIN = stringPreferencesKey("custom_pin") // Legacy plaintext PIN
         val CUSTOM_PIN_ENCRYPTED = stringPreferencesKey("custom_pin_encrypted")
@@ -134,6 +143,14 @@ class UserPreferencesManager @Inject constructor(
         }
     }
 
+    val securityRecoveryReason: Flow<SecurityRecoveryReason> = dataStore.data.map { prefs ->
+        try {
+            SecurityRecoveryReason.valueOf(prefs[SECURITY_RECOVERY_REASON] ?: SecurityRecoveryReason.NONE.name)
+        } catch (e: Exception) {
+            SecurityRecoveryReason.NONE
+        }
+    }
+
     val appLockMode: Flow<AppLockMode> = dataStore.data.map { prefs ->
         val lockStr = prefs[APP_LOCK_MODE] ?: AppLockMode.NONE.name
         try {
@@ -158,6 +175,13 @@ class UserPreferencesManager @Inject constructor(
             KeyStoreHelper.decrypt(encrypted)
         } else {
             prefs[CUSTOM_PIN] // Legacy plaintext
+        }
+    }.catch { e ->
+        if (e is KeystoreInvalidatedException) {
+            resetSecurityState(SecurityRecoveryReason.KEYSTORE_INVALIDATED)
+            emit(null)
+        } else {
+            throw e
         }
     }
 
@@ -246,6 +270,26 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setAppLockMode(mode: AppLockMode) {
         dataStore.edit { prefs ->
             prefs[APP_LOCK_MODE] = mode.name
+        }
+    }
+
+    suspend fun clearSecurityRecoveryReason() {
+        dataStore.edit { prefs ->
+            prefs[SECURITY_RECOVERY_REASON] = SecurityRecoveryReason.NONE.name
+        }
+    }
+
+    suspend fun resetSecurityState(reason: SecurityRecoveryReason) {
+        dataStore.edit { prefs ->
+            if (prefs[APP_LOCK_MODE] != AppLockMode.NONE.name || prefs.contains(CUSTOM_PIN_ENCRYPTED)) {
+                prefs.remove(CUSTOM_PIN_ENCRYPTED)
+                prefs.remove(CUSTOM_PIN)
+                prefs[APP_LOCK_MODE] = AppLockMode.NONE.name
+                prefs[PIN_FAILED_ATTEMPTS] = 0
+                prefs[PIN_LOCKOUT_END_TIME] = 0L
+                prefs[SECURITY_RECOVERY_REASON] = reason.name
+                Log.i("Security", "Security state reset due to: $reason")
+            }
         }
     }
 

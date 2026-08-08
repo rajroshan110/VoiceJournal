@@ -29,7 +29,13 @@ interface TagDao {
     suspend fun getTagByUuid(uuid: String): TagEntity?
 
     @Query("DELETE FROM tags WHERE id = :id")
-    suspend fun deleteTag(id: Long)
+    suspend fun deleteTagInternal(id: Long)
+
+    @Transaction
+    suspend fun deleteTag(id: Long) {
+        deleteTagCrossRefsByTagId(id)
+        deleteTagInternal(id)
+    }
 
     @Query("DELETE FROM tags")
     suspend fun deleteAllTags()
@@ -47,6 +53,6 @@ interface TagDao {
     suspend fun mergeTags(sourceTagId: Long, targetTagId: Long) {
         relinkCrossRefs(sourceTagId, targetTagId)
         deleteTagCrossRefsByTagId(sourceTagId)
-        deleteTag(sourceTagId)
+        deleteTagInternal(sourceTagId)
     }
 }

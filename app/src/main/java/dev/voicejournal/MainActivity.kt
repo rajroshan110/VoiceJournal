@@ -32,6 +32,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
+import dev.voicejournal.data.local.datastore.SecurityRecoveryReason
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
 import dev.voicejournal.ui.theme.AppThemeMode
@@ -61,6 +67,8 @@ class MainActivity : FragmentActivity() {
             val appLockModeState = userPreferencesManager.appLockMode.collectAsState(initial = null)
             val appLockTimeout by userPreferencesManager.appLockTimeout.collectAsState(initial = AppLockTimeout.IMMEDIATELY)
             val customPin by userPreferencesManager.customPin.collectAsState(initial = null)
+            val securityRecoveryReason by userPreferencesManager.securityRecoveryReason.collectAsState(initial = SecurityRecoveryReason.NONE)
+            val scope = rememberCoroutineScope()
 
             val appLockMode = appLockModeState.value
             var isAppUnlocked by rememberSaveable { mutableStateOf(false) }
