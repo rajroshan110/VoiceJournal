@@ -33,7 +33,8 @@ import javax.inject.Singleton
 
 enum class SecurityRecoveryReason {
     NONE,
-    KEYSTORE_INVALIDATED
+    KEYSTORE_INVALIDATED,
+    RESTORE_INCONSISTENT_SECURITY_STATE
 }
 
 @Singleton

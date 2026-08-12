@@ -119,6 +119,30 @@ class MainActivity : FragmentActivity() {
             }
 
             VoiceTheme(themeMode = appThemeMode) {
+                if (securityRecoveryReason != SecurityRecoveryReason.NONE) {
+                    AlertDialog(
+                        onDismissRequest = { 
+                            scope.launch { userPreferencesManager.clearSecurityRecoveryReason() }
+                        },
+                        title = { Text("Security Reset") },
+                        text = { 
+                            val message = when(securityRecoveryReason) {
+                                SecurityRecoveryReason.KEYSTORE_INVALIDATED -> "Your device's biometric or secure lock screen settings changed. For your protection, your app lock has been reset."
+                                SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE -> "The restored backup contained an invalid security configuration. App Lock has been reset to protect your data."
+                                else -> "A security error occurred and your app lock has been reset."
+                            }
+                            Text(message)
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { 
+                                scope.launch { userPreferencesManager.clearSecurityRecoveryReason() }
+                            }) {
+                                Text("Got it")
+                            }
+                        }
+                    )
+                }
+
                 val colors = AppTheme.colors
 
                 val activeMode = appLockMode ?: AppLockMode.NONE

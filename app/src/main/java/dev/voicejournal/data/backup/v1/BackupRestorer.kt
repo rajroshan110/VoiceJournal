@@ -14,6 +14,8 @@ import java.nio.file.StandardCopyOption
 
 
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
+import dev.voicejournal.data.local.datastore.SecurityRecoveryReason
+import dev.voicejournal.data.security.KeyStoreHelper
 import dev.voicejournal.data.local.db.AppDatabase
 import dev.voicejournal.data.local.db.entity.EntryImageEntity
 import dev.voicejournal.data.local.db.entity.EntryTagCrossRef
@@ -321,6 +323,30 @@ class BackupRestorer(
             if (preferences != null) {
                 onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
+                
+                // Validate security configuration
+                val currentPrefs = prefsManager.getRawPreferencesSnapshot()
+                val appLockModeStr = currentPrefs[dev.voicejournal.data.local.datastore.UserPreferencesManager.APP_LOCK_MODE]
+                
+                if (appLockModeStr == dev.voicejournal.domain.model.AppLockMode.CUSTOM_PIN.name) {
+                    val encryptedPin = currentPrefs[dev.voicejournal.data.local.datastore.UserPreferencesManager.CUSTOM_PIN_ENCRYPTED]
+                    var isValid = false
+                    if (encryptedPin != null) {
+                        try {
+                            val decrypted = dev.voicejournal.data.security.KeyStoreHelper.decrypt(encryptedPin)
+                            if (!decrypted.isNullOrEmpty()) {
+                                isValid = true
+                            }
+                        } catch (e: Exception) {
+                            // Decryption failed or keystore exception
+                        }
+                    }
+                    if (!isValid) {
+                        Log.w("Backup", "Restored backup contained invalid custom PIN configuration. Resetting security state.")
+                        prefsManager.resetSecurityState(SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE)
+                    }
+                }
+
                 rollbackManager.register { prefsManager.restoreRawPreferences(prefsSnapshot) }
                 Log.d("Backup", "Preferences replaced successfully")
             }
