@@ -127,6 +127,10 @@ class NoteDetailViewModel @Inject constructor(
     private val pendingFileAdditions = mutableSetOf<String>()
     @Volatile private var isSaving = false
 
+    private var isInitialized = false
+    private var loadedEntryId: Long? = null
+    private var loadJob: kotlinx.coroutines.Job? = null
+
     init {
         viewModelScope.launch {
             userPreferencesManager.timeFormat.collect { format ->
@@ -392,6 +396,10 @@ class NoteDetailViewModel @Inject constructor(
         initialTag: String? = null,
         initialTagType: String? = null
     ) {
+        if (isInitialized) return
+        isInitialized = true
+        loadedEntryId = null
+
         audioPlayerManager.stop()
         viewModelScope.launch {
             audioRecorderManager.cancelRecording()
@@ -445,7 +453,12 @@ class NoteDetailViewModel @Inject constructor(
             resetNewEntryState()
             return
         }
-        viewModelScope.launch {
+        if (isInitialized && loadedEntryId == id) return
+        isInitialized = true
+        loadedEntryId = id
+
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             getEntryByIdUseCase(id).collect { entry ->
                 entry?.let { e ->
                     val tracks = e.allAudioTracks.take(3)
@@ -618,6 +631,7 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun onLeaveScreen() {
+        audioPlayerManager.stop()
         // Discard any uncommitted temporary draft files created during unsaved session
         pendingFileAdditions.forEach { path ->
             deletePhysicalFile(path)

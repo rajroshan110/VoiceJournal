@@ -26,6 +26,7 @@ import dev.voicejournal.ui.journal.components.TopicFilterBottomSheet
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.util.findActivity
 import java.time.LocalDate
 
 @Composable
@@ -46,7 +47,10 @@ fun CalendarScreen(
 
     DisposableEffect(pendingNavEntryId) {
         onDispose {
-            viewModel.stopAudioOnLeave(pendingNavEntryId)
+            val activity = context.findActivity()
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.stopAudioOnLeave(pendingNavEntryId)
+            }
         }
     }
 

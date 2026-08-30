@@ -32,6 +32,73 @@ static std::string routeTargetLanguage(const std::string &detected_code) {
     return "unsupported";
 }
 
+// Safe conversion from standard UTF-8 C++ string to Java String (handles 4-byte UTF-8, emojis, and invalid sequences without JNI abort)
+static jstring createJavaStringFromUtf8(JNIEnv *env, const char *bytes, size_t len) {
+    if (env == nullptr) return nullptr;
+    if (bytes == nullptr || len == 0) {
+        return env->NewStringUTF("");
+    }
+
+    jbyteArray byteArray = env->NewByteArray(static_cast<jsize>(len));
+    if (byteArray == nullptr) {
+        LOGE("createJavaStringFromUtf8: Failed to allocate jbyteArray (len=%zu)", len);
+        return nullptr;
+    }
+
+    env->SetByteArrayRegion(byteArray, 0, static_cast<jsize>(len), reinterpret_cast<const jbyte *>(bytes));
+    if (env->ExceptionCheck()) {
+        LOGE("createJavaStringFromUtf8: Exception in SetByteArrayRegion");
+        env->ExceptionClear();
+        env->DeleteLocalRef(byteArray);
+        return nullptr;
+    }
+
+    jclass stringClass = env->FindClass("java/lang/String");
+    if (stringClass == nullptr) {
+        LOGE("createJavaStringFromUtf8: Failed to find java/lang/String");
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(byteArray);
+        return nullptr;
+    }
+
+    jmethodID stringConstructor = env->GetMethodID(stringClass, "<init>", "([BLjava/lang/String;)V");
+    if (stringConstructor == nullptr) {
+        LOGE("createJavaStringFromUtf8: Failed to find String([BLjava/lang/String;)V constructor");
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(stringClass);
+        env->DeleteLocalRef(byteArray);
+        return nullptr;
+    }
+
+    jstring charsetName = env->NewStringUTF("UTF-8");
+    if (charsetName == nullptr) {
+        LOGE("createJavaStringFromUtf8: Failed to create charsetName string");
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(stringClass);
+        env->DeleteLocalRef(byteArray);
+        return nullptr;
+    }
+
+    jstring resultString = static_cast<jstring>(
+        env->NewObject(stringClass, stringConstructor, byteArray, charsetName)
+    );
+    if (env->ExceptionCheck()) {
+        LOGE("createJavaStringFromUtf8: Exception during String construction");
+        env->ExceptionClear();
+        resultString = nullptr;
+    }
+
+    env->DeleteLocalRef(charsetName);
+    env->DeleteLocalRef(byteArray);
+    env->DeleteLocalRef(stringClass);
+
+    return resultString;
+}
+
+static jstring createJavaStringFromUtf8(JNIEnv *env, const std::string &str) {
+    return createJavaStringFromUtf8(env, str.data(), str.length());
+}
+
 struct CallbackData {
     JNIEnv *env;
     jobject callback_obj;
@@ -100,7 +167,12 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
     struct whisper_context *ctx = reinterpret_cast<struct whisper_context *>(context_ptr);
     if (ctx == nullptr) {
         LOGE("fullTranscribe failed: context_ptr is null!");
-        return env->NewStringUTF("");
+        return createJavaStringFromUtf8(env, "Error: Whisper context is null");
+    }
+
+    if (audio_samples == nullptr) {
+        LOGE("fullTranscribe failed: audio_samples is null!");
+        return createJavaStringFromUtf8(env, "Error: Audio samples array is null");
     }
 
     const char *lang_str = env->GetStringUTFChars(language, nullptr);
@@ -110,7 +182,16 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
     }
 
     jsize num_samples = env->GetArrayLength(audio_samples);
+    if (num_samples <= 0) {
+        LOGE("fullTranscribe failed: audio_samples array is empty!");
+        return createJavaStringFromUtf8(env, "");
+    }
+
     jfloat *samples = env->GetFloatArrayElements(audio_samples, nullptr);
+    if (samples == nullptr) {
+        LOGE("fullTranscribe failed: GetFloatArrayElements returned nullptr (Native allocation failure / Out of memory)");
+        return createJavaStringFromUtf8(env, "Error: Native audio buffer allocation failed (Out of memory)");
+    }
 
     LOGI("=== JNI fullTranscribe Execution Start ===");
     LOGI("Audio Samples: %d (%.2f seconds of 16kHz audio)", num_samples, (double)num_samples / 16000.0);
@@ -120,146 +201,168 @@ Java_dev_voicejournal_transcription_WhisperLib_fullTranscribe(
     std::string detected_code = req_lang;
     float top_prob = 0.0f;
 
-    // Automatic Language Detection Pipeline
-    if (req_lang == "auto") {
-        LOGI("Running automatic language detection...");
-        if (whisper_pcm_to_mel(ctx, samples, num_samples, num_threads) == 0) {
-            int max_lang_id = whisper_lang_max_id();
-            std::vector<float> lang_probs(max_lang_id + 1, 0.0f);
-            int det_id = whisper_lang_auto_detect(ctx, 0, num_threads, lang_probs.data());
-            if (det_id >= 0) {
-                const char * det_str = whisper_lang_str(det_id);
-                if (det_str != nullptr) {
-                    detected_code = det_str;
-                }
-                top_prob = lang_probs[det_id];
+    try {
+        // Automatic Language Detection Pipeline
+        if (req_lang == "auto") {
+            LOGI("Running automatic language detection...");
+            if (whisper_pcm_to_mel(ctx, samples, num_samples, num_threads) == 0) {
+                int max_lang_id = whisper_lang_max_id();
+                std::vector<float> lang_probs(max_lang_id + 1, 0.0f);
+                int det_id = whisper_lang_auto_detect(ctx, 0, num_threads, lang_probs.data());
+                if (det_id >= 0) {
+                    const char * det_str = whisper_lang_str(det_id);
+                    if (det_str != nullptr) {
+                        detected_code = det_str;
+                    }
+                    top_prob = lang_probs[det_id];
 
-                // Collect and sort all language probabilities to log Top 5
-                std::vector<std::pair<float, int>> sorted_langs;
-                sorted_langs.reserve(max_lang_id + 1);
-                for (int i = 0; i <= max_lang_id; ++i) {
-                    sorted_langs.push_back({lang_probs[i], i});
-                }
-                std::sort(sorted_langs.rbegin(), sorted_langs.rend());
+                    // Collect and sort all language probabilities to log Top 5
+                    std::vector<std::pair<float, int>> sorted_langs;
+                    sorted_langs.reserve(max_lang_id + 1);
+                    for (int i = 0; i <= max_lang_id; ++i) {
+                        sorted_langs.push_back({lang_probs[i], i});
+                    }
+                    std::sort(sorted_langs.rbegin(), sorted_langs.rend());
 
-                LOGI("=== Top 5 Detected Spoken Language Probabilities ===");
-                for (int i = 0; i < 5 && i < (int)sorted_langs.size(); ++i) {
-                    float prob = sorted_langs[i].first;
-                    int lang_id = sorted_langs[i].second;
-                    const char * lstr = whisper_lang_str(lang_id);
-                    const char * fname = whisper_lang_str_full(lang_id);
-                    LOGI("  #%d: '%s' (%s) -> prob=%.4f (%.2f%%)",
-                         i + 1,
-                         (lstr ? lstr : "unknown"),
-                         (fname ? fname : "unknown"),
-                         prob,
-                         prob * 100.0f);
+                    LOGI("=== Top 5 Detected Spoken Language Probabilities ===");
+                    for (int i = 0; i < 5 && i < (int)sorted_langs.size(); ++i) {
+                        float prob = sorted_langs[i].first;
+                        int lang_id = sorted_langs[i].second;
+                        const char * lstr = whisper_lang_str(lang_id);
+                        const char * fname = whisper_lang_str_full(lang_id);
+                        LOGI("  #%d: '%s' (%s) -> prob=%.4f (%.2f%%)",
+                             i + 1,
+                             (lstr ? lstr : "unknown"),
+                             (fname ? fname : "unknown"),
+                             prob,
+                             prob * 100.0f);
+                    }
+                } else {
+                    LOGE("whisper_lang_auto_detect failed!");
                 }
             } else {
-                LOGE("whisper_lang_auto_detect failed!");
+                LOGE("whisper_pcm_to_mel failed during auto-detection!");
             }
-        } else {
-            LOGE("whisper_pcm_to_mel failed during auto-detection!");
         }
-    }
 
-    // Language Routing Logic (Hindi Group -> "hi", English -> "en", All Others -> "unsupported")
-    std::string final_lang = routeTargetLanguage(detected_code);
+        // Language Routing Logic (Hindi Group -> "hi", English -> "en", All Others -> "unsupported")
+        std::string final_lang = routeTargetLanguage(detected_code);
 
-    LOGI("Detected language: '%s' (prob=%.4f)", detected_code.c_str(), top_prob);
-    LOGI("Final language passed to whisper_full(): '%s'", final_lang.c_str());
+        LOGI("Detected language: '%s' (prob=%.4f)", detected_code.c_str(), top_prob);
+        LOGI("Final language passed to whisper_full(): '%s'", final_lang.c_str());
 
-    if (final_lang == "unsupported") {
-        LOGE("Detected language '%s' is unsupported. Only English and Hindi are supported. Halting transcription.", detected_code.c_str());
-        env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
-        std::string err_msg = "Unsupported language detected (" + detected_code + ")";
-        return env->NewStringUTF(err_msg.c_str());
-    }
+        if (final_lang == "unsupported") {
+            LOGE("Detected language '%s' is unsupported. Only English and Hindi are supported. Halting transcription.", detected_code.c_str());
+            env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
+            std::string err_msg = "Unsupported language detected (" + detected_code + ")";
+            return createJavaStringFromUtf8(env, err_msg);
+        }
 
-    whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    params.greedy.best_of = 1;
-    params.print_progress = false;
-    params.print_special = false;
-    params.print_realtime = false;
-    params.print_timestamps = false;
-    params.translate = false; // Transcribe in native spoken script
-    params.language = final_lang.c_str();
-    params.n_threads = num_threads;
-    params.no_context = true; // Phase 1: Disable past text context carryover
-    params.n_max_text_ctx = 0; // Phase 1: Zero max past text context tokens
-    params.suppress_blank = true;
-    params.suppress_non_speech_tokens = true;
-    params.temperature = 0.0f; // Deterministic greedy decoding
-    params.temperature_inc = 0.0f; // Phase 1: Disable temperature fallback loop
+        whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+        params.greedy.best_of = 1;
+        params.print_progress = false;
+        params.print_special = false;
+        params.print_realtime = false;
+        params.print_timestamps = false;
+        params.translate = false; // Transcribe in native spoken script
+        params.language = final_lang.c_str();
+        params.n_threads = num_threads;
+        params.no_context = true; // Phase 1: Disable past text context carryover
+        params.n_max_text_ctx = 0; // Phase 1: Zero max past text context tokens
+        params.suppress_blank = true;
+        params.suppress_non_speech_tokens = true;
+        params.temperature = 0.0f; // Deterministic greedy decoding
+        params.temperature_inc = 0.0f; // Phase 1: Disable temperature fallback loop
 
-    CallbackData cb_data;
-    cb_data.env = env;
-    cb_data.callback_obj = callback;
-    cb_data.method_id = nullptr;
+        CallbackData cb_data;
+        cb_data.env = env;
+        cb_data.callback_obj = callback;
+        cb_data.method_id = nullptr;
 
-    if (callback != nullptr) {
-        jclass callback_class = env->GetObjectClass(callback);
-        cb_data.method_id = env->GetMethodID(callback_class, "onNewSegment", "(Ljava/lang/String;)V");
-        if (cb_data.method_id != nullptr) {
-            params.new_segment_callback = [](struct whisper_context * ctx, struct whisper_state * state, int n_new, void * user_data) {
-                CallbackData *data = static_cast<CallbackData *>(user_data);
-                if (data && data->env && data->callback_obj && data->method_id) {
-                    int n_segments = whisper_full_n_segments(ctx);
-                    int start_idx = n_segments - n_new;
-                    std::string new_text = "";
-                    for (int i = start_idx; i < n_segments; ++i) {
-                        const char *seg_text = whisper_full_get_segment_text(ctx, i);
-                        if (seg_text != nullptr) {
-                            new_text += seg_text;
+        if (callback != nullptr) {
+            jclass callback_class = env->GetObjectClass(callback);
+            if (callback_class != nullptr) {
+                cb_data.method_id = env->GetMethodID(callback_class, "onNewSegment", "(Ljava/lang/String;)V");
+                env->DeleteLocalRef(callback_class);
+            }
+            if (cb_data.method_id != nullptr) {
+                params.new_segment_callback = [](struct whisper_context * ctx, struct whisper_state * state, int n_new, void * user_data) {
+                    CallbackData *data = static_cast<CallbackData *>(user_data);
+                    if (data && data->env && data->callback_obj && data->method_id) {
+                        int n_segments = whisper_full_n_segments(ctx);
+                        int start_idx = n_segments - n_new;
+                        std::string new_text = "";
+                        for (int i = start_idx; i < n_segments; ++i) {
+                            const char *seg_text = whisper_full_get_segment_text(ctx, i);
+                            if (seg_text != nullptr) {
+                                new_text += seg_text;
+                            }
+                        }
+                        if (!new_text.empty()) {
+                            LOGI("Partial segment generated: n_new=%d, byte_len=%zu", n_new, new_text.length());
+                            jstring jtext = createJavaStringFromUtf8(data->env, new_text);
+                            if (jtext != nullptr) {
+                                data->env->CallVoidMethod(data->callback_obj, data->method_id, jtext);
+                                if (data->env->ExceptionCheck()) {
+                                    LOGE("Exception in Java onNewSegment callback");
+                                    data->env->ExceptionClear();
+                                }
+                                data->env->DeleteLocalRef(jtext);
+                            }
                         }
                     }
-                    if (!new_text.empty()) {
-                        jstring jtext = data->env->NewStringUTF(new_text.c_str());
-                        data->env->CallVoidMethod(data->callback_obj, data->method_id, jtext);
-                        data->env->DeleteLocalRef(jtext);
-                    }
-                }
-            };
-            params.new_segment_callback_user_data = &cb_data;
+                };
+                params.new_segment_callback_user_data = &cb_data;
+            }
         }
-    }
 
-    // Runtime Parameter Logs (Phase 1 Debugging)
-    LOGI("=== Final whisper_full_params ===");
-    LOGI("language=%s", params.language != nullptr ? params.language : "null");
-    LOGI("no_context=%s", params.no_context ? "true" : "false");
-    LOGI("temperature=%.1f", params.temperature);
-    LOGI("temperature_inc=%.1f", params.temperature_inc);
-    LOGI("n_max_text_ctx=%d", params.n_max_text_ctx);
-    LOGI("translate=%s", params.translate ? "true" : "false");
-    LOGI("strategy=%s", params.strategy == WHISPER_SAMPLING_GREEDY ? "GREEDY" : "BEAM_SEARCH");
-    LOGI("best_of=%d", params.greedy.best_of);
+        // Measure Whisper Native Full Engine Inference Time
+        auto infer_start = std::chrono::high_resolution_clock::now();
+        int ret = whisper_full(ctx, params, samples, num_samples);
+        auto infer_end = std::chrono::high_resolution_clock::now();
+        auto infer_ms = std::chrono::duration_cast<std::chrono::milliseconds>(infer_end - infer_start).count();
 
-    // Measure Whisper Native Full Engine Inference Time
-    auto infer_start = std::chrono::high_resolution_clock::now();
-    int ret = whisper_full(ctx, params, samples, num_samples);
-    auto infer_end = std::chrono::high_resolution_clock::now();
-    auto infer_ms = std::chrono::duration_cast<std::chrono::milliseconds>(infer_end - infer_start).count();
+        if (ret != 0) {
+            LOGE("whisper_full FAILED with return code: %d (Inference Time: %lld ms)", ret, (long long)infer_ms);
+            env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
+            return createJavaStringFromUtf8(env, "Error: Native transcription failed");
+        }
 
-    if (ret != 0) {
-        LOGE("whisper_full FAILED with return code: %d (Inference Time: %lld ms)", ret, (long long)infer_ms);
+        LOGI("whisper_full Completed Successfully in %lld ms", (long long)infer_ms);
+
+        std::string result_text = "";
+        int n_segments = whisper_full_n_segments(ctx);
+        for (int i = 0; i < n_segments; ++i) {
+            const char *text = whisper_full_get_segment_text(ctx, i);
+            if (text != nullptr) {
+                result_text += text;
+            }
+        }
+
+        LOGI("Transcription finished: %d segments, total_byte_len=%zu", n_segments, result_text.length());
+
         env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
-        return env->NewStringUTF("Transcription failed");
-    }
 
-    LOGI("whisper_full Completed Successfully in %lld ms", (long long)infer_ms);
-
-    std::string result_text = "";
-    int n_segments = whisper_full_n_segments(ctx);
-    for (int i = 0; i < n_segments; ++i) {
-        const char *text = whisper_full_get_segment_text(ctx, i);
-        if (text != nullptr) {
-            result_text += text;
+        jstring final_result = createJavaStringFromUtf8(env, result_text);
+        if (final_result == nullptr) {
+            LOGE("Failed to create Java String from transcription result");
+            return createJavaStringFromUtf8(env, "Error: Failed to convert transcription text to Java String");
         }
+        return final_result;
+    } catch (const std::bad_alloc &e) {
+        LOGE("C++ std::bad_alloc during transcription: %s", e.what());
+        env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
+        return createJavaStringFromUtf8(env, "Error: Out of memory in Whisper native engine");
+    } catch (const std::exception &e) {
+        LOGE("C++ std::exception during transcription: %s", e.what());
+        env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
+        std::string err_msg = std::string("Error: Native engine exception: ") + e.what();
+        return createJavaStringFromUtf8(env, err_msg);
+    } catch (...) {
+        LOGE("Unknown C++ exception during transcription");
+        env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
+        return createJavaStringFromUtf8(env, "Error: Unknown native transcription error");
     }
-
-    env->ReleaseFloatArrayElements(audio_samples, samples, JNI_ABORT);
-    return env->NewStringUTF(result_text.c_str());
 }
 
 extern "C"

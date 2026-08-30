@@ -157,7 +157,6 @@ class JournalViewModel @Inject constructor(
                             currentPositionMs = 0L,
                             errorMessage = state.message
                         )
-                        _loadError.value = state.message
                     }
                 }
             }

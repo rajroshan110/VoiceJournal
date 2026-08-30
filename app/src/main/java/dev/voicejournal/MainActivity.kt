@@ -103,9 +103,10 @@ class MainActivity : FragmentActivity() {
                         lastStopTimestamp = android.os.SystemClock.elapsedRealtime()
                     } else if (event == Lifecycle.Event.ON_RESUME) {
                         val currentMode = appLockMode ?: AppLockMode.NONE
+                        val wasPicker = dev.voicejournal.ui.util.AppLockStateManager.consumeTransientPicker()
                         if (currentMode != AppLockMode.NONE && lastStopTimestamp > 0L) {
                             val elapsed = android.os.SystemClock.elapsedRealtime() - lastStopTimestamp
-                            if (elapsed >= appLockTimeout.timeoutMillis) {
+                            if (!wasPicker && elapsed >= appLockTimeout.timeoutMillis) {
                                 isAppUnlocked = false
                             }
                             lastStopTimestamp = 0L

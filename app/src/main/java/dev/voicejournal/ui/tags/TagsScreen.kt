@@ -37,6 +37,7 @@ import dev.voicejournal.ui.tags.components.CategoryFolderCard
 import dev.voicejournal.ui.tags.components.TagCardGrid
 import dev.voicejournal.ui.tags.components.TagCardList
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.util.findActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +64,13 @@ fun TagsScreen(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.stopAudioOnLeave()
+            val activity = context.findActivity()
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.stopAudioOnLeave()
+            }
         }
     }
 

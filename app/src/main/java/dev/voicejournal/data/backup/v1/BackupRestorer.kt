@@ -323,30 +323,6 @@ class BackupRestorer(
             if (preferences != null) {
                 onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
-                
-                // Validate security configuration
-                val currentPrefs = prefsManager.getRawPreferencesSnapshot()
-                val appLockModeStr = currentPrefs[dev.voicejournal.data.local.datastore.UserPreferencesManager.APP_LOCK_MODE]
-                
-                if (appLockModeStr == dev.voicejournal.domain.model.AppLockMode.CUSTOM_PIN.name) {
-                    val encryptedPin = currentPrefs[dev.voicejournal.data.local.datastore.UserPreferencesManager.CUSTOM_PIN_ENCRYPTED]
-                    var isValid = false
-                    if (encryptedPin != null) {
-                        try {
-                            val decrypted = dev.voicejournal.data.security.KeyStoreHelper.decrypt(encryptedPin)
-                            if (!decrypted.isNullOrEmpty()) {
-                                isValid = true
-                            }
-                        } catch (e: Exception) {
-                            // Decryption failed or keystore exception
-                        }
-                    }
-                    if (!isValid) {
-                        Log.w("Backup", "Restored backup contained invalid custom PIN configuration. Resetting security state.")
-                        prefsManager.resetSecurityState(SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE)
-                    }
-                }
-
                 rollbackManager.register { prefsManager.restoreRawPreferences(prefsSnapshot) }
                 Log.d("Backup", "Preferences replaced successfully")
             }
@@ -380,7 +356,7 @@ class BackupRestorer(
         }
     }
 
-    private suspend fun restorePreferences(p: BackupPreferences) {
+    internal suspend fun restorePreferences(p: BackupPreferences) {
         // Recording format
         val audioFormat = try {
             AudioFormat.valueOf(p.recording.audioFormat.uppercase(Locale.ROOT))
@@ -425,18 +401,9 @@ class BackupRestorer(
         // Editor
         prefsManager.setMarkdownEnabled(p.editor.markdownEnabled)
 
-        // Security (App lock mode/timeout & screen privacy; PIN strictly EXCLUDED!)
-        val lockMode = try {
-            AppLockMode.valueOf(p.security.appLockMode.uppercase(Locale.ROOT))
-        } catch (e: Exception) { AppLockMode.NONE }
-        prefsManager.setAppLockMode(lockMode)
-
-        val lockTimeout = try {
-            AppLockTimeout.valueOf(p.security.appLockTimeout.uppercase(Locale.ROOT))
-        } catch (e: Exception) { AppLockTimeout.IMMEDIATELY }
-        prefsManager.setAppLockTimeout(lockTimeout)
-
-        prefsManager.setScreenPrivacyEnabled(p.security.screenPrivacyEnabled)
+        // Security: App Lock state (AppLockMode, custom PIN, timeout) is strictly destination-device-owned
+        // and intentionally NEVER mutated by backup restore.
+        Log.i("Backup", "Preserving destination device App Lock state; security configuration from backup is intentionally ignored.")
 
         // Data Management
         prefsManager.setDailyReminder(p.dataManagement.dailyReminder)

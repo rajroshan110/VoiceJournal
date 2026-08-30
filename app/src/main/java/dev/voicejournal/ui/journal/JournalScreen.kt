@@ -42,6 +42,7 @@ import dev.voicejournal.ui.journal.components.*
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.util.findActivity
 import kotlinx.coroutines.launch
 
 private val MicIcon: ImageVector = ImageVector.Builder(
@@ -177,15 +178,18 @@ fun JournalScreen(
         }
     }
 
-    // Stop audio, clear selection & close search when leaving screen
+    // Stop audio, clear selection & close search when leaving screen (only on true navigation away, not configuration change)
     DisposableEffect(pendingNavEntryId) {
         onDispose {
-            viewModel.stopAudioOnLeave(pendingNavEntryId)
-            if (uiState.isSearchActive) {
-                viewModel.toggleSearch()
-            }
-            if (selectionState.isSelectionMode) {
-                viewModel.clearSelection()
+            val activity = context.findActivity()
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.stopAudioOnLeave(pendingNavEntryId)
+                if (uiState.isSearchActive) {
+                    viewModel.toggleSearch()
+                }
+                if (selectionState.isSelectionMode) {
+                    viewModel.clearSelection()
+                }
             }
         }
     }

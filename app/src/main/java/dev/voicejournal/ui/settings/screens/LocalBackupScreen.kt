@@ -227,14 +227,20 @@ fun LocalBackupScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip") },
+                            onClick = {
+                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip")
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Export\nBackup", textAlign = TextAlign.Center)
                         }
 
                         OutlinedButton(
-                            onClick = { importLauncher.launch(arrayOf("application/zip")) },
+                            onClick = {
+                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                importLauncher.launch(arrayOf("application/zip"))
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Import\nBackup", textAlign = TextAlign.Center)

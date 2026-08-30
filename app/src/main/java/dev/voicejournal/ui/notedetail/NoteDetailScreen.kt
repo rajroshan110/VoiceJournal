@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import dev.voicejournal.ui.notedetail.components.AddItemSheet
 import dev.voicejournal.data.storage.MediaStorageManager
+import dev.voicejournal.ui.util.findActivity
 import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
 import dev.voicejournal.ui.notedetail.components.TranscriptionButton
 import dev.voicejournal.ui.notedetail.components.TranscriptSection
@@ -129,7 +130,10 @@ fun NoteDetailScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.onLeaveScreen()
+            val activity = context.findActivity()
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.onLeaveScreen()
+            }
         }
     }
 
@@ -587,18 +591,21 @@ fun NoteDetailScreen(
                         "${context.packageName}.fileprovider",
                         photoFile
                     )
+                    dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                     cameraLauncher.launch(photoUri)
                 } catch (e: Exception) {
                     Toast.makeText(context, "Failed to launch camera: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             },
             onAddPhotoClick = {
+                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                 photoPickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
             onAddVoiceRecordingClick = {
                 if (uiState.audioTracks.size < 3) {
+                    dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                     audioPickerLauncher.launch(arrayOf("audio/*"))
                 } else {
                     Toast.makeText(context, "Maximum 3 audio tracks per note", Toast.LENGTH_SHORT).show()

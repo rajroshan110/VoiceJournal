@@ -39,6 +39,8 @@ import dev.voicejournal.ui.journal.components.LightboxDialog
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.util.findActivity
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +65,13 @@ fun FoldersScreen(
         }
     }
 
+    val context = LocalContext.current
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.stopAudioOnLeave()
+            val activity = context.findActivity()
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.stopAudioOnLeave()
+            }
         }
     }
 

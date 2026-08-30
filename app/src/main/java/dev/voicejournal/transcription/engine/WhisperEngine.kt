@@ -300,7 +300,7 @@ class WhisperEngine @Inject constructor(
                 val totalDuration = System.currentTimeMillis() - totalStart
                 Log.d(PERF_TAG, "=== TOTAL TRANSCRIPTION TIME: ${totalDuration}ms ===")
 
-                if (rawText.startsWith("Unsupported language detected")) {
+                if (rawText.startsWith("Error:") || rawText.startsWith("Unsupported language detected")) {
                     return@withContext Result.failure(Exception(rawText))
                 }
 

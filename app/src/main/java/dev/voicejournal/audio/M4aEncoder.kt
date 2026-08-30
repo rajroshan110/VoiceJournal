@@ -13,9 +13,17 @@ class M4aEncoder {
     private var trackIndex = -1
     private var muxerStarted = false
     private val bufferInfo = MediaCodec.BufferInfo()
+    private var totalBytesAccepted: Long = 0L
+
+    companion object {
+        private const val SAMPLE_RATE = 16000
+        private const val CHANNELS = 1
+        private const val BYTES_PER_SAMPLE = 2 // 16-bit PCM
+        private const val BYTES_PER_FRAME = CHANNELS * BYTES_PER_SAMPLE
+    }
 
     fun start(outputFile: File) {
-        val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, 16000, 1)
+        val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, SAMPLE_RATE, CHANNELS)
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
         format.setInteger(MediaFormat.KEY_BIT_RATE, 128000)
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384)
@@ -27,6 +35,7 @@ class M4aEncoder {
         mediaMuxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         trackIndex = -1
         muxerStarted = false
+        totalBytesAccepted = 0L
     }
 
     fun encodePcmChunk(buffer: ByteArray, bytesRead: Int) {
@@ -44,7 +53,9 @@ class M4aEncoder {
                 val chunkSize = minOf(remaining, capacity)
                 
                 inputBuffer?.put(buffer, offset, chunkSize)
-                codec.queueInputBuffer(inputBufferIndex, 0, chunkSize, System.nanoTime() / 1000, 0)
+                val presentationTimeUs = (totalBytesAccepted / BYTES_PER_FRAME) * 1_000_000L / SAMPLE_RATE
+                codec.queueInputBuffer(inputBufferIndex, 0, chunkSize, presentationTimeUs, 0)
+                totalBytesAccepted += chunkSize
                 offset += chunkSize
             }
             drainCodec(false)
@@ -53,20 +64,41 @@ class M4aEncoder {
 
     fun finish() {
         val codec = mediaCodec ?: return
-        val inputBufferIndex = codec.dequeueInputBuffer(10000)
-        if (inputBufferIndex >= 0) {
-            codec.queueInputBuffer(inputBufferIndex, 0, 0, System.nanoTime() / 1000, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+        var queuedEos = false
+        var attempts = 0
+        while (!queuedEos && attempts < 10) {
+            val inputBufferIndex = codec.dequeueInputBuffer(10000)
+            if (inputBufferIndex >= 0) {
+                val presentationTimeUs = (totalBytesAccepted / BYTES_PER_FRAME) * 1_000_000L / SAMPLE_RATE
+                codec.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                queuedEos = true
+            } else {
+                drainCodec(false)
+                attempts++
+            }
         }
         drainCodec(true)
         
-        codec.stop()
+        try {
+            codec.stop()
+        } catch (e: Exception) {
+            // Ignore error if already stopped
+        }
         codec.release()
         mediaCodec = null
 
         if (muxerStarted) {
-            mediaMuxer?.stop()
+            try {
+                mediaMuxer?.stop()
+            } catch (e: Exception) {
+                // Ignore error if muxer had no valid tracks
+            }
         }
-        mediaMuxer?.release()
+        try {
+            mediaMuxer?.release()
+        } catch (e: Exception) {
+            // Ignore
+        }
         mediaMuxer = null
     }
 
