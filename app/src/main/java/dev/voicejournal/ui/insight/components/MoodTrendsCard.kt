@@ -121,7 +121,7 @@ fun MoodTrendsCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
+                    .height(140.dp)
             ) {
                 val primaryColor = colors.primary
                 val textSecondary = colors.textSecondary
@@ -268,9 +268,9 @@ fun MoodTrendsCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Distribution summary chips
+        // Distribution summary chips or placeholder footer
         if (moodDistribution.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -299,6 +299,13 @@ fun MoodTrendsCard(
                     }
                 }
             }
+        } else {
+            Text(
+                text = "Track your moods daily with voice notes 🎙️",
+                color = colors.textSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

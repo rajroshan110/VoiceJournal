@@ -29,6 +29,9 @@ sealed class InsightsContentState {
 data class InsightUiState(
     val period: TimePeriod = TimePeriod.WEEK,
     val dateRangeMode: InsightDateRangeMode = InsightDateRangeMode.LAST_DAYS,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
     val contentState: InsightsContentState = InsightsContentState.Loading
 )
 
@@ -48,6 +51,21 @@ class InsightViewModel @Inject constructor(
             userPreferencesManager.insightDateRangeMode.collectLatest { mode ->
                 _uiState.value = _uiState.value.copy(dateRangeMode = mode)
                 loadData(_uiState.value.period, mode)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isTopicsEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isPeopleEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isMoodEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
             }
         }
     }

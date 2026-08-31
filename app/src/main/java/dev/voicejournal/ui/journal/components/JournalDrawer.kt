@@ -1,13 +1,20 @@
 package dev.voicejournal.ui.journal.components
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,9 +24,16 @@ import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import dev.voicejournal.BuildConfig
 
 @Composable
 fun JournalDrawerContent(
+    isFolderEnabled: Boolean = true,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToDraft: () -> Unit = {},
     onNavigateToFolders: () -> Unit = {},
@@ -29,6 +43,22 @@ fun JournalDrawerContent(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val context = LocalContext.current
+
+    val appIconBitmap = remember(context) {
+        try {
+            val drawable = context.packageManager.getApplicationIcon(context.packageName)
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 108
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 108
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bitmap.asImageBitmap()
+        } catch (e: Throwable) {
+            null
+        }
+    }
 
     ModalDrawerSheet(
         drawerContainerColor = colors.surface,
@@ -51,16 +81,26 @@ fun JournalDrawerContent(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 12.dp)
             ) {
-                Surface(
-                    color = colors.primary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "🎙️",
-                            fontSize = 20.sp
-                        )
+                if (appIconBitmap != null) {
+                    Image(
+                        bitmap = appIconBitmap,
+                        contentDescription = "Voice Journal",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                } else {
+                    Surface(
+                        color = colors.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "🎙️",
+                                fontSize = 20.sp
+                            )
+                        }
                     }
                 }
 
@@ -83,13 +123,13 @@ fun JournalDrawerContent(
             HorizontalDivider(color = colors.border.copy(alpha = 0.4f))
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Navigation Items
             Text(
                 text = "FEATURES",
                 style = MaterialTheme.typography.labelSmall,
-                color = colors.textSecondary,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                color = colors.textSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -113,7 +153,6 @@ fun JournalDrawerContent(
                 },
                 selected = false,
                 onClick = {
-                    onCloseDrawer()
                     onNavigateToArchive()
                 },
                 colors = NavigationDrawerItemDefaults.colors(
@@ -146,7 +185,6 @@ fun JournalDrawerContent(
                 },
                 selected = false,
                 onClick = {
-                    onCloseDrawer()
                     onNavigateToDraft()
                 },
                 colors = NavigationDrawerItemDefaults.colors(
@@ -160,38 +198,39 @@ fun JournalDrawerContent(
                     .padding(vertical = 4.dp)
             )
 
-            // 3. Folder Navigation Item (Below Draft)
-            NavigationDrawerItem(
-                icon = {
-                    Icon(
-                        imageVector = getFolderIcon(colors.primary),
-                        contentDescription = "Folders",
-                        tint = colors.primary
-                    )
-                },
-                label = {
-                    Text(
-                        text = "Folders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary
-                    )
-                },
-                selected = false,
-                onClick = {
-                    onCloseDrawer()
-                    onNavigateToFolders()
-                },
-                colors = NavigationDrawerItemDefaults.colors(
-                    unselectedContainerColor = colors.surfaceVariant.copy(alpha = 0.5f),
-                    unselectedIconColor = colors.primary,
-                    unselectedTextColor = colors.textPrimary
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            )
+            // 3. Folder Navigation Item (Below Draft, shown only when isFolderEnabled)
+            if (isFolderEnabled) {
+                NavigationDrawerItem(
+                    icon = {
+                        Icon(
+                            imageVector = getFolderIcon(colors.primary),
+                            contentDescription = "Folders",
+                            tint = colors.primary
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = "Folders",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.textPrimary
+                        )
+                    },
+                    selected = false,
+                    onClick = {
+                        onNavigateToFolders()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = colors.surfaceVariant.copy(alpha = 0.5f),
+                        unselectedIconColor = colors.primary,
+                        unselectedTextColor = colors.textPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
 
             // 4. Tags Navigation Item (Below Folders)
             NavigationDrawerItem(
@@ -212,7 +251,6 @@ fun JournalDrawerContent(
                 },
                 selected = false,
                 onClick = {
-                    onCloseDrawer()
                     onNavigateToTags()
                 },
                 colors = NavigationDrawerItemDefaults.colors(
@@ -245,7 +283,6 @@ fun JournalDrawerContent(
                 },
                 selected = false,
                 onClick = {
-                    onCloseDrawer()
                     onNavigateToTrash()
                 },
                 colors = NavigationDrawerItemDefaults.colors(
@@ -264,14 +301,43 @@ fun JournalDrawerContent(
             HorizontalDivider(color = colors.border.copy(alpha = 0.4f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Footer / App Info
-            Text(
-                text = "VoiceJournal v1.0",
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary.copy(alpha = 0.7f),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
+            // Footer / App Info with dynamic Version Control
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .clickable {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(
+                            ClipData.newPlainText(
+                                "App Version",
+                                "VoiceJournal v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})"
+                            )
+                        )
+                        Toast.makeText(context, "Version info copied to clipboard", Toast.LENGTH_SHORT).show()
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "VoiceJournal v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary.copy(alpha = 0.8f),
+                    fontSize = 12.sp
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = colors.surfaceVariant
+                ) {
+                    Text(
+                        text = "Build ${BuildConfig.VERSION_CODE}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
     }
 }

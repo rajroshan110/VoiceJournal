@@ -37,6 +37,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Share
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.journal.components.*
@@ -130,6 +134,38 @@ fun JournalScreen(
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showCategorizeSheet by rememberSaveable { mutableStateOf(false) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            pendingImportUri = it
+        }
+    }
+
+    pendingImportUri?.let { uri ->
+        dev.voicejournal.ui.components.BackupRestoreConfirmationDialog(
+            onConfirm = {
+                pendingImportUri = null
+                viewModel.importBackupFromUri(uri)
+            },
+            onDismiss = { pendingImportUri = null }
+        )
+    }
+
+    uiState.backupResultDialog?.let { dialogInfo ->
+        dev.voicejournal.ui.components.BackupResultAlertDialog(
+            dialogInfo = dialogInfo,
+            onDismiss = { viewModel.dismissBackupResultDialog() }
+        )
+    }
+
+    if (uiState.isImporting) {
+        dev.voicejournal.ui.components.BackupRestoreProgressDialog(
+            progressText = uiState.backupProgressText
+        )
+    }
 
     val listState = rememberLazyListState()
 
@@ -210,6 +246,7 @@ fun JournalScreen(
         gesturesEnabled = !selectionState.isSelectionMode,
         drawerContent = {
             JournalDrawerContent(
+                isFolderEnabled = uiState.isFolderEnabled,
                 onNavigateToArchive = { navController.navigate(Screen.Archive.route) },
                 onNavigateToDraft = { navController.navigate(Screen.Draft.route) },
                 onNavigateToFolders = { navController.navigate(Screen.Folders.route) },
@@ -239,15 +276,22 @@ fun JournalScreen(
                         onMenuClick = { scope.launch { drawerState.open() } },
                         isSelectionMode = selectionState.isSelectionMode,
                         selectedCount = selectionState.selectedEntryIds.size,
+                        isNotesOrganisationEnabled = uiState.isNotesOrganisationEnabled,
+                        isFolderEnabled = uiState.isFolderEnabled,
+                        isTopicsEnabled = uiState.isTopicsEnabled,
+                        isPeopleEnabled = uiState.isPeopleEnabled,
                         onCategorizeSelected = { showCategorizeSheet = true },
                         onDeleteSelected = { showDeleteDialog = true },
                         onClearSelection = { viewModel.clearSelection() },
-                        filterContent = if (isCompactLandscape && !uiState.isSearchActive) {
+                        filterContent = if (isCompactLandscape && !uiState.isSearchActive && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                             {
                                 FilterBar(
                                     selectedTagsCount = uiState.filterState.selectedTags.size,
                                     selectedPeopleCount = uiState.filterState.selectedPeople.size,
                                     selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                                    isTopicsEnabled = uiState.isTopicsEnabled,
+                                    isPeopleEnabled = uiState.isPeopleEnabled,
+                                    isMoodEnabled = uiState.isMoodEnabled,
                                     onAllClick = { viewModel.clearAllFilters() },
                                     onTagsClick = { activeSheet = ActiveSheet.TAGS },
                                     onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
@@ -256,11 +300,14 @@ fun JournalScreen(
                             }
                         } else null
                     )
-                    if (!isCompactLandscape) {
+                    if (!isCompactLandscape && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                         FilterBar(
                             selectedTagsCount = uiState.filterState.selectedTags.size,
                             selectedPeopleCount = uiState.filterState.selectedPeople.size,
                             selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                            isTopicsEnabled = uiState.isTopicsEnabled,
+                            isPeopleEnabled = uiState.isPeopleEnabled,
+                            isMoodEnabled = uiState.isMoodEnabled,
                             onAllClick = { viewModel.clearAllFilters() },
                             onTagsClick = { activeSheet = ActiveSheet.TAGS },
                             onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
@@ -392,6 +439,27 @@ fun JournalScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Record Your First Note")
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                importLauncher.launch(arrayOf("application/zip", "*/*"))
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppTheme.colors.textPrimary),
+                            border = BorderStroke(1.dp, AppTheme.colors.border),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.minimumInteractiveComponentSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Import Backup",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Import Backup")
+                        }
                     }
                 }
                 is FeedState.EmptyFiltered -> {
@@ -507,6 +575,7 @@ fun JournalScreen(
                                 isAudioError = isAudioError,
                                 currentPositionMs = currentPos,
                                 timeFormat = uiState.timeFormat,
+                                isMoodEnabled = uiState.isMoodEnabled,
                                 onPlayPauseTrackClick = { track ->
                                     if (selectionState.isSelectionMode) {
                                         viewModel.toggleEntrySelection(entry.id)
@@ -611,6 +680,9 @@ fun JournalScreen(
 
                 BatchCategorizeSheet(
                     selectedCount = selectionState.selectedEntryIds.size,
+                    isFolderEnabled = uiState.isFolderEnabled,
+                    isTopicsEnabled = uiState.isTopicsEnabled,
+                    isPeopleEnabled = uiState.isPeopleEnabled,
                     availableFolders = (listOf("Personal", "Work", "Ideas", "Journal") + uiState.availableTags.filter { it.type == TagType.FOLDER }.map { it.name }).distinct(),
                     availableTags = uiState.availableTags,
                     availablePeople = uiState.availablePeople,

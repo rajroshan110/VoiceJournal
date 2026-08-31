@@ -363,29 +363,49 @@ fun TagsScreen(
 
                 // LEVEL 1: Root Tags Manager (Topics & People Root Folders)
                 else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        item {
-                            CategoryFolderCard(
-                                title = "Topics",
-                                tagType = TagType.TOPIC,
-                                tagCount = uiState.topicTags.size,
-                                iconEmoji = "🏷️",
-                                onClick = { viewModel.selectCategory(TagType.TOPIC) }
+                    if (!uiState.isTopicsEnabled && !uiState.isPeopleEnabled) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No tag categories are currently enabled.\nEnable them in Settings → Tag Organiser → Choose Tags.",
+                                color = colors.textSecondary,
+                                textAlign = TextAlign.Center,
+                                fontSize = 14.sp
                             )
                         }
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (uiState.isTopicsEnabled) {
+                                item {
+                                    CategoryFolderCard(
+                                        title = "Topics",
+                                        tagType = TagType.TOPIC,
+                                        tagCount = uiState.topicTags.size,
+                                        iconEmoji = "🏷️",
+                                        onClick = { viewModel.selectCategory(TagType.TOPIC) }
+                                    )
+                                }
+                            }
 
-                        item {
-                            CategoryFolderCard(
-                                title = "People",
-                                tagType = TagType.PERSON,
-                                tagCount = uiState.personTags.size,
-                                iconEmoji = "👤",
-                                onClick = { viewModel.selectCategory(TagType.PERSON) }
-                            )
+                            if (uiState.isPeopleEnabled) {
+                                item {
+                                    CategoryFolderCard(
+                                        title = "People",
+                                        tagType = TagType.PERSON,
+                                        tagCount = uiState.personTags.size,
+                                        iconEmoji = "👤",
+                                        onClick = { viewModel.selectCategory(TagType.PERSON) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -31,7 +31,9 @@ data class TagsUiState(
     val isCreateTagDialogOpen: Boolean = false,
     val tagToRename: Tag? = null,
     val tagToMerge: Tag? = null,
-    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -65,6 +67,30 @@ class TagsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.timeFormat.collect { format ->
                 _uiState.update { it.copy(timeFormat = format) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isTopicsEnabled.collect { enabled ->
+                _uiState.update { state ->
+                    val shouldResetCategory = !enabled && state.selectedCategory == TagType.TOPIC
+                    state.copy(
+                        isTopicsEnabled = enabled,
+                        selectedCategory = if (shouldResetCategory) null else state.selectedCategory,
+                        selectedTag = if (shouldResetCategory) null else state.selectedTag
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isPeopleEnabled.collect { enabled ->
+                _uiState.update { state ->
+                    val shouldResetCategory = !enabled && state.selectedCategory == TagType.PERSON
+                    state.copy(
+                        isPeopleEnabled = enabled,
+                        selectedCategory = if (shouldResetCategory) null else state.selectedCategory,
+                        selectedTag = if (shouldResetCategory) null else state.selectedTag
+                    )
+                }
             }
         }
     }

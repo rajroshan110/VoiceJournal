@@ -1,5 +1,7 @@
 package dev.voicejournal.ui.settings.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.Toast
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
+import dev.voicejournal.ui.settings.components.settingHighlight
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.io.File
 
@@ -35,35 +38,10 @@ fun LocalBackupScreen(
 
     var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
 
-    if (uiState.backupResultDialog != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { viewModel.dismissBackupResultDialog() },
-            title = {
-                Text(
-                    text = uiState.backupResultDialog.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = uiState.backupResultDialog.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { viewModel.dismissBackupResultDialog() }
-                ) {
-                    Text(
-                        text = "OK",
-                        color = colors.primary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = colors.surface
+    uiState.backupResultDialog?.let { dialogInfo ->
+        dev.voicejournal.ui.components.BackupResultAlertDialog(
+            dialogInfo = dialogInfo,
+            onDismiss = { viewModel.dismissBackupResultDialog() }
         )
     }
 
@@ -83,170 +61,137 @@ fun LocalBackupScreen(
         }
     }
 
-    if (pendingImportUri != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { pendingImportUri = null },
-            title = {
-                Text(
-                    text = "Restore Backup",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary
-                )
+    pendingImportUri?.let { uri ->
+        dev.voicejournal.ui.components.BackupRestoreConfirmationDialog(
+            onConfirm = {
+                pendingImportUri = null
+                viewModel.importBackupFromUri(uri)
             },
-            text = {
-                Text(
-                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        val uriToImport = pendingImportUri
-                        pendingImportUri = null
-                        uriToImport?.let { viewModel.importBackupFromUri(it) }
-                    }
-                ) {
-                    Text(
-                        text = "Restore",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { pendingImportUri = null }
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = colors.textSecondary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = colors.surface
+            onDismiss = { pendingImportUri = null }
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        // Cloud Sync Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = colors.surface),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val minHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Cloud Sync",
-                    color = colors.primary,
-                    fontSize = 13.sp,
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Local First Architecture (Active)",
-                    color = colors.textPrimary,
-                    fontSize = 15.sp,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "All voice recordings and transcripts remain stored exclusively on your device for absolute privacy.",
-                    color = colors.textSecondary,
-                    fontSize = 12.sp
-                )
-            }
-        }
+            // Local Export & Import Card
+            Card(
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .settingHighlight(uiState.highlightedSettingKey in listOf("export_backup", "import_backup"))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Local Backup & Restore",
+                        color = colors.primary,
+                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Export or import your journal entries, tags, and audio recordings as a zip archive via Storage Access Framework.",
+                        color = colors.textSecondary,
+                        fontSize = 12.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Security Warning
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = colors.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Backups are unencrypted. Store them securely.",
+                            color = colors.error,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-        // Local Export & Import Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = colors.surface),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+                    if (uiState.isExporting || uiState.isImporting) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = colors.primary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.backupProgressText ?: (if (uiState.isExporting) "Preparing backup…" else "Validating backup…"),
+                                color = colors.textSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                    exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Export\nBackup", textAlign = TextAlign.Center)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                    importLauncher.launch(arrayOf("application/zip"))
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Import\nBackup", textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Flexible Spacer to push privacy context note to footer
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Local-First Architecture Note (Footer Context)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    text = "Local Backup & Restore",
-                    color = colors.primary,
-                    fontSize = 13.sp,
-                    style = MaterialTheme.typography.labelMedium
+                    text = "Local-First Architecture",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Export or import your journal entries, tags, and audio recordings as a zip archive via Storage Access Framework.",
+                    text = "VoiceJournal operates without third-party cloud synchronization to protect your privacy and ensure complete data ownership. You can create full, portable backup archives anytime and transfer them securely to any device or storage.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
-                    fontSize = 12.sp
+                    textAlign = TextAlign.Center
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Security Warning
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Warning",
-                        tint = colors.error,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Backups are unencrypted. Store them securely.",
-                        color = colors.error,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (uiState.isExporting || uiState.isImporting) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(color = colors.primary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uiState.backupProgressText ?: (if (uiState.isExporting) "Preparing backup…" else "Validating backup…"),
-                            color = colors.textSecondary,
-                            fontSize = 13.sp
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
-                                exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip")
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Export\nBackup", textAlign = TextAlign.Center)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
-                                importLauncher.launch(arrayOf("application/zip"))
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Import\nBackup", textAlign = TextAlign.Center)
-                        }
-                    }
-                }
             }
         }
     }

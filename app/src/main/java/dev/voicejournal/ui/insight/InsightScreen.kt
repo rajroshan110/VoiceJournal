@@ -137,29 +137,48 @@ fun InsightScreen(
                         if (isWideLayout) {
                             // 2-Column Responsive Layout for Medium / Expanded Screens
                             item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    RecordingActivityCard(
-                                        dailyCounts = summary.dailyCounts,
-                                        totalEntries = summary.totalEntries,
-                                        averagePerDay = summary.averagePerDay,
-                                        activeStreak = summary.activeStreak,
-                                        period = uiState.period,
-                                        peakDay = summary.peakDay,
-                                        peakCount = summary.peakCount,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                if (uiState.isMoodEnabled) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp)
+                                            .height(IntrinsicSize.Max),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        RecordingActivityCard(
+                                            dailyCounts = summary.dailyCounts,
+                                            totalEntries = summary.totalEntries,
+                                            averagePerDay = summary.averagePerDay,
+                                            activeStreak = summary.activeStreak,
+                                            period = uiState.period,
+                                            peakDay = summary.peakDay,
+                                            peakCount = summary.peakCount,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
 
-                                    MoodTrendsCard(
-                                        dominantMood = summary.dominantMood,
-                                        moodDistribution = summary.moodDistribution,
-                                        dailyMoodPoints = summary.dailyMoodPoints,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                        MoodTrendsCard(
+                                            dominantMood = summary.dominantMood,
+                                            moodDistribution = summary.moodDistribution,
+                                            dailyMoodPoints = summary.dailyMoodPoints,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
+                                    }
+                                } else {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        RecordingActivityCard(
+                                            dailyCounts = summary.dailyCounts,
+                                            totalEntries = summary.totalEntries,
+                                            averagePerDay = summary.averagePerDay,
+                                            activeStreak = summary.activeStreak,
+                                            period = uiState.period,
+                                            peakDay = summary.peakDay,
+                                            peakCount = summary.peakCount
+                                        )
+                                    }
                                 }
                             }
 
@@ -171,28 +190,57 @@ fun InsightScreen(
                                 }
                             }
 
-                            item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    TopTagsCard(
-                                        topTags = summary.topTags,
-                                        onTagClick = { tag ->
-                                            navController.navigate(Screen.Journal.createRoute(tag = tag))
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
+                            if (uiState.isTopicsEnabled && uiState.isPeopleEnabled) {
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp)
+                                            .height(IntrinsicSize.Max),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        TopTagsCard(
+                                            topTags = summary.topTags,
+                                            onTagClick = { tag ->
+                                                navController.navigate(Screen.Journal.createRoute(tag = tag))
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
 
-                                    PeopleMentionedCard(
-                                        topPeople = summary.topPeople,
-                                        onPersonClick = { person ->
-                                            navController.navigate(Screen.Journal.createRoute(person = person))
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                        PeopleMentionedCard(
+                                            topPeople = summary.topPeople,
+                                            onPersonClick = { person ->
+                                                navController.navigate(Screen.Journal.createRoute(person = person))
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
+                                    }
+                                }
+                            } else if (uiState.isTopicsEnabled) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        TopTagsCard(
+                                            topTags = summary.topTags,
+                                            onTagClick = { tag ->
+                                                navController.navigate(Screen.Journal.createRoute(tag = tag))
+                                            }
+                                        )
+                                    }
+                                }
+                            } else if (uiState.isPeopleEnabled) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        PeopleMentionedCard(
+                                            topPeople = summary.topPeople,
+                                            onPersonClick = { person ->
+                                                navController.navigate(Screen.Journal.createRoute(person = person))
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         } else {
@@ -211,13 +259,15 @@ fun InsightScreen(
                                 }
                             }
 
-                            item {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    MoodTrendsCard(
-                                        dominantMood = summary.dominantMood,
-                                        moodDistribution = summary.moodDistribution,
-                                        dailyMoodPoints = summary.dailyMoodPoints
-                                    )
+                            if (uiState.isMoodEnabled) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        MoodTrendsCard(
+                                            dominantMood = summary.dominantMood,
+                                            moodDistribution = summary.moodDistribution,
+                                            dailyMoodPoints = summary.dailyMoodPoints
+                                        )
+                                    }
                                 }
                             }
 
@@ -229,25 +279,29 @@ fun InsightScreen(
                                 }
                             }
 
-                            item {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    TopTagsCard(
-                                        topTags = summary.topTags,
-                                        onTagClick = { tag ->
-                                            navController.navigate(Screen.Journal.createRoute(tag = tag))
-                                        }
-                                    )
+                            if (uiState.isTopicsEnabled) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        TopTagsCard(
+                                            topTags = summary.topTags,
+                                            onTagClick = { tag ->
+                                                navController.navigate(Screen.Journal.createRoute(tag = tag))
+                                            }
+                                        )
+                                    }
                                 }
                             }
 
-                            item {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    PeopleMentionedCard(
-                                        topPeople = summary.topPeople,
-                                        onPersonClick = { person ->
-                                            navController.navigate(Screen.Journal.createRoute(person = person))
-                                        }
-                                    )
+                            if (uiState.isPeopleEnabled) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        PeopleMentionedCard(
+                                            topPeople = summary.topPeople,
+                                            onPersonClick = { person ->
+                                                navController.navigate(Screen.Journal.createRoute(person = person))
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

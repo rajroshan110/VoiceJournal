@@ -294,6 +294,22 @@ data class DataManagementPreferences(
     }
 }
 
+data class TagOrganiserPreferences(
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("is_folder_enabled", isFolderEnabled)
+        put("is_notes_organisation_enabled", isNotesOrganisationEnabled)
+        put("is_topics_enabled", isTopicsEnabled)
+        put("is_people_enabled", isPeopleEnabled)
+        put("is_mood_enabled", isMoodEnabled)
+    }
+}
+
 data class BackupPreferences(
     val schemaVersion: Int = 1,
     val recording: RecordingPreferences = RecordingPreferences(),
@@ -303,6 +319,7 @@ data class BackupPreferences(
     val editor: EditorPreferences = EditorPreferences(),
     val security: SecurityPreferences = SecurityPreferences(),
     val dataManagement: DataManagementPreferences = DataManagementPreferences(),
+    val tagOrganiser: TagOrganiserPreferences = TagOrganiserPreferences(),
     val extensions: Map<String, Any> = emptyMap()
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -314,6 +331,7 @@ data class BackupPreferences(
         put("editor", editor.toJson())
         put("security", security.toJson())
         put("data_management", dataManagement.toJson())
+        put("tag_organiser", tagOrganiser.toJson())
         put("extensions", JSONObject(extensions))
     }
 }

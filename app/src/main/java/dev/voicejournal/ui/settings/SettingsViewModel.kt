@@ -40,18 +40,23 @@ data class SettingsUiState(
     val searchResults: List<SearchResultItem> = emptyList(),
     val activeSubScreen: SettingsSubScreen = SettingsSubScreen.GENERAL,
     val isViewingAppLockDetail: Boolean = false,
-    val audioFormat: AudioFormat = AudioFormat.WAV_16KHZ,
+    val audioFormat: AudioFormat = AudioFormat.M4A_AAC_128KBPS,
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val insightDateRangeMode: InsightDateRangeMode = InsightDateRangeMode.LAST_DAYS,
     val whisperModel: String = "base.en",
-    val isMarkdownEnabled: Boolean = false,
-    val timeFormat: TimeFormat = TimeFormat.TWELVE_HOUR,
-    val startOfWeek: StartOfWeek = StartOfWeek.SUNDAY,
+    val isMarkdownEnabled: Boolean = true,
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
     val appLockMode: AppLockMode = AppLockMode.NONE,
     val appLockTimeout: AppLockTimeout = AppLockTimeout.IMMEDIATELY,
     val customPin: String? = null,
     val isScreenPrivacyEnabled: Boolean = false,
     val isSpeechToTextEnabled: Boolean = true,
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
     val isModelDownloaded: Boolean = false,
     val downloadProgress: Float? = null,
     val sttModelDownloadState: ModelDownloadState = ModelDownloadState.Idle,
@@ -61,7 +66,8 @@ data class SettingsUiState(
     val backupProgressText: String? = null,
     val backupResultDialog: BackupResultDialog? = null,
     val showDeleteConfirmationDialog: Boolean = false,
-    val showPinSetupDialog: Boolean = false
+    val showPinSetupDialog: Boolean = false,
+    val highlightedSettingKey: String? = null
 )
 
 @HiltViewModel
@@ -139,6 +145,31 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            userPreferencesManager.isFolderEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isNotesOrganisationEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isNotesOrganisationEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isTopicsEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isPeopleEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isMoodEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
             whisperManager.isModelDownloaded.collect { downloaded ->
                 val state = if (downloaded) ModelDownloadState.Downloaded else ModelDownloadState.Idle
                 _uiState.value = _uiState.value.copy(
@@ -181,6 +212,18 @@ class SettingsViewModel @Inject constructor(
             activeSubScreen = subScreen,
             isViewingAppLockDetail = false
         )
+    }
+
+    fun highlightSetting(key: String?) {
+        _uiState.value = _uiState.value.copy(highlightedSettingKey = key)
+        if (key != null) {
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(2500L)
+                if (_uiState.value.highlightedSettingKey == key) {
+                    _uiState.value = _uiState.value.copy(highlightedSettingKey = null)
+                }
+            }
+        }
     }
 
     fun setViewingAppLockDetail(viewing: Boolean) {
@@ -274,6 +317,36 @@ class SettingsViewModel @Inject constructor(
     fun setSpeechToTextEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesManager.setSpeechToTextEnabled(enabled)
+        }
+    }
+
+    fun setFolderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setFolderEnabled(enabled)
+        }
+    }
+
+    fun setNotesOrganisationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setNotesOrganisationEnabled(enabled)
+        }
+    }
+
+    fun setTopicsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setTopicsEnabled(enabled)
+        }
+    }
+
+    fun setPeopleEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setPeopleEnabled(enabled)
+        }
+    }
+
+    fun setMoodEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setMoodEnabled(enabled)
         }
     }
 

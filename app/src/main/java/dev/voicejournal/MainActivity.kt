@@ -62,7 +62,7 @@ class MainActivity : FragmentActivity() {
         handleIntent(intent)
         enableEdgeToEdge()
         setContent {
-            val appThemeMode by userPreferencesManager.appThemeMode.collectAsState(initial = AppThemeMode.DARK)
+            val appThemeMode by userPreferencesManager.appThemeMode.collectAsState(initial = AppThemeMode.SYSTEM)
             val isScreenPrivacyEnabled by userPreferencesManager.isScreenPrivacyEnabled.collectAsState(initial = false)
             val appLockModeState = userPreferencesManager.appLockMode.collectAsState(initial = null)
             val appLockTimeout by userPreferencesManager.appLockTimeout.collectAsState(initial = AppLockTimeout.IMMEDIATELY)

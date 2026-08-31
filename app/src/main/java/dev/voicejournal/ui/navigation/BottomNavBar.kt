@@ -175,7 +175,7 @@ fun BottomNavBar(
                         if (screen is Screen.Journal) {
                             onJournalReselected?.invoke()
                         }
-                    } else if ((currentRoute == Screen.Folders.route || currentRoute == Screen.Tags.route || currentRoute == Screen.Archive.route || currentRoute == Screen.Draft.route) && screen.route == Screen.Journal.route) {
+                    } else if ((currentRoute == Screen.Folders.route || currentRoute == Screen.Tags.route || currentRoute == Screen.Archive.route || currentRoute == Screen.Draft.route || currentRoute == Screen.Trash.route) && screen.route == Screen.Journal.route) {
                         navController.popBackStack(Screen.Journal.route, inclusive = false)
                     } else {
                         navController.navigate(screen.route) {

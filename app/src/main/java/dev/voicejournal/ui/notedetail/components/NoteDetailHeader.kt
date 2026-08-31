@@ -112,7 +112,8 @@ fun NoteDetailHeader(
     onClearSelection: () -> Unit = {},
     onDeleteSelectedTracks: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
-    timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT
+    timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    isMoodEnabled: Boolean = true
 ) {
     val colors = AppTheme.colors
     val context = LocalContext.current
@@ -213,31 +214,33 @@ fun NoteDetailHeader(
                 }
 
                 // Minimalist Emoji Selector Button (Circle Emoji)
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clickable { moodMenuExpanded = true }
-                            .padding(4.dp)
-                            .background(colors.surfaceVariant, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = currentMood, fontSize = 20.sp)
-                    }
+                if (isMoodEnabled) {
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable { moodMenuExpanded = true }
+                                .padding(4.dp)
+                                .background(colors.surfaceVariant, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = currentMood, fontSize = 20.sp)
+                        }
 
-                    DropdownMenu(
-                        expanded = moodMenuExpanded,
-                        onDismissRequest = { moodMenuExpanded = false },
-                        modifier = Modifier.background(colors.surface)
-                    ) {
-                        EMOTION_EMOJIS.forEach { (emoji, label) ->
-                            DropdownMenuItem(
-                                text = { Text("$emoji  $label", color = colors.textPrimary, fontSize = 14.sp) },
-                                onClick = {
-                                    onMoodSelect(emoji)
-                                    moodMenuExpanded = false
-                                }
-                            )
+                        DropdownMenu(
+                            expanded = moodMenuExpanded,
+                            onDismissRequest = { moodMenuExpanded = false },
+                            modifier = Modifier.background(colors.surface)
+                        ) {
+                            EMOTION_EMOJIS.forEach { (emoji, label) ->
+                                DropdownMenuItem(
+                                    text = { Text("$emoji  $label", color = colors.textPrimary, fontSize = 14.sp) },
+                                    onClick = {
+                                        onMoodSelect(emoji)
+                                        moodMenuExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }

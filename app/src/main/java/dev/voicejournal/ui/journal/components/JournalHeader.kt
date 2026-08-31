@@ -81,6 +81,10 @@ fun JournalHeader(
     onMenuClick: () -> Unit = {},
     isSelectionMode: Boolean = false,
     selectedCount: Int = 0,
+    isNotesOrganisationEnabled: Boolean = true,
+    isFolderEnabled: Boolean = true,
+    isTopicsEnabled: Boolean = true,
+    isPeopleEnabled: Boolean = true,
     onCategorizeSelected: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onClearSelection: () -> Unit = {},
@@ -130,7 +134,7 @@ fun JournalHeader(
                     }
 
                     Text(
-                        text = if (isSelectionMode) "$selectedCount selected" else "Journal",
+                        text = if (isSelectionMode) "$selectedCount selected" else "Voice",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (isSelectionMode) colors.primary else colors.textPrimary,
                         fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal
@@ -154,14 +158,17 @@ fun JournalHeader(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
                         if (selectedCount > 0) {
-                            IconButton(
-                                onClick = onCategorizeSelected,
-                                modifier = Modifier.minimumInteractiveComponentSize()
-                            ) {
-                                Icon(
-                                    imageVector = getTagIcon(colors.primary),
-                                    contentDescription = "Organize selected notes"
-                                )
+                            val canOrganise = isNotesOrganisationEnabled && (isFolderEnabled || isTopicsEnabled || isPeopleEnabled)
+                            if (canOrganise) {
+                                IconButton(
+                                    onClick = onCategorizeSelected,
+                                    modifier = Modifier.minimumInteractiveComponentSize()
+                                ) {
+                                    Icon(
+                                        imageVector = getTagIcon(colors.primary),
+                                        contentDescription = "Organise selected notes"
+                                    )
+                                }
                             }
 
                             IconButton(

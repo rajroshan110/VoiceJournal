@@ -30,10 +30,10 @@ import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.settings.components.DestructiveActionRow
 import dev.voicejournal.ui.settings.components.SettingDayPickerRow
 import dev.voicejournal.ui.settings.components.SettingSegmentedRow
 import dev.voicejournal.ui.settings.components.SettingToggleRow
+import dev.voicejournal.ui.settings.components.settingHighlight
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.theme.AppThemeMode
 
@@ -70,7 +70,8 @@ fun GeneralSettingsScreen(
                     AppThemeMode.LIGHT_PREMIUM -> "Light"
                     AppThemeMode.DARK -> "Dark"
                 }
-            }
+            },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "app_theme")
         )
 
         // Time Format
@@ -92,7 +93,8 @@ fun GeneralSettingsScreen(
                     TimeFormat.TWELVE_HOUR -> "12 Hr"
                     TimeFormat.TWENTY_FOUR_HOUR -> "24 Hr"
                 }
-            }
+            },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "time_format")
         )
 
         // Markdown Editor Toggle
@@ -101,7 +103,8 @@ fun GeneralSettingsScreen(
             subtitle = "Use rich text formatting when writing journals",
             icon = Icons.Default.Edit,
             checked = uiState.isMarkdownEnabled,
-            onCheckedChange = { viewModel.setMarkdownEnabled(it) }
+            onCheckedChange = { viewModel.setMarkdownEnabled(it) },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "is_markdown_enabled")
         )
 
         // Start of the Week
@@ -115,7 +118,8 @@ fun GeneralSettingsScreen(
             subtitle = startOfWeekSubtitle,
             icon = Icons.Default.DateRange,
             selectedDay = uiState.startOfWeek,
-            onDaySelected = { viewModel.setStartOfWeek(it) }
+            onDaySelected = { viewModel.setStartOfWeek(it) },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "start_of_week")
         )
 
         // Insight Date Range Mode
@@ -135,7 +139,8 @@ fun GeneralSettingsScreen(
                     InsightDateRangeMode.LAST_DAYS -> "7 / 30 Days"
                     InsightDateRangeMode.CURRENT_CALENDAR -> "Month"
                 }
-            }
+            },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "insight_date_range")
         )
 
         // Audio Recording Quality
@@ -155,14 +160,17 @@ fun GeneralSettingsScreen(
                     AudioFormat.WAV_16KHZ -> "WAV"
                     AudioFormat.M4A_AAC_128KBPS -> "M4A"
                 }
-            }
+            },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "audio_format")
         )
 
         // Local Speech-to-Text Model Section (Redesigned Clean Layout)
         Card(
             colors = CardDefaults.cardColors(containerColor = colors.surface),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .settingHighlight(uiState.highlightedSettingKey == "whisper_model")
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -296,12 +304,5 @@ fun GeneralSettingsScreen(
                 }
             }
         }
-
-        // Data Management - Delete All Journals
-        DestructiveActionRow(
-            title = "Delete All Journals",
-            subtitle = "Permanently wipe database tables and local media files",
-            onClick = { viewModel.initiateDeleteAllJournals() }
-        )
     }
 }

@@ -62,6 +62,11 @@ class UserPreferencesManager @Inject constructor(
         val CUSTOM_PIN_ENCRYPTED = stringPreferencesKey("custom_pin_encrypted")
         val IS_SCREEN_PRIVACY_ENABLED = booleanPreferencesKey("is_screen_privacy_enabled")
         val IS_SPEECH_TO_TEXT_ENABLED = booleanPreferencesKey("is_speech_to_text_enabled")
+        val IS_FOLDER_ENABLED = booleanPreferencesKey("is_folder_enabled")
+        val IS_NOTES_ORGANISATION_ENABLED = booleanPreferencesKey("is_notes_organisation_enabled")
+        val IS_TOPICS_ENABLED = booleanPreferencesKey("is_topics_enabled")
+        val IS_PEOPLE_ENABLED = booleanPreferencesKey("is_people_enabled")
+        val IS_MOOD_ENABLED = booleanPreferencesKey("is_mood_enabled")
         
         // Lockout State
         val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
@@ -88,11 +93,11 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val audioFormat: Flow<AudioFormat> = dataStore.data.map { prefs ->
-        val formatStr = prefs[AUDIO_FORMAT] ?: AudioFormat.WAV_16KHZ.name
+        val formatStr = prefs[AUDIO_FORMAT] ?: AudioFormat.M4A_AAC_128KBPS.name
         try {
             AudioFormat.valueOf(formatStr)
         } catch (e: Exception) {
-            AudioFormat.WAV_16KHZ
+            AudioFormat.M4A_AAC_128KBPS
         }
     }
 
@@ -105,13 +110,13 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val appThemeMode: StateFlow<AppThemeMode> = dataStore.data.map { prefs ->
-        val modeStr = prefs[APP_THEME_MODE] ?: AppThemeMode.DARK.name
+        val modeStr = prefs[APP_THEME_MODE] ?: AppThemeMode.SYSTEM.name
         try {
             AppThemeMode.valueOf(modeStr)
         } catch (e: Exception) {
-            AppThemeMode.DARK
+            AppThemeMode.SYSTEM
         }
-    }.stateIn(scope, SharingStarted.Eagerly, AppThemeMode.DARK)
+    }.stateIn(scope, SharingStarted.Eagerly, AppThemeMode.SYSTEM)
 
     val sortOption: Flow<SortOption> = dataStore.data.map { prefs ->
         val sortStr = prefs[SORT_OPTION] ?: SortOption.MODIFIED_DESC.name
@@ -123,7 +128,7 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val isMarkdownEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[IS_MARKDOWN_ENABLED] ?: false
+        prefs[IS_MARKDOWN_ENABLED] ?: true
     }
 
     val timeFormat: Flow<TimeFormat> = dataStore.data.map { prefs ->
@@ -193,6 +198,41 @@ class UserPreferencesManager @Inject constructor(
     val isSpeechToTextEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_SPEECH_TO_TEXT_ENABLED] ?: true
     }
+
+    val isFolderEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_FOLDER_ENABLED] ?: false
+    }
+
+    val isFolderEnabledState: StateFlow<Boolean> = isFolderEnabled
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isNotesOrganisationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_NOTES_ORGANISATION_ENABLED] ?: false
+    }
+
+    val isNotesOrganisationEnabledState: StateFlow<Boolean> = isNotesOrganisationEnabled
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isTopicsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_TOPICS_ENABLED] ?: true
+    }
+
+    val isTopicsEnabledState: StateFlow<Boolean> = isTopicsEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    val isPeopleEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_PEOPLE_ENABLED] ?: true
+    }
+
+    val isPeopleEnabledState: StateFlow<Boolean> = isPeopleEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    val isMoodEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_MOOD_ENABLED] ?: true
+    }
+
+    val isMoodEnabledState: StateFlow<Boolean> = isMoodEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
     val pinFailedAttempts: Flow<Int> = dataStore.data.map { prefs ->
         prefs[PIN_FAILED_ATTEMPTS] ?: 0
@@ -348,6 +388,36 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setSpeechToTextEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[IS_SPEECH_TO_TEXT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setFolderEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_FOLDER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setNotesOrganisationEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_NOTES_ORGANISATION_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTopicsEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_TOPICS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setPeopleEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_PEOPLE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setMoodEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_MOOD_ENABLED] = enabled
         }
     }
 

@@ -16,7 +16,10 @@ import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.DeleteEntryUseCase
 import dev.voicejournal.domain.usecase.GetAllEntriesUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
+import android.net.Uri
+import dev.voicejournal.data.backup.ImportManager
 import dev.voicejournal.ui.journal.components.SortOption
+import dev.voicejournal.ui.settings.BackupResultDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -34,8 +37,10 @@ enum class PlaybackStatus {
 data class CardPlaybackState(
     val activeEntryId: Long? = null,
     val activeTrackId: String? = null,
-    val status: PlaybackStatus = PlaybackStatus.Idle,
     val currentPositionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val status: PlaybackStatus = PlaybackStatus.Idle,
+    val isBuffering: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -69,7 +74,37 @@ data class JournalUiState(
     val isSearchActive: Boolean = false,
     val permissionGranted: Boolean = true,
     val isRefreshing: Boolean = false,
-    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
+    val isImporting: Boolean = false,
+    val backupProgressText: String? = null,
+    val backupResultDialog: BackupResultDialog? = null
+)
+
+private data class JournalPrefConfig(
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true
+)
+
+private data class JournalStatusState(
+    val searchActive: Boolean,
+    val permission: Boolean,
+    val refreshing: Boolean,
+    val errorMsg: String?
+)
+
+private data class JournalBackupState(
+    val isImporting: Boolean,
+    val progressText: String?,
+    val resultDialog: BackupResultDialog?
 )
 
 @HiltViewModel
@@ -80,7 +115,8 @@ class JournalViewModel @Inject constructor(
     private val deleteEntryUseCase: DeleteEntryUseCase,
     private val journalRepository: JournalRepository,
     private val audioPlayerManager: AudioPlayerManager,
-    private val userPreferencesManager: UserPreferencesManager
+    private val userPreferencesManager: UserPreferencesManager,
+    private val importManager: ImportManager
 ) : ViewModel() {
 
     private val _filterState = MutableStateFlow(FilterState())
@@ -90,6 +126,9 @@ class JournalViewModel @Inject constructor(
     private val _permissionGranted = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
     private val _loadError = MutableStateFlow<String?>(null)
+    private val _isImporting = MutableStateFlow(false)
+    private val _backupProgressText = MutableStateFlow<String?>(null)
+    private val _backupResultDialog = MutableStateFlow<BackupResultDialog?>(null)
 
     private val _cardPlaybackState = MutableStateFlow(CardPlaybackState())
     val cardPlaybackState: StateFlow<CardPlaybackState> = _cardPlaybackState.asStateFlow()
@@ -200,13 +239,35 @@ class JournalViewModel @Inject constructor(
                 Triple(rawEntries, allTags, extractedPeople)
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
+            val prefConfigFlow = combine(
+                combine(
+                    userPreferencesManager.timeFormat,
+                    userPreferencesManager.isFolderEnabled,
+                    userPreferencesManager.isNotesOrganisationEnabled
+                ) { tf, fe, noe -> Triple(tf, fe, noe) },
+                combine(
+                    userPreferencesManager.isTopicsEnabled,
+                    userPreferencesManager.isPeopleEnabled,
+                    userPreferencesManager.isMoodEnabled
+                ) { te, pe, me -> Triple(te, pe, me) }
+            ) { p1, p2 ->
+                JournalPrefConfig(
+                    timeFormat = p1.first,
+                    isFolderEnabled = p1.second,
+                    isNotesOrganisationEnabled = p1.third,
+                    isTopicsEnabled = p2.first,
+                    isPeopleEnabled = p2.second,
+                    isMoodEnabled = p2.third
+                )
+            }
+
             val filteredDataFlow = combine(
                 extractedDataFlow,
                 _filterState,
                 _sortOption,
                 _searchQuery,
-                userPreferencesManager.timeFormat
-            ) { data, filters, sort, query, timeFormatPref ->
+                prefConfigFlow
+            ) { data, filters, sort, query, prefs ->
                 val rawEntries = data.first
                 val allTags = data.second
                 val extractedPeople = data.third
@@ -216,18 +277,18 @@ class JournalViewModel @Inject constructor(
 
                     val matchesQuery = query.isBlank() || textContent.contains(query, ignoreCase = true)
 
-                    val matchesTags = filters.selectedTags.isEmpty() ||
+                    val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
                             entry.tags.any { (it.type == TagType.TOPIC || it.type == TagType.THING) && it.name.removePrefix("#") in filters.selectedTags } ||
                             filters.selectedTags.any { tag -> textContent.contains("#$tag", ignoreCase = true) }
 
-                    val matchesPeople = filters.selectedPeople.isEmpty() ||
+                    val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
                             entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
                             entry.people.any { it.removePrefix("@") in filters.selectedPeople } ||
                             filters.selectedPeople.any { person ->
                                 textContent.contains("@$person", ignoreCase = true)
                             }
 
-                    val matchesMoods = filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
+                    val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
 
                     matchesQuery && matchesTags && matchesPeople && matchesMoods
                 }
@@ -239,9 +300,9 @@ class JournalViewModel @Inject constructor(
                     SortOption.MODIFIED_ASC -> filtered.sortedBy { it.updatedAt }
                 }
 
-                val hasAnyFilters = filters.selectedTags.isNotEmpty() ||
-                        filters.selectedPeople.isNotEmpty() ||
-                        filters.selectedMoods.isNotEmpty() ||
+                val hasAnyFilters = (prefs.isTopicsEnabled && filters.selectedTags.isNotEmpty()) ||
+                        (prefs.isPeopleEnabled && filters.selectedPeople.isNotEmpty()) ||
+                        (prefs.isMoodEnabled && filters.selectedMoods.isNotEmpty()) ||
                         query.isNotBlank()
 
                 val feed = when {
@@ -258,31 +319,56 @@ class JournalViewModel @Inject constructor(
                     filterState = filters,
                     sortOption = sort,
                     searchQuery = query,
-                    timeFormat = timeFormatPref
+                    timeFormat = prefs.timeFormat,
+                    isFolderEnabled = prefs.isFolderEnabled,
+                    isNotesOrganisationEnabled = prefs.isNotesOrganisationEnabled,
+                    isTopicsEnabled = prefs.isTopicsEnabled,
+                    isPeopleEnabled = prefs.isPeopleEnabled,
+                    isMoodEnabled = prefs.isMoodEnabled
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
-            combine(
-                filteredDataFlow,
+            val statusFlow = combine(
                 _isSearchActive,
                 _permissionGranted,
                 _isRefreshing,
                 _loadError
-            ) { baseState, searchActive, permission, refreshing, errorMsg ->
-                if (errorMsg != null) {
+            ) { searchActive, permission, refreshing, errorMsg ->
+                JournalStatusState(searchActive, permission, refreshing, errorMsg)
+            }
+
+            val backupFlow = combine(
+                _isImporting,
+                _backupProgressText,
+                _backupResultDialog
+            ) { isImporting, progressText, resultDialog ->
+                JournalBackupState(isImporting, progressText, resultDialog)
+            }
+
+            combine(
+                filteredDataFlow,
+                statusFlow,
+                backupFlow
+            ) { baseState, status, backup ->
+                val stateWithStatus = if (status.errorMsg != null) {
                     baseState.copy(
-                        feedState = FeedState.Error(errorMsg),
-                        isSearchActive = searchActive,
-                        permissionGranted = permission,
-                        isRefreshing = refreshing
+                        feedState = FeedState.Error(status.errorMsg),
+                        isSearchActive = status.searchActive,
+                        permissionGranted = status.permission,
+                        isRefreshing = status.refreshing
                     )
                 } else {
                     baseState.copy(
-                        isSearchActive = searchActive,
-                        permissionGranted = permission,
-                        isRefreshing = refreshing
+                        isSearchActive = status.searchActive,
+                        permissionGranted = status.permission,
+                        isRefreshing = status.refreshing
                     )
                 }
+                stateWithStatus.copy(
+                    isImporting = backup.isImporting,
+                    backupProgressText = backup.progressText,
+                    backupResultDialog = backup.resultDialog
+                )
             }.collect { state ->
                 _uiState.value = state
             }
@@ -474,6 +560,60 @@ class JournalViewModel @Inject constructor(
         if (navigatingToEntryId == null || activeId == null || navigatingToEntryId != activeId) {
             audioPlayerManager.stop()
             _cardPlaybackState.value = CardPlaybackState()
+        }
+    }
+
+    fun importBackupFromUri(sourceUri: android.net.Uri) {
+        viewModelScope.launch {
+            _isImporting.value = true
+            _backupProgressText.value = "Validating backup…"
+            _backupResultDialog.value = null
+
+            val result = importManager.importFromUri(sourceUri) { progress ->
+                _backupProgressText.value = progress
+            }
+            _isImporting.value = false
+            _backupProgressText.value = null
+            if (result.success) {
+                _backupResultDialog.value = BackupResultDialog(
+                    title = "Backup Restored",
+                    message = "Your backup has been restored successfully."
+                )
+            } else {
+                _backupResultDialog.value = mapImportErrorToDialog(result.validationErrors, null)
+            }
+        }
+    }
+
+    fun dismissBackupResultDialog() {
+        _backupResultDialog.value = null
+    }
+
+    private fun mapImportErrorToDialog(errors: List<String>, exception: Throwable?): BackupResultDialog {
+        val joined = errors.joinToString(" ").lowercase()
+        val exMsg = exception?.localizedMessage?.lowercase() ?: ""
+
+        return when {
+            joined.contains("unsupported format_version") || joined.contains("min_reader_version") -> BackupResultDialog(
+                title = "Unsupported Backup",
+                message = "This backup was created by a newer version of Voice Journal and cannot be restored by this version."
+            )
+            joined.contains("sha-256 mismatch") || joined.contains("size mismatch") || joined.contains("integrity") -> BackupResultDialog(
+                title = "Backup Verification Failed",
+                message = "One or more files failed integrity verification. The restore has been cancelled to protect your existing data."
+            )
+            joined.contains("corrupted") || joined.contains("missing required file") || joined.contains("failed to parse") || joined.contains("invalid format_name") -> BackupResultDialog(
+                title = "Backup Corrupted",
+                message = "This backup file is incomplete, corrupted, or has been modified and cannot be restored."
+            )
+            exMsg.contains("enospc") || exMsg.contains("no space left") || exMsg.contains("storage") -> BackupResultDialog(
+                title = "Insufficient Storage",
+                message = "There isn't enough storage space available to complete the restore."
+            )
+            else -> BackupResultDialog(
+                title = "Restore Failed",
+                message = "The backup could not be restored. Your existing data has not been modified."
+            )
         }
     }
 }

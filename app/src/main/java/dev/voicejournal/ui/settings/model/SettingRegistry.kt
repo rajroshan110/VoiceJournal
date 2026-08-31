@@ -12,7 +12,8 @@ data class SearchResultItem(
 enum class SettingsSubScreen {
     GENERAL,
     PRIVACY_SECURITY,
-    SYNC_BACKUP
+    SYNC_BACKUP,
+    TAG_ORGANISER
 }
 
 object SettingRegistry {
@@ -77,9 +78,9 @@ object SettingRegistry {
             id = "delete_all_journals",
             title = "Delete All Journals",
             subtitle = "Permanently wipe database tables and local media files",
-            parentCategory = "General Settings > Data Management",
+            parentCategory = "Privacy & Security > Data Management",
             targetPreferenceKey = "delete_all_journals",
-            targetSubScreen = SettingsSubScreen.GENERAL
+            targetSubScreen = SettingsSubScreen.PRIVACY_SECURITY
         ),
         SearchResultItem(
             id = "app_lock_mode",
@@ -98,14 +99,6 @@ object SettingRegistry {
             targetSubScreen = SettingsSubScreen.PRIVACY_SECURITY
         ),
         SearchResultItem(
-            id = "cloud_sync",
-            title = "Cloud Sync",
-            subtitle = "Automatic cloud backup and sync preferences",
-            parentCategory = "Sync & Backup > Cloud Sync",
-            targetPreferenceKey = "cloud_sync",
-            targetSubScreen = SettingsSubScreen.SYNC_BACKUP
-        ),
-        SearchResultItem(
             id = "export_backup",
             title = "Export Backup",
             subtitle = "Create a complete ZIP archive of journal entries, tags, and recordings",
@@ -120,6 +113,46 @@ object SettingRegistry {
             parentCategory = "Sync & Backup > Local Backup",
             targetPreferenceKey = "import_backup",
             targetSubScreen = SettingsSubScreen.SYNC_BACKUP
+        ),
+        SearchResultItem(
+            id = "is_folder_enabled",
+            title = "Enable Folder",
+            subtitle = "Control folder visibility across the sidebar, tags, and notes",
+            parentCategory = "Tag Organiser > Organisation",
+            targetPreferenceKey = "is_folder_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_notes_organisation_enabled",
+            title = "Notes Organisation",
+            subtitle = "Show organise action button when selecting notes in the journal screen",
+            parentCategory = "Tag Organiser > Organisation",
+            targetPreferenceKey = "is_notes_organisation_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_topics_enabled",
+            title = "Topics (#)",
+            subtitle = "Organise notes with topic hashtags (#work, #ideas)",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_topics_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_people_enabled",
+            title = "People (@)",
+            subtitle = "Mention and link people in notes (@john, @sarah)",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_people_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_mood_enabled",
+            title = "Mood",
+            subtitle = "Track emotional context and mood trends with emojis",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_mood_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
         )
     )
 

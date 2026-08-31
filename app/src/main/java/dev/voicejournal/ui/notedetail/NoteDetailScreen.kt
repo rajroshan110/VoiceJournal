@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import dev.voicejournal.ui.notedetail.components.AddItemSheet
 import dev.voicejournal.data.storage.MediaStorageManager
+import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.util.findActivity
 import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
 import dev.voicejournal.ui.notedetail.components.TranscriptionButton
@@ -86,6 +87,7 @@ fun NoteDetailScreen(
     val focusRequester = remember { FocusRequester() }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var showUnsavedPromptDialog by rememberSaveable { mutableStateOf(false) }
+    var showDraftOrDiscardDialog by rememberSaveable { mutableStateOf(false) }
     var showDiscardRecordingConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     fun handleExit() {
@@ -108,10 +110,7 @@ fun NoteDetailScreen(
         val isNewOrDraft = uiState.isDraft || uiState.entryId <= 0
         if (isNewOrDraft) {
             if (viewModel.hasContentModifications()) {
-                viewModel.saveDraftOnExit {
-                    Toast.makeText(context, "Saved to Drafts", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack()
-                }
+                showDraftOrDiscardDialog = true
             } else {
                 navController.popBackStack()
             }
@@ -247,7 +246,8 @@ fun NoteDetailScreen(
                         showArchiveConfirmDialog = true
                     }
                 },
-                timeFormat = uiState.timeFormat
+                timeFormat = uiState.timeFormat,
+                isMoodEnabled = uiState.isMoodEnabled
             )
         },
         bottomBar = {
@@ -413,24 +413,38 @@ fun NoteDetailScreen(
 
                     Spacer(modifier = Modifier.weight(1f, fill = false))
 
-                    Surface(
-                        color = if (uiState.tags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable { showTagsDialog = true }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    val hasAnyTagsEnabled = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
+                    if (hasAnyTagsEnabled) {
+                        val visibleTags = remember(uiState.tags, uiState.isFolderEnabled, uiState.isTopicsEnabled, uiState.isPeopleEnabled, uiState.isMoodEnabled) {
+                            uiState.tags.filter { tag ->
+                                when (tag.type) {
+                                    TagType.TOPIC -> uiState.isTopicsEnabled
+                                    TagType.PERSON -> uiState.isPeopleEnabled
+                                    TagType.FOLDER, TagType.THING -> uiState.isFolderEnabled
+                                    TagType.MOOD -> uiState.isMoodEnabled
+                                }
+                            }
+                        }
+
+                        Surface(
+                            color = if (visibleTags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.clickable { showTagsDialog = true }
                         ) {
-                            Text("🏷️ ", fontSize = 12.sp)
-                            Text(
-                                text = if (uiState.tags.isNotEmpty()) "Tags (${uiState.tags.size})" else "Tags",
-                                color = if (uiState.tags.isNotEmpty()) colors.primary else colors.textSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                softWrap = false
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("🏷️ ", fontSize = 12.sp)
+                                Text(
+                                    text = if (visibleTags.isNotEmpty()) "Tags (${visibleTags.size})" else "Tags",
+                                    color = if (visibleTags.isNotEmpty()) colors.primary else colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
                 }
@@ -619,6 +633,9 @@ fun NoteDetailScreen(
         JournalTagsDialog(
             tags = uiState.tags,
             allAvailableTags = uiState.allAvailableTags,
+            isFolderEnabled = uiState.isFolderEnabled,
+            isTopicsEnabled = uiState.isTopicsEnabled,
+            isPeopleEnabled = uiState.isPeopleEnabled,
             onSaveTags = { newTags -> viewModel.setTags(newTags) },
             onDismiss = { showTagsDialog = false }
         )
@@ -790,6 +807,46 @@ fun NoteDetailScreen(
                 if (uiState.modelDownloadProgress == null) {
                     TextButton(onClick = { viewModel.dismissModelDownloadPrompt() }) {
                         Text("Cancel", color = colors.textSecondary)
+                    }
+                }
+            },
+            containerColor = colors.surface
+        )
+    }
+
+    // Draft Note and Discard Confirmation Dialog for New Notes & Drafts
+    if (showDraftOrDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDraftOrDiscardDialog = false },
+            title = { Text("Save to Drafts?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("You have unsaved changes. Would you like to save this note as a draft or discard it?", color = colors.textSecondary) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDraftOrDiscardDialog = false
+                        viewModel.saveDraftOnExit {
+                            Toast.makeText(context, "Saved to Drafts", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        }
+                    }
+                ) {
+                    Text("Draft Note", color = colors.primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showDraftOrDiscardDialog = false }) {
+                        Text("Cancel", color = colors.textSecondary)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(
+                        onClick = {
+                            showDraftOrDiscardDialog = false
+                            viewModel.discardRecordingAndReset()
+                            navController.popBackStack()
+                        }
+                    ) {
+                        Text("Discard", color = colors.error, fontWeight = FontWeight.Medium)
                     }
                 }
             },
