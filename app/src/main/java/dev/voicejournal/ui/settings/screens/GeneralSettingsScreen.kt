@@ -30,7 +30,6 @@ import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.settings.components.DestructiveActionRow
 import dev.voicejournal.ui.settings.components.SettingDayPickerRow
 import dev.voicejournal.ui.settings.components.SettingSegmentedRow
 import dev.voicejournal.ui.settings.components.SettingToggleRow
@@ -296,12 +295,5 @@ fun GeneralSettingsScreen(
                 }
             }
         }
-
-        // Data Management - Delete All Journals
-        DestructiveActionRow(
-            title = "Delete All Journals",
-            subtitle = "Permanently wipe database tables and local media files",
-            onClick = { viewModel.initiateDeleteAllJournals() }
-        )
     }
 }

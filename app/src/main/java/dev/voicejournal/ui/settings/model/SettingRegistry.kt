@@ -77,9 +77,9 @@ object SettingRegistry {
             id = "delete_all_journals",
             title = "Delete All Journals",
             subtitle = "Permanently wipe database tables and local media files",
-            parentCategory = "General Settings > Data Management",
+            parentCategory = "Privacy & Security > Data Management",
             targetPreferenceKey = "delete_all_journals",
-            targetSubScreen = SettingsSubScreen.GENERAL
+            targetSubScreen = SettingsSubScreen.PRIVACY_SECURITY
         ),
         SearchResultItem(
             id = "app_lock_mode",
