@@ -2,9 +2,9 @@ package dev.voicejournal.ui.insight.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -48,7 +48,7 @@ fun PeopleMentionedCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp),
+                    .height(80.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -58,11 +58,14 @@ fun PeopleMentionedCard(
                 )
             }
         } else {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(displayedPeople) { person ->
+                displayedPeople.forEach { person ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier

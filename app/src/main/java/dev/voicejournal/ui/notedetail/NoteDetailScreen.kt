@@ -87,6 +87,7 @@ fun NoteDetailScreen(
     val focusRequester = remember { FocusRequester() }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var showUnsavedPromptDialog by rememberSaveable { mutableStateOf(false) }
+    var showDraftOrDiscardDialog by rememberSaveable { mutableStateOf(false) }
     var showDiscardRecordingConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     fun handleExit() {
@@ -109,10 +110,7 @@ fun NoteDetailScreen(
         val isNewOrDraft = uiState.isDraft || uiState.entryId <= 0
         if (isNewOrDraft) {
             if (viewModel.hasContentModifications()) {
-                viewModel.saveDraftOnExit {
-                    Toast.makeText(context, "Saved to Drafts", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack()
-                }
+                showDraftOrDiscardDialog = true
             } else {
                 navController.popBackStack()
             }
@@ -809,6 +807,46 @@ fun NoteDetailScreen(
                 if (uiState.modelDownloadProgress == null) {
                     TextButton(onClick = { viewModel.dismissModelDownloadPrompt() }) {
                         Text("Cancel", color = colors.textSecondary)
+                    }
+                }
+            },
+            containerColor = colors.surface
+        )
+    }
+
+    // Draft Note and Discard Confirmation Dialog for New Notes & Drafts
+    if (showDraftOrDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDraftOrDiscardDialog = false },
+            title = { Text("Save to Drafts?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("You have unsaved changes. Would you like to save this note as a draft or discard it?", color = colors.textSecondary) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDraftOrDiscardDialog = false
+                        viewModel.saveDraftOnExit {
+                            Toast.makeText(context, "Saved to Drafts", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        }
+                    }
+                ) {
+                    Text("Draft Note", color = colors.primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showDraftOrDiscardDialog = false }) {
+                        Text("Cancel", color = colors.textSecondary)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(
+                        onClick = {
+                            showDraftOrDiscardDialog = false
+                            viewModel.discardRecordingAndReset()
+                            navController.popBackStack()
+                        }
+                    ) {
+                        Text("Discard", color = colors.error, fontWeight = FontWeight.Medium)
                     }
                 }
             },

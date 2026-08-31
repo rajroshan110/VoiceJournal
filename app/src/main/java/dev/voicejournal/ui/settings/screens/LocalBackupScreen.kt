@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
+import dev.voicejournal.ui.settings.components.settingHighlight
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.io.File
 
@@ -37,35 +38,10 @@ fun LocalBackupScreen(
 
     var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
 
-    if (uiState.backupResultDialog != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { viewModel.dismissBackupResultDialog() },
-            title = {
-                Text(
-                    text = uiState.backupResultDialog.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = uiState.backupResultDialog.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { viewModel.dismissBackupResultDialog() }
-                ) {
-                    Text(
-                        text = "OK",
-                        color = colors.primary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = colors.surface
+    uiState.backupResultDialog?.let { dialogInfo ->
+        dev.voicejournal.ui.components.BackupResultAlertDialog(
+            dialogInfo = dialogInfo,
+            onDismiss = { viewModel.dismissBackupResultDialog() }
         )
     }
 
@@ -85,50 +61,13 @@ fun LocalBackupScreen(
         }
     }
 
-    if (pendingImportUri != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { pendingImportUri = null },
-            title = {
-                Text(
-                    text = "Restore Backup",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary
-                )
+    pendingImportUri?.let { uri ->
+        dev.voicejournal.ui.components.BackupRestoreConfirmationDialog(
+            onConfirm = {
+                pendingImportUri = null
+                viewModel.importBackupFromUri(uri)
             },
-            text = {
-                Text(
-                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        val uriToImport = pendingImportUri
-                        pendingImportUri = null
-                        uriToImport?.let { viewModel.importBackupFromUri(it) }
-                    }
-                ) {
-                    Text(
-                        text = "Restore",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { pendingImportUri = null }
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = colors.textSecondary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = colors.surface
+            onDismiss = { pendingImportUri = null }
         )
     }
 
@@ -146,7 +85,9 @@ fun LocalBackupScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .settingHighlight(uiState.highlightedSettingKey in listOf("export_backup", "import_backup"))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(

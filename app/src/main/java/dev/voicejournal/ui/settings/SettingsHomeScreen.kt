@@ -250,6 +250,7 @@ fun SettingsHomeScreen(
                                     isSearchFocused = false
                                     viewModel.setActiveSubScreen(item.targetSubScreen)
                                     selectedCompactSubScreen = item.targetSubScreen
+                                    viewModel.highlightSetting(item.targetPreferenceKey)
                                 }
                             )
                         }
@@ -288,6 +289,17 @@ fun SettingsHomeScreen(
                             )
 
                             CategoryNavCard(
+                                title = "Tag Organiser",
+                                subtitle = "Choose tags, folders, organise notes",
+                                icon = getTagIcon(colors.textPrimary),
+                                isSelected = uiState.activeSubScreen == SettingsSubScreen.TAG_ORGANISER,
+                                onClick = {
+                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
+                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
+                                }
+                            )
+
+                            CategoryNavCard(
                                 title = "Privacy & Security",
                                 subtitle = "App lock, biometrics, screen privacy",
                                 icon = Icons.Default.Lock,
@@ -306,17 +318,6 @@ fun SettingsHomeScreen(
                                 onClick = {
                                     viewModel.setActiveSubScreen(SettingsSubScreen.SYNC_BACKUP)
                                     selectedCompactSubScreen = SettingsSubScreen.SYNC_BACKUP
-                                }
-                            )
-
-                            CategoryNavCard(
-                                title = "Tag Organiser",
-                                subtitle = "Choose tags, folders, organise notes",
-                                icon = getTagIcon(colors.textPrimary),
-                                isSelected = uiState.activeSubScreen == SettingsSubScreen.TAG_ORGANISER,
-                                onClick = {
-                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
-                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
                                 }
                             )
 
@@ -372,6 +373,16 @@ fun SettingsHomeScreen(
                             )
 
                             CategoryNavCard(
+                                title = "Tag Organiser",
+                                subtitle = "Choose tags, folders, organise notes",
+                                icon = getTagIcon(colors.textPrimary),
+                                onClick = {
+                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
+                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
+                                }
+                            )
+
+                            CategoryNavCard(
                                 title = "Privacy & Security",
                                 subtitle = "App lock, biometrics, screen privacy",
                                 icon = Icons.Default.Lock,
@@ -388,16 +399,6 @@ fun SettingsHomeScreen(
                                 onClick = {
                                     selectedCompactSubScreen = SettingsSubScreen.SYNC_BACKUP
                                     viewModel.setActiveSubScreen(SettingsSubScreen.SYNC_BACKUP)
-                                }
-                            )
-
-                            CategoryNavCard(
-                                title = "Tag Organiser",
-                                subtitle = "Choose tags, folders, organise notes",
-                                icon = getTagIcon(colors.textPrimary),
-                                onClick = {
-                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
-                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
                                 }
                             )
 

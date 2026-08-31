@@ -144,111 +144,26 @@ fun JournalScreen(
         }
     }
 
-    if (pendingImportUri != null) {
-        AlertDialog(
-            onDismissRequest = { pendingImportUri = null },
-            title = {
-                Text(
-                    text = "Restore Backup",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = AppTheme.colors.textPrimary
-                )
+    pendingImportUri?.let { uri ->
+        dev.voicejournal.ui.components.BackupRestoreConfirmationDialog(
+            onConfirm = {
+                pendingImportUri = null
+                viewModel.importBackupFromUri(uri)
             },
-            text = {
-                Text(
-                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppTheme.colors.textSecondary
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val uriToImport = pendingImportUri
-                        pendingImportUri = null
-                        uriToImport?.let { viewModel.importBackupFromUri(it) }
-                    }
-                ) {
-                    Text(
-                        text = "Restore",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingImportUri = null }
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = AppTheme.colors.textSecondary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = AppTheme.colors.surface
+            onDismiss = { pendingImportUri = null }
         )
     }
 
-    if (uiState.backupResultDialog != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissBackupResultDialog() },
-            title = {
-                Text(
-                    text = uiState.backupResultDialog!!.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = AppTheme.colors.textPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = uiState.backupResultDialog!!.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppTheme.colors.textSecondary
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.dismissBackupResultDialog() }
-                ) {
-                    Text(
-                        text = "OK",
-                        color = AppTheme.colors.primary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            },
-            containerColor = AppTheme.colors.surface
+    uiState.backupResultDialog?.let { dialogInfo ->
+        dev.voicejournal.ui.components.BackupResultAlertDialog(
+            dialogInfo = dialogInfo,
+            onDismiss = { viewModel.dismissBackupResultDialog() }
         )
     }
 
     if (uiState.isImporting) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = {
-                Text(
-                    text = "Restoring Backup",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AppTheme.colors.textPrimary
-                )
-            },
-            text = {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator(color = AppTheme.colors.primary, modifier = Modifier.size(32.dp))
-                    Text(
-                        text = uiState.backupProgressText ?: "Restoring data…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AppTheme.colors.textSecondary
-                    )
-                }
-            },
-            confirmButton = {},
-            containerColor = AppTheme.colors.surface
+        dev.voicejournal.ui.components.BackupRestoreProgressDialog(
+            progressText = uiState.backupProgressText
         )
     }
 

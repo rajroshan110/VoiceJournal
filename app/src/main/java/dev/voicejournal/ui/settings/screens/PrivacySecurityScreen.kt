@@ -22,6 +22,7 @@ import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
 import dev.voicejournal.ui.settings.components.DestructiveActionRow
+import dev.voicejournal.ui.settings.components.settingHighlight
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
@@ -62,6 +63,7 @@ fun PrivacySecurityScreen(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .settingHighlight(uiState.highlightedSettingKey == "app_lock_mode")
                         .clickable { viewModel.setViewingAppLockDetail(true) }
                 ) {
                     Row(
@@ -111,6 +113,7 @@ fun PrivacySecurityScreen(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .settingHighlight(uiState.highlightedSettingKey == "is_screen_privacy_enabled")
                         .clickable { viewModel.setScreenPrivacyEnabled(!uiState.isScreenPrivacyEnabled) }
                 ) {
                     Row(
@@ -171,7 +174,8 @@ fun PrivacySecurityScreen(
                 DestructiveActionRow(
                     title = "Delete All Journals",
                     subtitle = "Permanently wipe database tables and local media files",
-                    onClick = { viewModel.initiateDeleteAllJournals() }
+                    onClick = { viewModel.initiateDeleteAllJournals() },
+                    modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "delete_all_journals")
                 )
 
                 // Flexible Spacer to push privacy context note to footer

@@ -1,17 +1,21 @@
 package dev.voicejournal.ui.settings.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +30,42 @@ import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.ui.settings.model.SearchResultItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+
+/**
+ * Extension modifier that applies a smooth highlight border and automatically
+ * brings the targeted setting card into view when search result is tapped.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun Modifier.settingHighlight(isHighlighted: Boolean): Modifier {
+    val colors = AppTheme.colors
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isHighlighted) 1f else 0f,
+        animationSpec = tween(durationMillis = 350),
+        label = "highlightAlpha"
+    )
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+
+    return this
+        .bringIntoViewRequester(bringIntoViewRequester)
+        .then(
+            if (borderAlpha > 0.01f) {
+                Modifier.border(
+                    width = 2.dp,
+                    color = colors.primary.copy(alpha = borderAlpha),
+                    shape = RoundedCornerShape(16.dp)
+                )
+            } else {
+                Modifier
+            }
+        )
+}
 
 @Composable
 fun <T> SettingSegmentedRow(

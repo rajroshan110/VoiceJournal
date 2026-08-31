@@ -94,7 +94,7 @@ class BackupRestorer(
             Log.i("Backup", "Phase 1: Preparing snapshots")
             onProgress?.invoke("Preparing restore environment…")
             
-            val dbEntriesSnapshot = database.journalEntryDao().getAllEntriesSync()
+            val dbEntriesSnapshot = database.journalEntryDao().getAllRawEntriesSync()
             val dbTagsSnapshot = database.tagDao().getAllTagsSync()
             val dbImagesSnapshot = database.entryImageDao().getAllEntryImagesSync()
             val dbCrossRefsSnapshot = database.journalEntryDao().getAllEntryTagCrossRefsSync()
@@ -360,18 +360,19 @@ class BackupRestorer(
         // Recording format
         val audioFormat = try {
             AudioFormat.valueOf(p.recording.audioFormat.uppercase(Locale.ROOT))
-        } catch (e: Exception) { AudioFormat.WAV_16KHZ }
+        } catch (e: Exception) { AudioFormat.M4A_AAC_128KBPS }
         prefsManager.setAudioFormat(audioFormat)
 
         // Whisper model & speech to text
         if (p.transcription.whisperModel.isNotBlank()) {
             prefsManager.setWhisperModel(p.transcription.whisperModel)
         }
+        prefsManager.setSpeechToTextEnabled(p.transcription.speechToTextEnabled)
 
         // Appearance
         val themeMode = try {
             AppThemeMode.valueOf(p.appearance.themeMode.uppercase(Locale.ROOT))
-        } catch (e: Exception) { AppThemeMode.DARK }
+        } catch (e: Exception) { AppThemeMode.SYSTEM }
         prefsManager.setAppThemeMode(themeMode)
 
         // Display
@@ -401,9 +402,12 @@ class BackupRestorer(
         // Editor
         prefsManager.setMarkdownEnabled(p.editor.markdownEnabled)
 
-        // Security: App Lock state (AppLockMode, custom PIN, timeout) is strictly destination-device-owned
+        // Security:
+        // 1. Screen Privacy preference is restored independently as a standalone preference
+        prefsManager.setScreenPrivacyEnabled(p.security.screenPrivacyEnabled)
+        // 2. App Lock state (AppLockMode, custom PIN, timeout) is strictly destination-device-owned
         // and intentionally NEVER mutated by backup restore.
-        Log.i("Backup", "Preserving destination device App Lock state; security configuration from backup is intentionally ignored.")
+        Log.i("Backup", "Preserving destination device App Lock state; app lock configuration from backup is intentionally ignored.")
 
         // Data Management
         prefsManager.setDailyReminder(p.dataManagement.dailyReminder)

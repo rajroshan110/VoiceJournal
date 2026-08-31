@@ -66,7 +66,8 @@ data class SettingsUiState(
     val backupProgressText: String? = null,
     val backupResultDialog: BackupResultDialog? = null,
     val showDeleteConfirmationDialog: Boolean = false,
-    val showPinSetupDialog: Boolean = false
+    val showPinSetupDialog: Boolean = false,
+    val highlightedSettingKey: String? = null
 )
 
 @HiltViewModel
@@ -211,6 +212,18 @@ class SettingsViewModel @Inject constructor(
             activeSubScreen = subScreen,
             isViewingAppLockDetail = false
         )
+    }
+
+    fun highlightSetting(key: String?) {
+        _uiState.value = _uiState.value.copy(highlightedSettingKey = key)
+        if (key != null) {
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(2500L)
+                if (_uiState.value.highlightedSettingKey == key) {
+                    _uiState.value = _uiState.value.copy(highlightedSettingKey = null)
+                }
+            }
+        }
     }
 
     fun setViewingAppLockDetail(viewing: Boolean) {

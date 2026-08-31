@@ -141,7 +141,8 @@ fun InsightScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 16.dp),
+                                            .padding(horizontal = 16.dp)
+                                            .height(IntrinsicSize.Max),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         RecordingActivityCard(
@@ -152,14 +153,18 @@ fun InsightScreen(
                                             period = uiState.period,
                                             peakDay = summary.peakDay,
                                             peakCount = summary.peakCount,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
 
                                         MoodTrendsCard(
                                             dominantMood = summary.dominantMood,
                                             moodDistribution = summary.moodDistribution,
                                             dailyMoodPoints = summary.dailyMoodPoints,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
                                     }
                                 } else {
@@ -190,7 +195,8 @@ fun InsightScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 16.dp),
+                                            .padding(horizontal = 16.dp)
+                                            .height(IntrinsicSize.Max),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         TopTagsCard(
@@ -198,7 +204,9 @@ fun InsightScreen(
                                             onTagClick = { tag ->
                                                 navController.navigate(Screen.Journal.createRoute(tag = tag))
                                             },
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
 
                                         PeopleMentionedCard(
@@ -206,7 +214,9 @@ fun InsightScreen(
                                             onPersonClick = { person ->
                                                 navController.navigate(Screen.Journal.createRoute(person = person))
                                             },
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
                                     }
                                 }

@@ -70,11 +70,12 @@ class BackupSecurityRestoreTest {
 
         restorer.restorePreferences(backupWithPin)
 
-        // Verify non-security preferences were restored
+        // Verify non-security and standalone screen privacy preferences were restored
         coVerify(exactly = 1) { mockPrefsManager.setAudioFormat(AudioFormat.M4A_AAC_128KBPS) }
         coVerify(exactly = 1) { mockPrefsManager.setAppThemeMode(AppThemeMode.LIGHT_PREMIUM) }
+        coVerify(exactly = 1) { mockPrefsManager.setScreenPrivacyEnabled(true) }
 
-        // Verify security state was NEVER mutated
+        // Verify App Lock state was NEVER mutated
         coVerify(exactly = 0) { mockPrefsManager.setAppLockMode(any()) }
         coVerify(exactly = 0) { mockPrefsManager.setAppLockTimeout(any()) }
         coVerify(exactly = 0) { mockPrefsManager.setCustomPin(any()) }
@@ -91,7 +92,8 @@ class BackupSecurityRestoreTest {
                 val backup = BackupPreferences(
                     security = SecurityPreferences(
                         appLockMode = mode,
-                        appLockTimeout = timeout
+                        appLockTimeout = timeout,
+                        screenPrivacyEnabled = false
                     )
                 )
 
@@ -99,7 +101,7 @@ class BackupSecurityRestoreTest {
             }
         }
 
-        // Across all 16 combinations, security mutation methods must NEVER be called
+        // Across all 16 combinations, App Lock mutation methods must NEVER be called
         coVerify(exactly = 0) { mockPrefsManager.setAppLockMode(any()) }
         coVerify(exactly = 0) { mockPrefsManager.setAppLockTimeout(any()) }
         coVerify(exactly = 0) { mockPrefsManager.setCustomPin(any()) }
@@ -107,10 +109,13 @@ class BackupSecurityRestoreTest {
     }
 
     @Test
-    fun `restorePreferences successfully restores all non-security user preferences`() = runBlocking {
+    fun `restorePreferences successfully restores all user preferences including standalone screen privacy`() = runBlocking {
         val backup = BackupPreferences(
             recording = RecordingPreferences(audioFormat = "wav_16khz"),
-            transcription = TranscriptionPreferences(whisperModel = "ggml-tiny-q5_1"),
+            transcription = TranscriptionPreferences(
+                whisperModel = "ggml-tiny-q5_1",
+                speechToTextEnabled = false
+            ),
             appearance = AppearancePreferences(themeMode = "dark"),
             display = DisplayPreferences(
                 timeFormat = "twenty_four_hour",
@@ -122,13 +127,17 @@ class BackupSecurityRestoreTest {
             ),
             editor = EditorPreferences(markdownEnabled = true),
             dataManagement = DataManagementPreferences(dailyReminder = true),
-            security = SecurityPreferences(appLockMode = "custom_pin") // Must be ignored
+            security = SecurityPreferences(
+                appLockMode = "custom_pin",
+                screenPrivacyEnabled = true
+            )
         )
 
         restorer.restorePreferences(backup)
 
         coVerify(exactly = 1) { mockPrefsManager.setAudioFormat(AudioFormat.WAV_16KHZ) }
         coVerify(exactly = 1) { mockPrefsManager.setWhisperModel("ggml-tiny-q5_1") }
+        coVerify(exactly = 1) { mockPrefsManager.setSpeechToTextEnabled(false) }
         coVerify(exactly = 1) { mockPrefsManager.setAppThemeMode(AppThemeMode.DARK) }
         coVerify(exactly = 1) { mockPrefsManager.setTimeFormat(TimeFormat.TWENTY_FOUR_HOUR) }
         coVerify(exactly = 1) { mockPrefsManager.setStartOfWeek(StartOfWeek.MONDAY) }
@@ -138,6 +147,7 @@ class BackupSecurityRestoreTest {
         coVerify(exactly = 1) { mockPrefsManager.setTagIsGridView(false) }
         coVerify(exactly = 1) { mockPrefsManager.setMarkdownEnabled(true) }
         coVerify(exactly = 1) { mockPrefsManager.setDailyReminder(true) }
+        coVerify(exactly = 1) { mockPrefsManager.setScreenPrivacyEnabled(true) }
 
         // AppLockMode was in backup but must NOT be touched
         coVerify(exactly = 0) { mockPrefsManager.setAppLockMode(any()) }

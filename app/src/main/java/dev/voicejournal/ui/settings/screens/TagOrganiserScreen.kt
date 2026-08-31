@@ -20,6 +20,7 @@ import dev.voicejournal.ui.components.getTagIcon
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
+import dev.voicejournal.ui.settings.components.settingHighlight
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -35,6 +36,12 @@ fun TagOrganiserScreen(
 ) {
     val colors = AppTheme.colors
     var showChooseTagsDialog by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.highlightedSettingKey) {
+        if (uiState.highlightedSettingKey in listOf("is_topics_enabled", "is_people_enabled", "is_mood_enabled")) {
+            showChooseTagsDialog = true
+        }
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val minHeight = maxHeight
@@ -60,6 +67,7 @@ fun TagOrganiserScreen(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .settingHighlight(uiState.highlightedSettingKey in listOf("is_topics_enabled", "is_people_enabled", "is_mood_enabled"))
                     .clickable { showChooseTagsDialog = true }
             ) {
                 Row(
@@ -118,6 +126,7 @@ fun TagOrganiserScreen(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .settingHighlight(uiState.highlightedSettingKey == "is_folder_enabled")
                     .clickable { viewModel.setFolderEnabled(!uiState.isFolderEnabled) }
             ) {
                 Row(
@@ -183,6 +192,7 @@ fun TagOrganiserScreen(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .settingHighlight(uiState.highlightedSettingKey == "is_notes_organisation_enabled")
                     .clickable(enabled = isOrganisationAvailable) { 
                         viewModel.setNotesOrganisationEnabled(!uiState.isNotesOrganisationEnabled) 
                     }

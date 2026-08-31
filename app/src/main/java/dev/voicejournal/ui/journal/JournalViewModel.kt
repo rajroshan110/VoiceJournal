@@ -94,6 +94,19 @@ private data class JournalPrefConfig(
     val isMoodEnabled: Boolean = true
 )
 
+private data class JournalStatusState(
+    val searchActive: Boolean,
+    val permission: Boolean,
+    val refreshing: Boolean,
+    val errorMsg: String?
+)
+
+private data class JournalBackupState(
+    val isImporting: Boolean,
+    val progressText: String?,
+    val resultDialog: BackupResultDialog?
+)
+
 @HiltViewModel
 class JournalViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
@@ -113,6 +126,9 @@ class JournalViewModel @Inject constructor(
     private val _permissionGranted = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
     private val _loadError = MutableStateFlow<String?>(null)
+    private val _isImporting = MutableStateFlow(false)
+    private val _backupProgressText = MutableStateFlow<String?>(null)
+    private val _backupResultDialog = MutableStateFlow<BackupResultDialog?>(null)
 
     private val _cardPlaybackState = MutableStateFlow(CardPlaybackState())
     val cardPlaybackState: StateFlow<CardPlaybackState> = _cardPlaybackState.asStateFlow()
@@ -312,27 +328,47 @@ class JournalViewModel @Inject constructor(
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
-            combine(
-                filteredDataFlow,
+            val statusFlow = combine(
                 _isSearchActive,
                 _permissionGranted,
                 _isRefreshing,
                 _loadError
-            ) { baseState, searchActive, permission, refreshing, errorMsg ->
-                if (errorMsg != null) {
+            ) { searchActive, permission, refreshing, errorMsg ->
+                JournalStatusState(searchActive, permission, refreshing, errorMsg)
+            }
+
+            val backupFlow = combine(
+                _isImporting,
+                _backupProgressText,
+                _backupResultDialog
+            ) { isImporting, progressText, resultDialog ->
+                JournalBackupState(isImporting, progressText, resultDialog)
+            }
+
+            combine(
+                filteredDataFlow,
+                statusFlow,
+                backupFlow
+            ) { baseState, status, backup ->
+                val stateWithStatus = if (status.errorMsg != null) {
                     baseState.copy(
-                        feedState = FeedState.Error(errorMsg),
-                        isSearchActive = searchActive,
-                        permissionGranted = permission,
-                        isRefreshing = refreshing
+                        feedState = FeedState.Error(status.errorMsg),
+                        isSearchActive = status.searchActive,
+                        permissionGranted = status.permission,
+                        isRefreshing = status.refreshing
                     )
                 } else {
                     baseState.copy(
-                        isSearchActive = searchActive,
-                        permissionGranted = permission,
-                        isRefreshing = refreshing
+                        isSearchActive = status.searchActive,
+                        permissionGranted = status.permission,
+                        isRefreshing = status.refreshing
                     )
                 }
+                stateWithStatus.copy(
+                    isImporting = backup.isImporting,
+                    backupProgressText = backup.progressText,
+                    backupResultDialog = backup.resultDialog
+                )
             }.collect { state ->
                 _uiState.value = state
             }
@@ -529,35 +565,28 @@ class JournalViewModel @Inject constructor(
 
     fun importBackupFromUri(sourceUri: android.net.Uri) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isImporting = true,
-                backupProgressText = "Validating backup…",
-                backupResultDialog = null
-            )
+            _isImporting.value = true
+            _backupProgressText.value = "Validating backup…"
+            _backupResultDialog.value = null
+
             val result = importManager.importFromUri(sourceUri) { progress ->
-                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+                _backupProgressText.value = progress
             }
+            _isImporting.value = false
+            _backupProgressText.value = null
             if (result.success) {
-                _uiState.value = _uiState.value.copy(
-                    isImporting = false,
-                    backupProgressText = null,
-                    backupResultDialog = BackupResultDialog(
-                        title = "Backup Restored",
-                        message = "Your backup has been restored successfully."
-                    )
+                _backupResultDialog.value = BackupResultDialog(
+                    title = "Backup Restored",
+                    message = "Your backup has been restored successfully."
                 )
             } else {
-                _uiState.value = _uiState.value.copy(
-                    isImporting = false,
-                    backupProgressText = null,
-                    backupResultDialog = mapImportErrorToDialog(result.validationErrors, null)
-                )
+                _backupResultDialog.value = mapImportErrorToDialog(result.validationErrors, null)
             }
         }
     }
 
     fun dismissBackupResultDialog() {
-        _uiState.value = _uiState.value.copy(backupResultDialog = null)
+        _backupResultDialog.value = null
     }
 
     private fun mapImportErrorToDialog(errors: List<String>, exception: Throwable?): BackupResultDialog {

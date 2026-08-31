@@ -38,7 +38,7 @@ fun TopTagsCard(
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         if (displayedTags.isEmpty()) {
             Box(
