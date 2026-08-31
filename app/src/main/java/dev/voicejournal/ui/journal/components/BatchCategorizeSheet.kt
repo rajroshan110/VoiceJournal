@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 fun BatchCategorizeSheet(
     selectedCount: Int,
     isFolderEnabled: Boolean = true,
+    isTopicsEnabled: Boolean = true,
+    isPeopleEnabled: Boolean = true,
     availableFolders: List<String> = listOf("Personal", "Work", "Ideas", "Journal"),
     availableTags: List<Tag>,
     availablePeople: List<String>,
@@ -42,7 +44,17 @@ fun BatchCategorizeSheet(
 ) {
     val colors = AppTheme.colors
 
-    var activeTab by rememberSaveable(isFolderEnabled) { mutableStateOf(if (isFolderEnabled) 0 else 1) } // 0: Folders, 1: Topics, 2: People
+    val enabledTabs = remember(isFolderEnabled, isTopicsEnabled, isPeopleEnabled) {
+        buildList {
+            if (isFolderEnabled) add(0 to "Folders")
+            if (isTopicsEnabled) add(1 to "Topics (#)")
+            if (isPeopleEnabled) add(2 to "People (@)")
+        }
+    }
+
+    var activeTab by rememberSaveable(isFolderEnabled, isTopicsEnabled, isPeopleEnabled) {
+        mutableIntStateOf(enabledTabs.firstOrNull()?.first ?: -1)
+    }
 
     var selectedFolder by remember(appliedFolder) { mutableStateOf<String?>(appliedFolder) }
     var customFolderInput by rememberSaveable { mutableStateOf("") }
@@ -86,7 +98,7 @@ fun BatchCategorizeSheet(
             ) {
                 Column {
                     Text(
-                        text = "Organize Notes",
+                        text = "Organise Notes",
                         style = MaterialTheme.typography.titleMedium,
                         color = colors.textPrimary,
                         fontWeight = FontWeight.Bold
@@ -103,33 +115,31 @@ fun BatchCategorizeSheet(
             }
 
             // Segmented Category Tabs (Folders / Topics / People)
-            val selectedTabIndex = if (isFolderEnabled) activeTab else if (activeTab == 2) 1 else 0
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = colors.surfaceVariant,
-                contentColor = colors.primary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                if (isFolderEnabled) {
-                    Tab(
-                        selected = activeTab == 0,
-                        onClick = { activeTab = 0 },
-                        text = { Text("Folders", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                        icon = { Icon(getFolderIcon(if (activeTab == 0) colors.primary else colors.textSecondary), contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    )
+            if (enabledTabs.isNotEmpty()) {
+                val selectedTabIndex = enabledTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = colors.surfaceVariant,
+                    contentColor = colors.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    enabledTabs.forEach { (tabIndex, title) ->
+                        val isSelected = activeTab == tabIndex
+                        Tab(
+                            selected = isSelected,
+                            onClick = { activeTab = tabIndex },
+                            text = { Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
+                            icon = {
+                                val iconColor = if (isSelected) colors.primary else colors.textSecondary
+                                when (tabIndex) {
+                                    0 -> Icon(getFolderIcon(iconColor), contentDescription = null, modifier = Modifier.size(18.dp))
+                                    1 -> Icon(getTagIcon(iconColor), contentDescription = null, modifier = Modifier.size(18.dp))
+                                    else -> Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                    }
                 }
-                Tab(
-                    selected = activeTab == 1,
-                    onClick = { activeTab = 1 },
-                    text = { Text("Topics (#)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                    icon = { Icon(getTagIcon(if (activeTab == 1) colors.primary else colors.textSecondary), contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
-                Tab(
-                    selected = activeTab == 2,
-                    onClick = { activeTab = 2 },
-                    text = { Text("People (@)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                    icon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
             }
 
             // Tab Body Content
@@ -139,17 +149,32 @@ fun BatchCategorizeSheet(
                     .heightIn(max = 300.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                when (activeTab) {
-                    // TAB 0: FOLDERS
-                    0 -> {
+                if (enabledTabs.isEmpty() || activeTab == -1) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = "Assign to Folder",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = "No tag categories are currently enabled.\nEnable Folders, Topics, or People in Settings → Tag Organiser.",
                             color = colors.textSecondary,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            fontSize = 14.sp
                         )
+                    }
+                } else {
+                    when (activeTab) {
+                        // TAB 0: FOLDERS
+                        0 -> {
+                            Text(
+                                text = "Assign to Folder",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
 
-                        // Folder List
+                            // Folder List
                         availableFolders.distinct().forEach { folderName ->
                             val isSelected = selectedFolder == folderName
                             Surface(
@@ -395,30 +420,37 @@ fun BatchCategorizeSheet(
                     }
                 }
             }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Action Apply Button
             Button(
                 onClick = {
-                    val topicTagsToAssign = selectedTopics.map { Tag(name = "#$it", type = TagType.TOPIC) }
-                    val personTagsToAssign = selectedPeople.map { Tag(name = "@$it", type = TagType.PERSON) }
+                    val topicTagsToAssign = if (isTopicsEnabled) selectedTopics.map { Tag(name = "#$it", type = TagType.TOPIC) } else emptyList()
+                    val personTagsToAssign = if (isPeopleEnabled) selectedPeople.map { Tag(name = "@$it", type = TagType.PERSON) } else emptyList()
 
-                    val removedTopicNames = cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#") == tag && it.type != TagType.PERSON && it.type != TagType.FOLDER } } - selectedTopics.toSet()
-                    val removedPersonNames = cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("@") == person } } - selectedPeople.toSet()
+                    val removedTopicNames = if (isTopicsEnabled) {
+                        cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#") == tag && it.type != TagType.PERSON && it.type != TagType.FOLDER } } - selectedTopics.toSet()
+                    } else emptySet()
+                    val removedPersonNames = if (isPeopleEnabled) {
+                        cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("@") == person } } - selectedPeople.toSet()
+                    } else emptySet()
 
                     val topicTagsToRemove = removedTopicNames.map { Tag(name = "#$it", type = TagType.TOPIC) }
                     val personTagsToRemove = removedPersonNames.map { Tag(name = "@$it", type = TagType.PERSON) }
 
-                    val folderToRemove = if (appliedFolder != null && appliedFolder != selectedFolder) appliedFolder else null
+                    val finalSelectedFolder = if (isFolderEnabled) selectedFolder else null
+                    val folderToRemove = if (isFolderEnabled && appliedFolder != null && appliedFolder != finalSelectedFolder) appliedFolder else null
 
                     onApply(
-                        selectedFolder,
+                        finalSelectedFolder,
                         topicTagsToAssign + personTagsToAssign,
                         topicTagsToRemove + personTagsToRemove,
                         folderToRemove
                     )
                 },
+                enabled = enabledTabs.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()

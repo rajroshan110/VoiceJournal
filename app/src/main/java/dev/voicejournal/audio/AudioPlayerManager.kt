@@ -49,15 +49,13 @@ class AudioPlayerManager(private val context: Context) {
                     AudioPlaybackService.stop(context)
                 }
                 Player.STATE_READY -> {
-                    if (!player.isPlaying) {
-                        if (player.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE || !player.playWhenReady) {
-                            handlePlaybackSuppression(
-                                if (player.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE)
-                                    player.playbackSuppressionReason
-                                else
-                                    Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
-                            )
-                        }
+                    if (!player.isPlaying && player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        val dur = player.duration.coerceAtLeast(0)
+                        _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
+                        progressJob?.cancel()
+                        AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
+                    } else if (player.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        handlePlaybackSuppression(player.playbackSuppressionReason)
                     }
                 }
                 Player.STATE_IDLE -> {
@@ -77,9 +75,10 @@ class AudioPlayerManager(private val context: Context) {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             val player = exoPlayer ?: return
             if (!playWhenReady && !player.isPlaying) {
-                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
-                    handlePlaybackSuppression(Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS)
-                }
+                val dur = player.duration.coerceAtLeast(0)
+                _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
+                progressJob?.cancel()
+                AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
             }
         }
 
@@ -92,10 +91,6 @@ class AudioPlayerManager(private val context: Context) {
                 AudioPlaybackService.updateState(context, true, currentTitle, currentEntryId)
             } else {
                 if (player.playbackState == Player.STATE_ENDED || player.playbackState == Player.STATE_IDLE) return
-                if (player.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
-                    handlePlaybackSuppression(player.playbackSuppressionReason)
-                    return
-                }
                 _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
                 progressJob?.cancel()
                 AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
@@ -112,37 +107,44 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     private fun handlePlaybackSuppression(reason: Int) {
+        if (reason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS) {
+            exoPlayer?.let { player ->
+                val dur = player.duration.coerceAtLeast(0)
+                _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
+            }
+            progressJob?.cancel()
+            AudioPlaybackService.updateState(context, false, currentTitle, currentEntryId)
+            return
+        }
         if (reason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
             val errorMessage = when (reason) {
-                Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS ->
-                    "Audio focus unavailable. Audio may be in use by another app or phone call."
                 Player.PLAYBACK_SUPPRESSION_REASON_UNSUITABLE_AUDIO_OUTPUT ->
-                    "Audio output is currently unavailable or unsuitable."
+                    "Audio output is currently unavailable."
                 else ->
-                    "Audio playback suppressed by system."
+                    "Audio playback paused by system."
             }
             _playbackState.value = PlayerState.Error(errorMessage)
             progressJob?.cancel()
             AudioPlaybackService.stop(context)
             try {
                 exoPlayer?.pause()
-            } catch (ignored: Exception) {}
+            } catch (ignored: Throwable) {}
         }
     }
 
     private fun handlePlayerError(error: PlaybackException) {
         val msg = when (error.errorCode) {
             PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ->
-                "Audio output is in use or unavailable (e.g., active phone call)."
+                "Audio output is in use by another app or phone call."
             PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ->
-                "Audio output write failed. Audio device may be unavailable."
+                "Audio output unavailable."
             PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
                 "Audio file does not exist or was deleted."
             PlaybackException.ERROR_CODE_DECODING_FAILED,
             PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ->
                 "Corrupt audio file or unsupported audio format."
             else ->
-                "Playback failed: ${error.message ?: "Unsupported audio or system error"}"
+                "Playback error: ${error.message ?: "Audio playback failed"}"
         }
         _playbackState.value = PlayerState.Error(msg)
         progressJob?.cancel()

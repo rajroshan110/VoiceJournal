@@ -71,7 +71,19 @@ data class JournalUiState(
     val isRefreshing: Boolean = false,
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
     val isFolderEnabled: Boolean = true,
-    val isNotesOrganisationEnabled: Boolean = true
+    val isNotesOrganisationEnabled: Boolean = true,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true
+)
+
+private data class JournalPrefConfig(
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isFolderEnabled: Boolean = true,
+    val isNotesOrganisationEnabled: Boolean = true,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -203,11 +215,25 @@ class JournalViewModel @Inject constructor(
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
             val prefConfigFlow = combine(
-                userPreferencesManager.timeFormat,
-                userPreferencesManager.isFolderEnabled,
-                userPreferencesManager.isNotesOrganisationEnabled
-            ) { timeFormatPref, isFolderEnabled, isNotesOrganisationEnabled ->
-                Triple(timeFormatPref, isFolderEnabled, isNotesOrganisationEnabled)
+                combine(
+                    userPreferencesManager.timeFormat,
+                    userPreferencesManager.isFolderEnabled,
+                    userPreferencesManager.isNotesOrganisationEnabled
+                ) { tf, fe, noe -> Triple(tf, fe, noe) },
+                combine(
+                    userPreferencesManager.isTopicsEnabled,
+                    userPreferencesManager.isPeopleEnabled,
+                    userPreferencesManager.isMoodEnabled
+                ) { te, pe, me -> Triple(te, pe, me) }
+            ) { p1, p2 ->
+                JournalPrefConfig(
+                    timeFormat = p1.first,
+                    isFolderEnabled = p1.second,
+                    isNotesOrganisationEnabled = p1.third,
+                    isTopicsEnabled = p2.first,
+                    isPeopleEnabled = p2.second,
+                    isMoodEnabled = p2.third
+                )
             }
 
             val filteredDataFlow = combine(
@@ -226,18 +252,18 @@ class JournalViewModel @Inject constructor(
 
                     val matchesQuery = query.isBlank() || textContent.contains(query, ignoreCase = true)
 
-                    val matchesTags = filters.selectedTags.isEmpty() ||
+                    val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
                             entry.tags.any { (it.type == TagType.TOPIC || it.type == TagType.THING) && it.name.removePrefix("#") in filters.selectedTags } ||
                             filters.selectedTags.any { tag -> textContent.contains("#$tag", ignoreCase = true) }
 
-                    val matchesPeople = filters.selectedPeople.isEmpty() ||
+                    val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
                             entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
                             entry.people.any { it.removePrefix("@") in filters.selectedPeople } ||
                             filters.selectedPeople.any { person ->
                                 textContent.contains("@$person", ignoreCase = true)
                             }
 
-                    val matchesMoods = filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
+                    val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
 
                     matchesQuery && matchesTags && matchesPeople && matchesMoods
                 }
@@ -249,9 +275,9 @@ class JournalViewModel @Inject constructor(
                     SortOption.MODIFIED_ASC -> filtered.sortedBy { it.updatedAt }
                 }
 
-                val hasAnyFilters = filters.selectedTags.isNotEmpty() ||
-                        filters.selectedPeople.isNotEmpty() ||
-                        filters.selectedMoods.isNotEmpty() ||
+                val hasAnyFilters = (prefs.isTopicsEnabled && filters.selectedTags.isNotEmpty()) ||
+                        (prefs.isPeopleEnabled && filters.selectedPeople.isNotEmpty()) ||
+                        (prefs.isMoodEnabled && filters.selectedMoods.isNotEmpty()) ||
                         query.isNotBlank()
 
                 val feed = when {
@@ -268,9 +294,12 @@ class JournalViewModel @Inject constructor(
                     filterState = filters,
                     sortOption = sort,
                     searchQuery = query,
-                    timeFormat = prefs.first,
-                    isFolderEnabled = prefs.second,
-                    isNotesOrganisationEnabled = prefs.third
+                    timeFormat = prefs.timeFormat,
+                    isFolderEnabled = prefs.isFolderEnabled,
+                    isNotesOrganisationEnabled = prefs.isNotesOrganisationEnabled,
+                    isTopicsEnabled = prefs.isTopicsEnabled,
+                    isPeopleEnabled = prefs.isPeopleEnabled,
+                    isMoodEnabled = prefs.isMoodEnabled
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 

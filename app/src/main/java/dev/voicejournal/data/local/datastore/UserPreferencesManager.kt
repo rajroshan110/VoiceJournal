@@ -64,6 +64,9 @@ class UserPreferencesManager @Inject constructor(
         val IS_SPEECH_TO_TEXT_ENABLED = booleanPreferencesKey("is_speech_to_text_enabled")
         val IS_FOLDER_ENABLED = booleanPreferencesKey("is_folder_enabled")
         val IS_NOTES_ORGANISATION_ENABLED = booleanPreferencesKey("is_notes_organisation_enabled")
+        val IS_TOPICS_ENABLED = booleanPreferencesKey("is_topics_enabled")
+        val IS_PEOPLE_ENABLED = booleanPreferencesKey("is_people_enabled")
+        val IS_MOOD_ENABLED = booleanPreferencesKey("is_mood_enabled")
         
         // Lockout State
         val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
@@ -200,9 +203,36 @@ class UserPreferencesManager @Inject constructor(
         prefs[IS_FOLDER_ENABLED] ?: true
     }
 
+    val isFolderEnabledState: StateFlow<Boolean> = isFolderEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
     val isNotesOrganisationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_NOTES_ORGANISATION_ENABLED] ?: true
     }
+
+    val isNotesOrganisationEnabledState: StateFlow<Boolean> = isNotesOrganisationEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    val isTopicsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_TOPICS_ENABLED] ?: true
+    }
+
+    val isTopicsEnabledState: StateFlow<Boolean> = isTopicsEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    val isPeopleEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_PEOPLE_ENABLED] ?: true
+    }
+
+    val isPeopleEnabledState: StateFlow<Boolean> = isPeopleEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    val isMoodEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_MOOD_ENABLED] ?: true
+    }
+
+    val isMoodEnabledState: StateFlow<Boolean> = isMoodEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
     val pinFailedAttempts: Flow<Int> = dataStore.data.map { prefs ->
         prefs[PIN_FAILED_ATTEMPTS] ?: 0
@@ -370,6 +400,24 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setNotesOrganisationEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[IS_NOTES_ORGANISATION_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTopicsEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_TOPICS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setPeopleEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_PEOPLE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setMoodEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_MOOD_ENABLED] = enabled
         }
     }
 

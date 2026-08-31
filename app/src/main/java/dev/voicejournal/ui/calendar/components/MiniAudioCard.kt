@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
+import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.components.TagChip
 import dev.voicejournal.ui.designsystem.tokens.Border
@@ -53,6 +54,9 @@ fun MiniAudioCard(
     entry: JournalEntry,
     onCardClick: () -> Unit,
     timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    isMoodEnabled: Boolean = true,
+    isTopicsEnabled: Boolean = true,
+    isPeopleEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -103,10 +107,12 @@ fun MiniAudioCard(
                         color = colors.textSecondary,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text(
-                        text = entry.mood,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    if (isMoodEnabled) {
+                        Text(
+                            text = entry.mood,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
@@ -148,17 +154,25 @@ fun MiniAudioCard(
                         }
 
                         // 2. Tags Chips (Limit to 2 tags max on single line)
-                        val visibleTags = entry.tags.take(2)
+                        val filteredTags = entry.tags.filter { tag ->
+                            when (tag.type) {
+                                TagType.TOPIC -> isTopicsEnabled
+                                TagType.PERSON -> isPeopleEnabled
+                                TagType.FOLDER, TagType.THING -> true
+                                TagType.MOOD -> isMoodEnabled
+                            }
+                        }
+                        val visibleTags = filteredTags.take(2)
                         visibleTags.forEach { tag ->
                             TagChip(tag = tag, onClick = {})
                         }
-                        if (entry.tags.size > 2) {
+                        if (filteredTags.size > 2) {
                             Surface(
                                 shape = RoundedCornerShape(Radius.RadiusSm),
                                 color = colors.surfaceVariant
                             ) {
                                 Text(
-                                    text = "...+${entry.tags.size - 2}",
+                                    text = "...+${filteredTags.size - 2}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = colors.textSecondary,
                                     modifier = Modifier.padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX3s)

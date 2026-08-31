@@ -54,6 +54,9 @@ data class SettingsUiState(
     val isSpeechToTextEnabled: Boolean = true,
     val isFolderEnabled: Boolean = true,
     val isNotesOrganisationEnabled: Boolean = true,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
     val isModelDownloaded: Boolean = false,
     val downloadProgress: Float? = null,
     val sttModelDownloadState: ModelDownloadState = ModelDownloadState.Idle,
@@ -148,6 +151,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.isNotesOrganisationEnabled.collect { enabled ->
                 _uiState.value = _uiState.value.copy(isNotesOrganisationEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isTopicsEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isPeopleEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isMoodEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
             }
         }
         viewModelScope.launch {
@@ -298,6 +316,24 @@ class SettingsViewModel @Inject constructor(
     fun setNotesOrganisationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesManager.setNotesOrganisationEnabled(enabled)
+        }
+    }
+
+    fun setTopicsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setTopicsEnabled(enabled)
+        }
+    }
+
+    fun setPeopleEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setPeopleEnabled(enabled)
+        }
+    }
+
+    fun setMoodEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setMoodEnabled(enabled)
         }
     }
 

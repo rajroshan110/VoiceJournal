@@ -36,31 +36,52 @@ fun JournalTagsDialog(
     tags: List<Tag>,
     allAvailableTags: List<Tag> = emptyList(),
     isFolderEnabled: Boolean = true,
+    isTopicsEnabled: Boolean = true,
+    isPeopleEnabled: Boolean = true,
     onSaveTags: (List<Tag>) -> Unit,
     onDismiss: () -> Unit
 ) {
     var localTags by remember { mutableStateOf(tags) }
-    // Topics is active by default -> initialize tagInput to "#" with cursor positioned at index 1 (#|)
-    var tagInput by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("#", selection = TextRange(1))) }
-    var activeCategory by rememberSaveable { mutableStateOf(TagType.TOPIC) }
+    val defaultCategory = remember(isTopicsEnabled, isPeopleEnabled, isFolderEnabled) {
+        when {
+            isTopicsEnabled -> TagType.TOPIC
+            isPeopleEnabled -> TagType.PERSON
+            isFolderEnabled -> TagType.FOLDER
+            else -> TagType.TOPIC
+        }
+    }
+    var activeCategory by rememberSaveable(isTopicsEnabled, isPeopleEnabled, isFolderEnabled) {
+        mutableStateOf(defaultCategory)
+    }
+    val defaultPrefix = when (defaultCategory) {
+        TagType.TOPIC -> "#"
+        TagType.PERSON -> "@"
+        else -> ""
+    }
+    var tagInput by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(defaultPrefix, selection = TextRange(defaultPrefix.length)))
+    }
     var pendingNewFolderTagName by rememberSaveable { mutableStateOf<String?>(null) }
     val colors = AppTheme.colors
 
     // Compute suggestion list matching current user input prefix and text
-    val suggestions by remember(tagInput.text, allAvailableTags, localTags, activeCategory, isFolderEnabled) {
+    val suggestions by remember(tagInput.text, allAvailableTags, localTags, activeCategory, isFolderEnabled, isTopicsEnabled, isPeopleEnabled) {
         derivedStateOf {
             val inputTrimmed = tagInput.text.trim()
             val (prefixCategory, query) = when {
-                inputTrimmed.startsWith("#") -> TagType.TOPIC to inputTrimmed.removePrefix("#").trim()
-                inputTrimmed.startsWith("@") -> TagType.PERSON to inputTrimmed.removePrefix("@").trim()
-                isFolderEnabled -> TagType.FOLDER to inputTrimmed
+                inputTrimmed.startsWith("#") && isTopicsEnabled -> TagType.TOPIC to inputTrimmed.removePrefix("#").trim()
+                inputTrimmed.startsWith("@") && isPeopleEnabled -> TagType.PERSON to inputTrimmed.removePrefix("@").trim()
+                isFolderEnabled -> TagType.FOLDER to inputTrimmed.removePrefix("#").removePrefix("@").trim()
+                isTopicsEnabled -> TagType.TOPIC to inputTrimmed.removePrefix("#").removePrefix("@").trim()
+                isPeopleEnabled -> TagType.PERSON to inputTrimmed.removePrefix("#").removePrefix("@").trim()
                 else -> TagType.TOPIC to inputTrimmed
             }
 
             allAvailableTags.filter { tag ->
-                if (!isFolderEnabled && (tag.type == TagType.FOLDER || tag.type == TagType.THING)) {
-                    return@filter false
-                }
+                if (!isTopicsEnabled && tag.type == TagType.TOPIC) return@filter false
+                if (!isPeopleEnabled && tag.type == TagType.PERSON) return@filter false
+                if (!isFolderEnabled && (tag.type == TagType.FOLDER || tag.type == TagType.THING)) return@filter false
+
                 val isCategoryMatch = when (prefixCategory) {
                     TagType.FOLDER -> tag.type == TagType.FOLDER || tag.type == TagType.THING
                     else -> tag.type == prefixCategory
@@ -78,17 +99,31 @@ fun JournalTagsDialog(
             when {
                 trimmed.startsWith("#") -> {
                     val cleanName = trimmed.removePrefix("#").trim()
-                    if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
-                        localTags = localTags + Tag(name = cleanName, type = TagType.TOPIC)
+                    if (isTopicsEnabled) {
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.TOPIC)
+                        }
+                        tagInput = TextFieldValue("#", selection = TextRange(1))
+                    } else if (isPeopleEnabled) {
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.PERSON)
+                        }
+                        tagInput = TextFieldValue("@", selection = TextRange(1))
                     }
-                    tagInput = TextFieldValue("#", selection = TextRange(1))
                 }
                 trimmed.startsWith("@") -> {
                     val cleanName = trimmed.removePrefix("@").trim()
-                    if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
-                        localTags = localTags + Tag(name = cleanName, type = TagType.PERSON)
+                    if (isPeopleEnabled) {
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.PERSON)
+                        }
+                        tagInput = TextFieldValue("@", selection = TextRange(1))
+                    } else if (isTopicsEnabled) {
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.TOPIC)
+                        }
+                        tagInput = TextFieldValue("#", selection = TextRange(1))
                     }
-                    tagInput = TextFieldValue("@", selection = TextRange(1))
                 }
                 else -> {
                     val cleanName = trimmed
@@ -111,16 +146,20 @@ fun JournalTagsDialog(
                             }
                             tagInput = TextFieldValue("", selection = TextRange(0))
                         } else {
-                            // Folder tag does NOT exist yet (even if Topic or Person with that name exists): prompt dialog!
+                            // Folder tag does NOT exist yet: prompt dialog!
                             pendingNewFolderTagName = cleanName
                             tagInput = TextFieldValue("", selection = TextRange(0))
                         }
-                    } else {
-                        // Folder disabled: default plain text to Topic
+                    } else if (isTopicsEnabled) {
                         if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
                             localTags = localTags + Tag(name = cleanName, type = TagType.TOPIC)
                         }
                         tagInput = TextFieldValue("#", selection = TextRange(1))
+                    } else if (isPeopleEnabled) {
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.PERSON)
+                        }
+                        tagInput = TextFieldValue("@", selection = TextRange(1))
                     }
                 }
             }
@@ -218,29 +257,41 @@ fun JournalTagsDialog(
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val isInputAllowed = isTopicsEnabled || isPeopleEnabled || isFolderEnabled
+
                             OutlinedTextField(
                                 value = tagInput,
                                 onValueChange = { newValue ->
                                     val newText = newValue.text
                                     // Handle Category Auto-Sync & Cursor position after prefix (#| / @|)
-                                    if (newText.startsWith("#")) {
+                                    if (newText.startsWith("#") && isTopicsEnabled) {
                                         activeCategory = TagType.TOPIC
                                         tagInput = newValue
-                                    } else if (newText.startsWith("@")) {
+                                    } else if (newText.startsWith("@") && isPeopleEnabled) {
                                         activeCategory = TagType.PERSON
                                         tagInput = newValue
                                     } else {
-                                        activeCategory = if (isFolderEnabled) TagType.FOLDER else TagType.TOPIC
+                                        activeCategory = when {
+                                            isFolderEnabled -> TagType.FOLDER
+                                            isTopicsEnabled -> TagType.TOPIC
+                                            isPeopleEnabled -> TagType.PERSON
+                                            else -> TagType.TOPIC
+                                        }
                                         tagInput = newValue
                                     }
                                 },
+                                enabled = isInputAllowed,
                                 placeholder = {
                                     Text(
                                         when {
-                                            activeCategory == TagType.TOPIC -> "Add #topic tag..."
-                                            activeCategory == TagType.PERSON -> "Add @person tag..."
+                                            !isInputAllowed -> "Tag categories disabled in settings"
+                                            isTopicsEnabled && activeCategory == TagType.TOPIC -> "Add #topic tag..."
+                                            isPeopleEnabled && activeCategory == TagType.PERSON -> "Add @person tag..."
                                             isFolderEnabled && activeCategory == TagType.FOLDER -> "Add folder tag..."
-                                            else -> "Add #topic tag..."
+                                            isTopicsEnabled -> "Add #topic tag..."
+                                            isPeopleEnabled -> "Add @person tag..."
+                                            isFolderEnabled -> "Add folder tag..."
+                                            else -> "Add tag..."
                                         },
                                         color = colors.textSecondary,
                                         fontSize = 14.sp
@@ -252,20 +303,34 @@ fun JournalTagsDialog(
                                     focusedBorderColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent,
                                     focusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    disabledBorderColor = Color.Transparent,
                                     unfocusedTextColor = colors.textPrimary,
-                                    focusedTextColor = colors.textPrimary
+                                    focusedTextColor = colors.textPrimary,
+                                    disabledTextColor = colors.textSecondary
                                 ),
                                 singleLine = true
                             )
 
                             Button(
                                 onClick = handleAddTag,
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                enabled = isInputAllowed && tagInput.text.trim().isNotEmpty(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.primary,
+                                    disabledContainerColor = colors.surfaceVariant
+                                ),
                                 shape = RoundedCornerShape(16.dp),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, tint = colors.onPrimary)
-                                Text("Add", color = colors.onPrimary)
+                                Icon(
+                                    Icons.Default.Add, 
+                                    contentDescription = null, 
+                                    tint = if (isInputAllowed && tagInput.text.trim().isNotEmpty()) colors.onPrimary else colors.textSecondary
+                                )
+                                Text(
+                                    "Add", 
+                                    color = if (isInputAllowed && tagInput.text.trim().isNotEmpty()) colors.onPrimary else colors.textSecondary
+                                )
                             }
                         }
                     }
@@ -281,70 +346,75 @@ fun JournalTagsDialog(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // Category Tabs Selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val categoryList = buildList {
-                        add(TagType.TOPIC to "# Topics")
-                        add(TagType.PERSON to "@ People")
-                        if (isFolderEnabled) {
-                            add(TagType.FOLDER to "📁 Folder")
-                        }
-                    }
-                    categoryList.forEach { (type, label) ->
-                        val isSelected = activeCategory == type
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(
-                                    color = if (isSelected) colors.primary else colors.surfaceVariant,
-                                    shape = RoundedCornerShape(20.dp)
-                                )
-                                .clickable {
-                                    activeCategory = type
-                                    // Automatic input prefix with cursor positioned cleanly AFTER prefix (#| or @|)
-                                    tagInput = when (type) {
-                                        TagType.TOPIC -> {
-                                             val text = if (tagInput.text.startsWith("#")) tagInput.text else "#" + tagInput.text.removePrefix("@")
-                                            TextFieldValue(text, selection = TextRange(text.length))
+                val categoryList = buildList {
+                    if (isTopicsEnabled) add(TagType.TOPIC to "# Topics")
+                    if (isPeopleEnabled) add(TagType.PERSON to "@ People")
+                    if (isFolderEnabled) add(TagType.FOLDER to "📁 Folder")
+                }
+
+                if (categoryList.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categoryList.forEach { (type, label) ->
+                            val isSelected = activeCategory == type
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        color = if (isSelected) colors.primary else colors.surfaceVariant,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .clickable {
+                                        activeCategory = type
+                                        // Automatic input prefix with cursor positioned cleanly AFTER prefix (#| or @|)
+                                        tagInput = when (type) {
+                                            TagType.TOPIC -> {
+                                                 val text = if (tagInput.text.startsWith("#")) tagInput.text else "#" + tagInput.text.removePrefix("@")
+                                                TextFieldValue(text, selection = TextRange(text.length))
+                                            }
+                                            TagType.PERSON -> {
+                                                val text = if (tagInput.text.startsWith("@")) tagInput.text else "@" + tagInput.text.removePrefix("#")
+                                                TextFieldValue(text, selection = TextRange(text.length))
+                                            }
+                                            TagType.FOLDER -> {
+                                                val text = tagInput.text.removePrefix("#").removePrefix("@")
+                                                TextFieldValue(text, selection = TextRange(text.length))
+                                            }
+                                            else -> tagInput
                                         }
-                                        TagType.PERSON -> {
-                                            val text = if (tagInput.text.startsWith("@")) tagInput.text else "@" + tagInput.text.removePrefix("#")
-                                            TextFieldValue(text, selection = TextRange(text.length))
-                                        }
-                                        TagType.FOLDER -> {
-                                            val text = tagInput.text.removePrefix("#").removePrefix("@")
-                                            TextFieldValue(text, selection = TextRange(text.length))
-                                        }
-                                        else -> tagInput
                                     }
-                                }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) colors.onPrimary else colors.textPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) colors.onPrimary else colors.textPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
 
                 // Active Tags List by Category Cards
-                TagCategoryCard(
-                    title = "Topics (#)",
-                    tags = localTags.filter { it.type == TagType.TOPIC },
-                    onRemoveTag = { tag -> localTags = localTags - tag }
-                )
+                if (isTopicsEnabled) {
+                    TagCategoryCard(
+                        title = "Topics (#)",
+                        tags = localTags.filter { it.type == TagType.TOPIC },
+                        onRemoveTag = { tag -> localTags = localTags - tag }
+                    )
+                }
 
-                TagCategoryCard(
-                    title = "People (@)",
-                    tags = localTags.filter { it.type == TagType.PERSON },
-                    onRemoveTag = { tag -> localTags = localTags - tag }
-                )
+                if (isPeopleEnabled) {
+                    TagCategoryCard(
+                        title = "People (@)",
+                        tags = localTags.filter { it.type == TagType.PERSON },
+                        onRemoveTag = { tag -> localTags = localTags - tag }
+                    )
+                }
 
                 if (isFolderEnabled) {
                     TagCategoryCard(
@@ -352,6 +422,22 @@ fun JournalTagsDialog(
                         tags = localTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING },
                         onRemoveTag = { tag -> localTags = localTags - tag }
                     )
+                }
+
+                if (!isTopicsEnabled && !isPeopleEnabled && !isFolderEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No tag categories are currently enabled.\nEnable them in Settings → Tag Organiser → Choose Tags.",
+                            color = colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
         }
@@ -363,14 +449,18 @@ fun JournalTagsDialog(
             onDismissRequest = { pendingNewFolderTagName = null },
             title = {
                 Text(
-                    text = "Add Tag Category",
+                    text = if (isTopicsEnabled) "Add Tag Category" else "Create Folder Tag",
                     color = colors.textPrimary,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "How would you like to add \"$newTagName\"?",
+                    text = if (isTopicsEnabled) {
+                        "How would you like to add \"$newTagName\"?"
+                    } else {
+                        "Add \"$newTagName\" as a new folder tag?"
+                    },
                     color = colors.textSecondary
                 )
             },
@@ -382,17 +472,22 @@ fun JournalTagsDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
                 ) {
-                    Text("Create Folder", color = colors.onPrimary)
+                    Text("Create New Folder", color = colors.onPrimary)
                 }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = {
-                        localTags = localTags + Tag(name = newTagName, type = TagType.TOPIC)
+                        if (isTopicsEnabled) {
+                            localTags = localTags + Tag(name = newTagName, type = TagType.TOPIC)
+                        }
                         pendingNewFolderTagName = null
                     }
                 ) {
-                    Text("Add as Topic", color = colors.primary)
+                    Text(
+                        text = if (isTopicsEnabled) "Add as Topic" else "Discard",
+                        color = if (isTopicsEnabled) colors.primary else colors.textSecondary
+                    )
                 }
             },
             containerColor = colors.surface,

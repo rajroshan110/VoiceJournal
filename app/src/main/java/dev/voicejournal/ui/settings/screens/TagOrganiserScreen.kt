@@ -21,6 +21,12 @@ import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.window.Dialog
+
 @Composable
 fun TagOrganiserScreen(
     uiState: SettingsUiState,
@@ -28,6 +34,7 @@ fun TagOrganiserScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    var showChooseTagsDialog by rememberSaveable { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val minHeight = maxHeight
@@ -39,11 +46,21 @@ fun TagOrganiserScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Choose Tags Card (Upcoming feature)
+            // 1. Choose Tags Card (Interactive configuration)
+            val activeTagsSummary = remember(uiState.isTopicsEnabled, uiState.isPeopleEnabled, uiState.isMoodEnabled) {
+                listOfNotNull(
+                    if (uiState.isTopicsEnabled) "Topics" else null,
+                    if (uiState.isPeopleEnabled) "People" else null,
+                    if (uiState.isMoodEnabled) "Mood" else null
+                ).joinToString(", ").ifEmpty { "None" }
+            }
+
             Card(
-                colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = 0.7f)),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showChooseTagsDialog = true }
             ) {
                 Row(
                     modifier = Modifier
@@ -54,13 +71,13 @@ fun TagOrganiserScreen(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(colors.secondaryBackground.copy(alpha = 0.6f), shape = CircleShape),
+                            .background(colors.secondaryBackground, shape = CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getTagIcon(colors.textSecondary),
+                            imageVector = getTagIcon(colors.textPrimary),
                             contentDescription = null,
-                            tint = colors.textSecondary,
+                            tint = colors.textPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -70,14 +87,14 @@ fun TagOrganiserScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Choose Tags",
-                            color = colors.textPrimary.copy(alpha = 0.8f),
+                            color = colors.textPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Customise and manage tag behaviours",
+                            text = "Active: $activeTagsSummary",
                             color = colors.textSecondary,
                             fontSize = 13.sp,
                             style = MaterialTheme.typography.bodySmall
@@ -86,18 +103,12 @@ fun TagOrganiserScreen(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Surface(
-                        color = colors.primary.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Coming Soon",
-                            color = colors.primary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Configure Tags",
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
@@ -164,12 +175,17 @@ fun TagOrganiserScreen(
             }
 
             // 3. Notes Organisation Card
+            val isOrganisationAvailable = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
             Card(
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isOrganisationAvailable) colors.surface else colors.surface.copy(alpha = 0.6f)
+                ),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.setNotesOrganisationEnabled(!uiState.isNotesOrganisationEnabled) }
+                    .clickable(enabled = isOrganisationAvailable) { 
+                        viewModel.setNotesOrganisationEnabled(!uiState.isNotesOrganisationEnabled) 
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -180,13 +196,16 @@ fun TagOrganiserScreen(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(colors.secondaryBackground, shape = CircleShape),
+                            .background(
+                                if (isOrganisationAvailable) colors.secondaryBackground else colors.secondaryBackground.copy(alpha = 0.5f), 
+                                shape = CircleShape
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getTagIcon(colors.textPrimary),
+                            imageVector = getTagIcon(if (isOrganisationAvailable) colors.textPrimary else colors.textSecondary),
                             contentDescription = null,
-                            tint = colors.textPrimary,
+                            tint = if (isOrganisationAvailable) colors.textPrimary else colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -196,14 +215,18 @@ fun TagOrganiserScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Notes Organisation",
-                            color = colors.textPrimary,
+                            color = if (isOrganisationAvailable) colors.textPrimary else colors.textSecondary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Show organise action button when selecting notes in the journal screen",
+                            text = if (isOrganisationAvailable) {
+                                "Show organise action button when selecting notes in the journal screen"
+                            } else {
+                                "Enable at least one tag category (Folders, Topics, or People) to use notes organisation"
+                            },
                             color = colors.textSecondary,
                             fontSize = 13.sp,
                             style = MaterialTheme.typography.bodySmall
@@ -213,7 +236,8 @@ fun TagOrganiserScreen(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Switch(
-                        checked = uiState.isNotesOrganisationEnabled,
+                        checked = uiState.isNotesOrganisationEnabled && isOrganisationAvailable,
+                        enabled = isOrganisationAvailable,
                         onCheckedChange = { viewModel.setNotesOrganisationEnabled(it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = colors.onPrimary,
@@ -251,5 +275,177 @@ fun TagOrganiserScreen(
                 )
             }
         }
+    }
+
+    if (showChooseTagsDialog) {
+        ChooseTagsDialog(
+            isTopicsEnabled = uiState.isTopicsEnabled,
+            isPeopleEnabled = uiState.isPeopleEnabled,
+            isMoodEnabled = uiState.isMoodEnabled,
+            onToggleTopics = { viewModel.setTopicsEnabled(it) },
+            onTogglePeople = { viewModel.setPeopleEnabled(it) },
+            onToggleMood = { viewModel.setMoodEnabled(it) },
+            onDismiss = { showChooseTagsDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun ChooseTagsDialog(
+    isTopicsEnabled: Boolean,
+    isPeopleEnabled: Boolean,
+    isMoodEnabled: Boolean,
+    onToggleTopics: (Boolean) -> Unit,
+    onTogglePeople: (Boolean) -> Unit,
+    onToggleMood: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = AppTheme.colors
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = colors.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Column {
+                    Text(
+                        text = "Choose Tags",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Select which tag categories and indicators appear across your journals, filters, and insights.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+
+                HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
+
+                // 1. Topics Row
+                TagCategoryToggleRow(
+                    iconText = "#",
+                    title = "Topics",
+                    subtitle = "Organise notes with topic hashtags (#work, #ideas)",
+                    checked = isTopicsEnabled,
+                    onCheckedChange = onToggleTopics
+                )
+
+                // 2. People Row
+                TagCategoryToggleRow(
+                    iconText = "@",
+                    title = "People",
+                    subtitle = "Mention and link people in notes (@john, @sarah)",
+                    checked = isPeopleEnabled,
+                    onCheckedChange = onTogglePeople
+                )
+
+                // 3. Mood Row
+                TagCategoryToggleRow(
+                    iconText = "😊",
+                    title = "Mood",
+                    subtitle = "Track emotional context and mood trends with emojis",
+                    checked = isMoodEnabled,
+                    onCheckedChange = onToggleMood
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Done Button
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Done",
+                        color = colors.onPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagCategoryToggleRow(
+    iconText: String,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val colors = AppTheme.colors
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(colors.secondaryBackground, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = iconText,
+                fontSize = if (iconText.length == 1 && !iconText.startsWith("#") && !iconText.startsWith("@")) 18.sp else 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary,
+                fontSize = 15.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colors.onPrimary,
+                checkedTrackColor = colors.primary,
+                uncheckedThumbColor = colors.textSecondary,
+                uncheckedTrackColor = colors.surfaceVariant
+            )
+        )
     }
 }

@@ -96,12 +96,15 @@ fun CalendarScreen(
                         val now = LocalDate.now()
                         viewModel.jumpToDate(now.year, now.monthValue, now.dayOfMonth)
                     },
-                    filterContent = if (isCompactLandscape) {
+                    filterContent = if (isCompactLandscape && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                         {
                             FilterBar(
                                 selectedTagsCount = uiState.filterState.selectedTags.size,
                                 selectedPeopleCount = uiState.filterState.selectedPeople.size,
                                 selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                                isTopicsEnabled = uiState.isTopicsEnabled,
+                                isPeopleEnabled = uiState.isPeopleEnabled,
+                                isMoodEnabled = uiState.isMoodEnabled,
                                 onAllClick = { viewModel.clearAllFilters() },
                                 onTagsClick = { activeSheet = ActiveSheet.TAGS },
                                 onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
@@ -110,11 +113,14 @@ fun CalendarScreen(
                         }
                     } else null
                 )
-                if (!isCompactLandscape) {
+                if (!isCompactLandscape && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                     FilterBar(
                         selectedTagsCount = uiState.filterState.selectedTags.size,
                         selectedPeopleCount = uiState.filterState.selectedPeople.size,
                         selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                        isTopicsEnabled = uiState.isTopicsEnabled,
+                        isPeopleEnabled = uiState.isPeopleEnabled,
+                        isMoodEnabled = uiState.isMoodEnabled,
                         onAllClick = { viewModel.clearAllFilters() },
                         onTagsClick = { activeSheet = ActiveSheet.TAGS },
                         onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },

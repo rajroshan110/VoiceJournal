@@ -241,15 +241,21 @@ fun JournalScreen(
                         isSelectionMode = selectionState.isSelectionMode,
                         selectedCount = selectionState.selectedEntryIds.size,
                         isNotesOrganisationEnabled = uiState.isNotesOrganisationEnabled,
+                        isFolderEnabled = uiState.isFolderEnabled,
+                        isTopicsEnabled = uiState.isTopicsEnabled,
+                        isPeopleEnabled = uiState.isPeopleEnabled,
                         onCategorizeSelected = { showCategorizeSheet = true },
                         onDeleteSelected = { showDeleteDialog = true },
                         onClearSelection = { viewModel.clearSelection() },
-                        filterContent = if (isCompactLandscape && !uiState.isSearchActive) {
+                        filterContent = if (isCompactLandscape && !uiState.isSearchActive && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                             {
                                 FilterBar(
                                     selectedTagsCount = uiState.filterState.selectedTags.size,
                                     selectedPeopleCount = uiState.filterState.selectedPeople.size,
                                     selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                                    isTopicsEnabled = uiState.isTopicsEnabled,
+                                    isPeopleEnabled = uiState.isPeopleEnabled,
+                                    isMoodEnabled = uiState.isMoodEnabled,
                                     onAllClick = { viewModel.clearAllFilters() },
                                     onTagsClick = { activeSheet = ActiveSheet.TAGS },
                                     onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
@@ -258,11 +264,14 @@ fun JournalScreen(
                             }
                         } else null
                     )
-                    if (!isCompactLandscape) {
+                    if (!isCompactLandscape && (uiState.isTopicsEnabled || uiState.isPeopleEnabled || uiState.isMoodEnabled)) {
                         FilterBar(
                             selectedTagsCount = uiState.filterState.selectedTags.size,
                             selectedPeopleCount = uiState.filterState.selectedPeople.size,
                             selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                            isTopicsEnabled = uiState.isTopicsEnabled,
+                            isPeopleEnabled = uiState.isPeopleEnabled,
+                            isMoodEnabled = uiState.isMoodEnabled,
                             onAllClick = { viewModel.clearAllFilters() },
                             onTagsClick = { activeSheet = ActiveSheet.TAGS },
                             onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
@@ -509,6 +518,7 @@ fun JournalScreen(
                                 isAudioError = isAudioError,
                                 currentPositionMs = currentPos,
                                 timeFormat = uiState.timeFormat,
+                                isMoodEnabled = uiState.isMoodEnabled,
                                 onPlayPauseTrackClick = { track ->
                                     if (selectionState.isSelectionMode) {
                                         viewModel.toggleEntrySelection(entry.id)
@@ -614,6 +624,8 @@ fun JournalScreen(
                 BatchCategorizeSheet(
                     selectedCount = selectionState.selectedEntryIds.size,
                     isFolderEnabled = uiState.isFolderEnabled,
+                    isTopicsEnabled = uiState.isTopicsEnabled,
+                    isPeopleEnabled = uiState.isPeopleEnabled,
                     availableFolders = (listOf("Personal", "Work", "Ideas", "Journal") + uiState.availableTags.filter { it.type == TagType.FOLDER }.map { it.name }).distinct(),
                     availableTags = uiState.availableTags,
                     availablePeople = uiState.availablePeople,

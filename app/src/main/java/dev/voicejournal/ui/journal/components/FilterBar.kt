@@ -21,6 +21,9 @@ fun FilterBar(
     selectedTagsCount: Int,
     selectedPeopleCount: Int,
     selectedMoodsCount: Int,
+    isTopicsEnabled: Boolean = true,
+    isPeopleEnabled: Boolean = true,
+    isMoodEnabled: Boolean = true,
     onAllClick: () -> Unit,
     onTagsClick: () -> Unit,
     onPeopleClick: () -> Unit,
@@ -28,7 +31,9 @@ fun FilterBar(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val isAllActive = selectedTagsCount == 0 && selectedPeopleCount == 0 && selectedMoodsCount == 0
+    val isAllActive = (!isTopicsEnabled || selectedTagsCount == 0) &&
+            (!isPeopleEnabled || selectedPeopleCount == 0) &&
+            (!isMoodEnabled || selectedMoodsCount == 0)
 
     LazyRow(
         modifier = modifier
@@ -53,115 +58,121 @@ fun FilterBar(
             )
         }
 
-        // [Tags] Chip with trailing arrow and numeric badge counter
-        item {
-            FilterChip(
-                selected = selectedTagsCount > 0,
-                onClick = onTagsClick,
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
-                    ) {
-                        Text("Topics", style = MaterialTheme.typography.labelLarge)
-                        if (selectedTagsCount > 0) {
-                            Badge(
-                                containerColor = colors.primaryContainer,
-                                contentColor = colors.primary
-                            ) {
-                                Text("$selectedTagsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        // [Tags / Topics] Chip with trailing arrow and numeric badge counter
+        if (isTopicsEnabled) {
+            item {
+                FilterChip(
+                    selected = selectedTagsCount > 0,
+                    onClick = onTagsClick,
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                        ) {
+                            Text("Topics", style = MaterialTheme.typography.labelLarge)
+                            if (selectedTagsCount > 0) {
+                                Badge(
+                                    containerColor = colors.primaryContainer,
+                                    contentColor = colors.primary
+                                ) {
+                                    Text("$selectedTagsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                    }
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select Topics Filter",
-                        modifier = Modifier.size(IconSize.IconSm)
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Topics Filter",
+                            modifier = Modifier.size(IconSize.IconSm)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = colors.primary.copy(alpha = 0.25f),
+                        selectedLabelColor = colors.primary,
+                        containerColor = colors.surfaceVariant,
+                        labelColor = colors.textPrimary
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = colors.primary.copy(alpha = 0.25f),
-                    selectedLabelColor = colors.primary,
-                    containerColor = colors.surfaceVariant,
-                    labelColor = colors.textPrimary
                 )
-            )
+            }
         }
 
         // [People] Chip with trailing arrow and numeric badge counter
-        item {
-            FilterChip(
-                selected = selectedPeopleCount > 0,
-                onClick = onPeopleClick,
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
-                    ) {
-                        Text("People", style = MaterialTheme.typography.labelLarge)
-                        if (selectedPeopleCount > 0) {
-                            Badge(
-                                containerColor = colors.primaryContainer,
-                                contentColor = colors.primary
-                            ) {
-                                Text("$selectedPeopleCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        if (isPeopleEnabled) {
+            item {
+                FilterChip(
+                    selected = selectedPeopleCount > 0,
+                    onClick = onPeopleClick,
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                        ) {
+                            Text("People", style = MaterialTheme.typography.labelLarge)
+                            if (selectedPeopleCount > 0) {
+                                Badge(
+                                    containerColor = colors.primaryContainer,
+                                    contentColor = colors.primary
+                                ) {
+                                    Text("$selectedPeopleCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                    }
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select People Filter",
-                        modifier = Modifier.size(IconSize.IconSm)
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select People Filter",
+                            modifier = Modifier.size(IconSize.IconSm)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = colors.primary.copy(alpha = 0.25f),
+                        selectedLabelColor = colors.primary,
+                        containerColor = colors.surfaceVariant,
+                        labelColor = colors.textPrimary
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = colors.primary.copy(alpha = 0.25f),
-                    selectedLabelColor = colors.primary,
-                    containerColor = colors.surfaceVariant,
-                    labelColor = colors.textPrimary
                 )
-            )
+            }
         }
 
         // [Mood] Chip with trailing arrow and numeric badge counter
-        item {
-            FilterChip(
-                selected = selectedMoodsCount > 0,
-                onClick = onMoodClick,
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
-                    ) {
-                        Text("Mood", style = MaterialTheme.typography.labelLarge)
-                        if (selectedMoodsCount > 0) {
-                            Badge(
-                                containerColor = colors.primaryContainer,
-                                contentColor = colors.primary
-                            ) {
-                                Text("$selectedMoodsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        if (isMoodEnabled) {
+            item {
+                FilterChip(
+                    selected = selectedMoodsCount > 0,
+                    onClick = onMoodClick,
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                        ) {
+                            Text("Mood", style = MaterialTheme.typography.labelLarge)
+                            if (selectedMoodsCount > 0) {
+                                Badge(
+                                    containerColor = colors.primaryContainer,
+                                    contentColor = colors.primary
+                                ) {
+                                    Text("$selectedMoodsCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                    }
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select Mood Filter",
-                        modifier = Modifier.size(IconSize.IconSm)
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Mood Filter",
+                            modifier = Modifier.size(IconSize.IconSm)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = colors.primary.copy(alpha = 0.25f),
+                        selectedLabelColor = colors.primary,
+                        containerColor = colors.surfaceVariant,
+                        labelColor = colors.textPrimary
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = colors.primary.copy(alpha = 0.25f),
-                    selectedLabelColor = colors.primary,
-                    containerColor = colors.surfaceVariant,
-                    labelColor = colors.textPrimary
                 )
-            )
+            }
         }
     }
 }

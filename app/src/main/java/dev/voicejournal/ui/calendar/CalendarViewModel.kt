@@ -51,7 +51,18 @@ data class CalendarUiState(
     val availablePeople: List<String> = emptyList(),
     val startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
     val errorMessage: String? = null
+)
+
+private data class CalendarPrefConfig(
+    val startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -167,8 +178,24 @@ class CalendarViewModel @Inject constructor(
                 Triple(rawEntries, allTags, extractedPeople)
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
-            val preferencesFlow = combine(userPreferencesManager.startOfWeek, userPreferencesManager.timeFormat) { sow, tf ->
-                sow to tf
+            val preferencesFlow = combine(
+                combine(
+                    userPreferencesManager.startOfWeek,
+                    userPreferencesManager.timeFormat
+                ) { sow, tf -> sow to tf },
+                combine(
+                    userPreferencesManager.isTopicsEnabled,
+                    userPreferencesManager.isPeopleEnabled,
+                    userPreferencesManager.isMoodEnabled
+                ) { te, pe, me -> Triple(te, pe, me) }
+            ) { p1, p2 ->
+                CalendarPrefConfig(
+                    startOfWeek = p1.first,
+                    timeFormat = p1.second,
+                    isTopicsEnabled = p2.first,
+                    isPeopleEnabled = p2.second,
+                    isMoodEnabled = p2.third
+                )
             }
 
             val filteredDataFlow = combine(
@@ -178,8 +205,8 @@ class CalendarViewModel @Inject constructor(
                 _selectedDate,
                 preferencesFlow
             ) { data, filters, ym, selDate, prefs ->
-                val startOfWeekSetting = prefs.first
-                val timeFormatPref = prefs.second
+                val startOfWeekSetting = prefs.startOfWeek
+                val timeFormatPref = prefs.timeFormat
                 val rawEntries = data.first
                 val allTags = data.second
                 val extractedPeople = data.third
@@ -187,18 +214,18 @@ class CalendarViewModel @Inject constructor(
                 val filteredEntries = rawEntries.filter { entry ->
                     val textContent = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
 
-                    val matchesTags = filters.selectedTags.isEmpty() ||
+                    val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
                             entry.tags.any { (it.type == TagType.TOPIC || it.type == TagType.THING) && it.name.removePrefix("#") in filters.selectedTags } ||
                             filters.selectedTags.any { tag -> textContent.contains("#$tag", ignoreCase = true) }
 
-                    val matchesPeople = filters.selectedPeople.isEmpty() ||
+                    val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
                             entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
                             entry.people.any { it.removePrefix("@") in filters.selectedPeople } ||
                             filters.selectedPeople.any { person ->
                                 textContent.contains("@$person", ignoreCase = true)
                             }
 
-                    val matchesMoods = filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
+                    val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
 
                     matchesTags && matchesPeople && matchesMoods
                 }
@@ -263,6 +290,9 @@ class CalendarViewModel @Inject constructor(
                     availablePeople = extractedPeople,
                     startOfWeek = startOfWeekSetting,
                     timeFormat = timeFormatPref,
+                    isTopicsEnabled = prefs.isTopicsEnabled,
+                    isPeopleEnabled = prefs.isPeopleEnabled,
+                    isMoodEnabled = prefs.isMoodEnabled,
                     errorMessage = null
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)

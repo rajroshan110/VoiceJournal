@@ -99,14 +99,6 @@ object SettingRegistry {
             targetSubScreen = SettingsSubScreen.PRIVACY_SECURITY
         ),
         SearchResultItem(
-            id = "cloud_sync",
-            title = "Cloud Sync",
-            subtitle = "Automatic cloud backup and sync preferences",
-            parentCategory = "Sync & Backup > Cloud Sync",
-            targetPreferenceKey = "cloud_sync",
-            targetSubScreen = SettingsSubScreen.SYNC_BACKUP
-        ),
-        SearchResultItem(
             id = "export_backup",
             title = "Export Backup",
             subtitle = "Create a complete ZIP archive of journal entries, tags, and recordings",
@@ -136,6 +128,30 @@ object SettingRegistry {
             subtitle = "Show organise action button when selecting notes in the journal screen",
             parentCategory = "Tag Organiser > Organisation",
             targetPreferenceKey = "is_notes_organisation_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_topics_enabled",
+            title = "Topics (#)",
+            subtitle = "Organise notes with topic hashtags (#work, #ideas)",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_topics_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_people_enabled",
+            title = "People (@)",
+            subtitle = "Mention and link people in notes (@john, @sarah)",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_people_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_mood_enabled",
+            title = "Mood",
+            subtitle = "Track emotional context and mood trends with emojis",
+            parentCategory = "Tag Organiser > Choose Tags",
+            targetPreferenceKey = "is_mood_enabled",
             targetSubScreen = SettingsSubScreen.TAG_ORGANISER
         )
     )

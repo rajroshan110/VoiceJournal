@@ -82,7 +82,17 @@ class AudioPlaybackService : Service() {
             }
             ACTION_PAUSE -> {
                 val notification = buildNotification(title, isPlaying = false)
-                startForegroundCompat(NOTIFICATION_ID, notification)
+                try {
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notification)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_DETACH)
+                    }
+                } catch (e: Throwable) {
+                    try {
+                        startForegroundCompat(NOTIFICATION_ID, notification)
+                    } catch (ignored: Throwable) {}
+                }
             }
             ACTION_RESUME -> {
                 val notification = buildNotification(title, isPlaying = true)
@@ -99,7 +109,9 @@ class AudioPlaybackService : Service() {
             }
             ACTION_STOP -> {
                 AudioPlayerManager.instance?.stop()
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                try {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } catch (ignored: Throwable) {}
                 stopSelf()
             }
         }
@@ -107,18 +119,25 @@ class AudioPlaybackService : Service() {
     }
 
     private fun startForegroundCompat(id: Int, notification: android.app.Notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                id,
-                notification,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                } else {
-                    0
-                }
-            )
-        } else {
-            startForeground(id, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    id,
+                    notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    } else {
+                        0
+                    }
+                )
+            } else {
+                startForeground(id, notification)
+            }
+        } catch (e: Throwable) {
+            try {
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.notify(id, notification)
+            } catch (ignored: Throwable) {}
         }
     }
 
@@ -148,41 +167,62 @@ class AudioPlaybackService : Service() {
             }
         }
 
-        val reqCode = if (activeEntryId != -1L) (activeEntryId % 10000).toInt() else 2001
         val contentIntent = PendingIntent.getActivity(
             this,
-            reqCode,
+            0,
             openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        // Control PendingIntents
-        val rewindIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_SKIP_BACKWARD }
-        val rewindPendingIntent = PendingIntent.getService(this, 1, rewindIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
         val toggleIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_TOGGLE }
-        val togglePendingIntent = PendingIntent.getService(this, 2, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val togglePendingIntent = PendingIntent.getService(
+            this,
+            1,
+            toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+
+        val rewindIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_SKIP_BACKWARD }
+        val rewindPendingIntent = PendingIntent.getService(
+            this,
+            2,
+            rewindIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
 
         val ffIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_SKIP_FORWARD }
-        val ffPendingIntent = PendingIntent.getService(this, 3, ffIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val ffPendingIntent = PendingIntent.getService(
+            this,
+            3,
+            ffIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
 
         val stopIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_STOP }
-        val stopPendingIntent = PendingIntent.getService(this, 4, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val stopPendingIntent = PendingIntent.getService(
+            this,
+            4,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
 
         val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
         val playPauseTitle = if (isPlaying) "Pause" else "Play"
 
-        val position = AudioPlayerManager.instance?.currentPosition ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN
         val duration = AudioPlayerManager.instance?.duration ?: -1L
+        val currentPosition = AudioPlayerManager.instance?.currentPosition ?: 0L
 
-        val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
         mediaSession?.setPlaybackState(
             PlaybackStateCompat.Builder()
-                .setState(state, position, 1.0f)
+                .setState(
+                    if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                    currentPosition,
+                    1f
+                )
                 .setActions(
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE or 
-                    PlaybackStateCompat.ACTION_PLAY or 
-                    PlaybackStateCompat.ACTION_PAUSE or 
+                    PlaybackStateCompat.ACTION_PLAY or
+                    PlaybackStateCompat.ACTION_PAUSE or
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE or
                     PlaybackStateCompat.ACTION_STOP or
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
                     PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
@@ -239,14 +279,14 @@ class AudioPlaybackService : Service() {
                 putExtra(EXTRA_TITLE, title)
                 entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                try {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(intent)
-                } catch (e: Exception) {
-                    try { context.startService(intent) } catch (ignored: Exception) {}
+                } else {
+                    context.startService(intent)
                 }
-            } else {
-                try { context.startService(intent) } catch (ignored: Exception) {}
+            } catch (e: Throwable) {
+                try { context.startService(intent) } catch (ignored: Throwable) {}
             }
         }
 
@@ -256,14 +296,14 @@ class AudioPlaybackService : Service() {
                 putExtra(EXTRA_TITLE, title)
                 entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                try {
+            try {
+                if (isPlaying && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(intent)
-                } catch (e: Exception) {
-                    try { context.startService(intent) } catch (ignored: Exception) {}
+                } else {
+                    context.startService(intent)
                 }
-            } else {
-                try { context.startService(intent) } catch (ignored: Exception) {}
+            } catch (e: Throwable) {
+                // Safely handle background service start restrictions
             }
         }
 
@@ -271,7 +311,7 @@ class AudioPlaybackService : Service() {
             val intent = Intent(context, AudioPlaybackService::class.java)
             try {
                 context.stopService(intent)
-            } catch (ignored: Exception) {}
+            } catch (ignored: Throwable) {}
         }
     }
 }

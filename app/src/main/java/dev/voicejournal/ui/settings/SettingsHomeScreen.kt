@@ -278,7 +278,7 @@ fun SettingsHomeScreen(
                         ) {
                             CategoryNavCard(
                                 title = "General Settings",
-                                subtitle = "Theme, journaling preferences, audio quality, editor",
+                                subtitle = "Theme, time format, editor, audio quality",
                                 icon = Icons.Default.Settings,
                                 isSelected = uiState.activeSubScreen == SettingsSubScreen.GENERAL,
                                 onClick = {
@@ -300,7 +300,7 @@ fun SettingsHomeScreen(
 
                             CategoryNavCard(
                                 title = "Sync & Backup",
-                                subtitle = "Cloud sync, local export, import",
+                                subtitle = "Local backup archive, export, import",
                                 icon = Icons.Default.Share,
                                 isSelected = uiState.activeSubScreen == SettingsSubScreen.SYNC_BACKUP,
                                 onClick = {
@@ -311,7 +311,7 @@ fun SettingsHomeScreen(
 
                             CategoryNavCard(
                                 title = "Tag Organiser",
-                                subtitle = "Choose tags, enable folder, notes organisation",
+                                subtitle = "Choose tags, folders, organise notes",
                                 icon = getTagIcon(colors.textPrimary),
                                 isSelected = uiState.activeSubScreen == SettingsSubScreen.TAG_ORGANISER,
                                 onClick = {
@@ -342,9 +342,7 @@ fun SettingsHomeScreen(
                                 GeneralSettingsScreen(uiState = uiState, viewModel = viewModel)
                             }
                             SettingsSubScreen.PRIVACY_SECURITY -> PrivacySecurityScreen(uiState = uiState, viewModel = viewModel)
-                            SettingsSubScreen.SYNC_BACKUP -> Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                                LocalBackupScreen(uiState = uiState, viewModel = viewModel)
-                            }
+                            SettingsSubScreen.SYNC_BACKUP -> LocalBackupScreen(uiState = uiState, viewModel = viewModel)
                             SettingsSubScreen.TAG_ORGANISER -> TagOrganiserScreen(uiState = uiState, viewModel = viewModel)
                         }
                     }
@@ -365,7 +363,7 @@ fun SettingsHomeScreen(
                         ) {
                             CategoryNavCard(
                                 title = "General Settings",
-                                subtitle = "Theme, journaling preferences, audio quality, editor, locale",
+                                subtitle = "Theme, time format, editor, audio quality",
                                 icon = Icons.Default.Settings,
                                 onClick = {
                                     selectedCompactSubScreen = SettingsSubScreen.GENERAL
@@ -385,7 +383,7 @@ fun SettingsHomeScreen(
 
                             CategoryNavCard(
                                 title = "Sync & Backup",
-                                subtitle = "Cloud sync, local export, import",
+                                subtitle = "Local backup archive, export, import",
                                 icon = Icons.Default.Share,
                                 onClick = {
                                     selectedCompactSubScreen = SettingsSubScreen.SYNC_BACKUP
@@ -395,7 +393,7 @@ fun SettingsHomeScreen(
 
                             CategoryNavCard(
                                 title = "Tag Organiser",
-                                subtitle = "Choose tags, enable folder, notes organisation",
+                                subtitle = "Choose tags, folders, organise notes",
                                 icon = getTagIcon(colors.textPrimary),
                                 onClick = {
                                     selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
@@ -420,9 +418,7 @@ fun SettingsHomeScreen(
                                 GeneralSettingsScreen(uiState = uiState, viewModel = viewModel)
                             }
                             SettingsSubScreen.PRIVACY_SECURITY -> PrivacySecurityScreen(uiState = uiState, viewModel = viewModel)
-                            SettingsSubScreen.SYNC_BACKUP -> Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                                LocalBackupScreen(uiState = uiState, viewModel = viewModel)
-                            }
+                            SettingsSubScreen.SYNC_BACKUP -> LocalBackupScreen(uiState = uiState, viewModel = viewModel)
                             SettingsSubScreen.TAG_ORGANISER -> TagOrganiserScreen(uiState = uiState, viewModel = viewModel)
                             else -> {}
                         }

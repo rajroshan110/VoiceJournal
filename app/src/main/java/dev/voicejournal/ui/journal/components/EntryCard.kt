@@ -46,6 +46,7 @@ fun EntryCard(
     isAudioError: Boolean = false,
     currentPositionMs: Long = 0L,
     timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    isMoodEnabled: Boolean = true,
     onPlayPauseTrackClick: (AudioTrack) -> Unit = {},
     onSeekTrackFraction: (AudioTrack, Float) -> Unit = { _, _ -> },
     onCardClick: () -> Unit,
@@ -111,12 +112,16 @@ fun EntryCard(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = entry.mood,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    if (isMoodEnabled) {
+                        Text(
+                            text = entry.mood,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
                     if (isSelected) {
-                        Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                        if (isMoodEnabled) {
+                            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                        }
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",

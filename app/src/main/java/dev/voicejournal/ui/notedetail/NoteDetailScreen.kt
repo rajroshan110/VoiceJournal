@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import dev.voicejournal.ui.notedetail.components.AddItemSheet
 import dev.voicejournal.data.storage.MediaStorageManager
+import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.util.findActivity
 import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
 import dev.voicejournal.ui.notedetail.components.TranscriptionButton
@@ -247,7 +248,8 @@ fun NoteDetailScreen(
                         showArchiveConfirmDialog = true
                     }
                 },
-                timeFormat = uiState.timeFormat
+                timeFormat = uiState.timeFormat,
+                isMoodEnabled = uiState.isMoodEnabled
             )
         },
         bottomBar = {
@@ -413,24 +415,38 @@ fun NoteDetailScreen(
 
                     Spacer(modifier = Modifier.weight(1f, fill = false))
 
-                    Surface(
-                        color = if (uiState.tags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable { showTagsDialog = true }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    val hasAnyTagsEnabled = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
+                    if (hasAnyTagsEnabled) {
+                        val visibleTags = remember(uiState.tags, uiState.isFolderEnabled, uiState.isTopicsEnabled, uiState.isPeopleEnabled, uiState.isMoodEnabled) {
+                            uiState.tags.filter { tag ->
+                                when (tag.type) {
+                                    TagType.TOPIC -> uiState.isTopicsEnabled
+                                    TagType.PERSON -> uiState.isPeopleEnabled
+                                    TagType.FOLDER, TagType.THING -> uiState.isFolderEnabled
+                                    TagType.MOOD -> uiState.isMoodEnabled
+                                }
+                            }
+                        }
+
+                        Surface(
+                            color = if (visibleTags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.clickable { showTagsDialog = true }
                         ) {
-                            Text("🏷️ ", fontSize = 12.sp)
-                            Text(
-                                text = if (uiState.tags.isNotEmpty()) "Tags (${uiState.tags.size})" else "Tags",
-                                color = if (uiState.tags.isNotEmpty()) colors.primary else colors.textSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                softWrap = false
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("🏷️ ", fontSize = 12.sp)
+                                Text(
+                                    text = if (visibleTags.isNotEmpty()) "Tags (${visibleTags.size})" else "Tags",
+                                    color = if (visibleTags.isNotEmpty()) colors.primary else colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
                 }
@@ -620,6 +636,8 @@ fun NoteDetailScreen(
             tags = uiState.tags,
             allAvailableTags = uiState.allAvailableTags,
             isFolderEnabled = uiState.isFolderEnabled,
+            isTopicsEnabled = uiState.isTopicsEnabled,
+            isPeopleEnabled = uiState.isPeopleEnabled,
             onSaveTags = { newTags -> viewModel.setTags(newTags) },
             onDismiss = { showTagsDialog = false }
         )

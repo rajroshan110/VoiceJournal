@@ -86,6 +86,9 @@ data class NoteDetailUiState(
     val isMarkdownEnabled: Boolean = false,
     val isSpeechToTextEnabled: Boolean = true,
     val isFolderEnabled: Boolean = true,
+    val isTopicsEnabled: Boolean = true,
+    val isPeopleEnabled: Boolean = true,
+    val isMoodEnabled: Boolean = true,
     val audioTracks: List<AudioTrack> = emptyList(),
     val isTranscribing: Boolean = false,
     val transcribingTrackId: String? = null,
@@ -113,7 +116,14 @@ class NoteDetailViewModel @Inject constructor(
     private val generateTranscriptUseCase: GenerateTranscriptUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(NoteDetailUiState())
+    private val _uiState = MutableStateFlow(
+        NoteDetailUiState(
+            isFolderEnabled = userPreferencesManager.isFolderEnabledState.value,
+            isTopicsEnabled = userPreferencesManager.isTopicsEnabledState.value,
+            isPeopleEnabled = userPreferencesManager.isPeopleEnabledState.value,
+            isMoodEnabled = userPreferencesManager.isMoodEnabledState.value
+        )
+    )
     val uiState: StateFlow<NoteDetailUiState> = _uiState.asStateFlow()
 
     private val _trackSelectionState = MutableStateFlow(TrackSelectionState())
@@ -151,6 +161,21 @@ class NoteDetailViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.isFolderEnabled.collect { enabled ->
                 _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isTopicsEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isPeopleEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isMoodEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
             }
         }
         // Observe SpeechToTextEngine model download state and progress
