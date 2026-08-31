@@ -16,7 +16,10 @@ import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.DeleteEntryUseCase
 import dev.voicejournal.domain.usecase.GetAllEntriesUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
+import android.net.Uri
+import dev.voicejournal.data.backup.ImportManager
 import dev.voicejournal.ui.journal.components.SortOption
+import dev.voicejournal.ui.settings.BackupResultDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -34,8 +37,10 @@ enum class PlaybackStatus {
 data class CardPlaybackState(
     val activeEntryId: Long? = null,
     val activeTrackId: String? = null,
-    val status: PlaybackStatus = PlaybackStatus.Idle,
     val currentPositionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val status: PlaybackStatus = PlaybackStatus.Idle,
+    val isBuffering: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -70,17 +75,20 @@ data class JournalUiState(
     val permissionGranted: Boolean = true,
     val isRefreshing: Boolean = false,
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
-    val isFolderEnabled: Boolean = true,
-    val isNotesOrganisationEnabled: Boolean = true,
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
     val isTopicsEnabled: Boolean = true,
     val isPeopleEnabled: Boolean = true,
-    val isMoodEnabled: Boolean = true
+    val isMoodEnabled: Boolean = true,
+    val isImporting: Boolean = false,
+    val backupProgressText: String? = null,
+    val backupResultDialog: BackupResultDialog? = null
 )
 
 private data class JournalPrefConfig(
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
-    val isFolderEnabled: Boolean = true,
-    val isNotesOrganisationEnabled: Boolean = true,
+    val isFolderEnabled: Boolean = false,
+    val isNotesOrganisationEnabled: Boolean = false,
     val isTopicsEnabled: Boolean = true,
     val isPeopleEnabled: Boolean = true,
     val isMoodEnabled: Boolean = true
@@ -94,7 +102,8 @@ class JournalViewModel @Inject constructor(
     private val deleteEntryUseCase: DeleteEntryUseCase,
     private val journalRepository: JournalRepository,
     private val audioPlayerManager: AudioPlayerManager,
-    private val userPreferencesManager: UserPreferencesManager
+    private val userPreferencesManager: UserPreferencesManager,
+    private val importManager: ImportManager
 ) : ViewModel() {
 
     private val _filterState = MutableStateFlow(FilterState())
@@ -515,6 +524,67 @@ class JournalViewModel @Inject constructor(
         if (navigatingToEntryId == null || activeId == null || navigatingToEntryId != activeId) {
             audioPlayerManager.stop()
             _cardPlaybackState.value = CardPlaybackState()
+        }
+    }
+
+    fun importBackupFromUri(sourceUri: android.net.Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isImporting = true,
+                backupProgressText = "Validating backup…",
+                backupResultDialog = null
+            )
+            val result = importManager.importFromUri(sourceUri) { progress ->
+                _uiState.value = _uiState.value.copy(backupProgressText = progress)
+            }
+            if (result.success) {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = BackupResultDialog(
+                        title = "Backup Restored",
+                        message = "Your backup has been restored successfully."
+                    )
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isImporting = false,
+                    backupProgressText = null,
+                    backupResultDialog = mapImportErrorToDialog(result.validationErrors, null)
+                )
+            }
+        }
+    }
+
+    fun dismissBackupResultDialog() {
+        _uiState.value = _uiState.value.copy(backupResultDialog = null)
+    }
+
+    private fun mapImportErrorToDialog(errors: List<String>, exception: Throwable?): BackupResultDialog {
+        val joined = errors.joinToString(" ").lowercase()
+        val exMsg = exception?.localizedMessage?.lowercase() ?: ""
+
+        return when {
+            joined.contains("unsupported format_version") || joined.contains("min_reader_version") -> BackupResultDialog(
+                title = "Unsupported Backup",
+                message = "This backup was created by a newer version of Voice Journal and cannot be restored by this version."
+            )
+            joined.contains("sha-256 mismatch") || joined.contains("size mismatch") || joined.contains("integrity") -> BackupResultDialog(
+                title = "Backup Verification Failed",
+                message = "One or more files failed integrity verification. The restore has been cancelled to protect your existing data."
+            )
+            joined.contains("corrupted") || joined.contains("missing required file") || joined.contains("failed to parse") || joined.contains("invalid format_name") -> BackupResultDialog(
+                title = "Backup Corrupted",
+                message = "This backup file is incomplete, corrupted, or has been modified and cannot be restored."
+            )
+            exMsg.contains("enospc") || exMsg.contains("no space left") || exMsg.contains("storage") -> BackupResultDialog(
+                title = "Insufficient Storage",
+                message = "There isn't enough storage space available to complete the restore."
+            )
+            else -> BackupResultDialog(
+                title = "Restore Failed",
+                message = "The backup could not be restored. Your existing data has not been modified."
+            )
         }
     }
 }

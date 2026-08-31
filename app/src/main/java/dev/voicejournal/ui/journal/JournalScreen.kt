@@ -37,6 +37,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Share
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.journal.components.*
@@ -130,6 +134,123 @@ fun JournalScreen(
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showCategorizeSheet by rememberSaveable { mutableStateOf(false) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            pendingImportUri = it
+        }
+    }
+
+    if (pendingImportUri != null) {
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = {
+                Text(
+                    text = "Restore Backup",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = AppTheme.colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "Restoring a backup will replace all current Voice Journal data on this device, including notes, media, tags, and settings.\n\nThis action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val uriToImport = pendingImportUri
+                        pendingImportUri = null
+                        uriToImport?.let { viewModel.importBackupFromUri(it) }
+                    }
+                ) {
+                    Text(
+                        text = "Restore",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingImportUri = null }
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = AppTheme.colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = AppTheme.colors.surface
+        )
+    }
+
+    if (uiState.backupResultDialog != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissBackupResultDialog() },
+            title = {
+                Text(
+                    text = uiState.backupResultDialog!!.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = AppTheme.colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = uiState.backupResultDialog!!.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.dismissBackupResultDialog() }
+                ) {
+                    Text(
+                        text = "OK",
+                        color = AppTheme.colors.primary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            },
+            containerColor = AppTheme.colors.surface
+        )
+    }
+
+    if (uiState.isImporting) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = {
+                Text(
+                    text = "Restoring Backup",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppTheme.colors.textPrimary
+                )
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = AppTheme.colors.primary, modifier = Modifier.size(32.dp))
+                    Text(
+                        text = uiState.backupProgressText ?: "Restoring data…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppTheme.colors.textSecondary
+                    )
+                }
+            },
+            confirmButton = {},
+            containerColor = AppTheme.colors.surface
+        )
+    }
 
     val listState = rememberLazyListState()
 
@@ -402,6 +523,27 @@ fun JournalScreen(
                             Icon(Icons.Default.Add, contentDescription = "Create new entry")
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Record Your First Note")
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
+                                importLauncher.launch(arrayOf("application/zip", "*/*"))
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppTheme.colors.textPrimary),
+                            border = BorderStroke(1.dp, AppTheme.colors.border),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.minimumInteractiveComponentSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Import Backup",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Import Backup")
                         }
                     }
                 }

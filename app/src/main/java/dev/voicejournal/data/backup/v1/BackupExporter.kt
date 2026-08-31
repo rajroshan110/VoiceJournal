@@ -74,6 +74,11 @@ class BackupExporter @Inject constructor(
             val markdownEnabled = prefsManager.isMarkdownEnabled.first()
             val screenPrivacyEnabled = prefsManager.isScreenPrivacyEnabled.first()
             val speechToTextEnabled = prefsManager.isSpeechToTextEnabled.first()
+            val isFolderEnabled = prefsManager.isFolderEnabled.first()
+            val isNotesOrganisationEnabled = prefsManager.isNotesOrganisationEnabled.first()
+            val isTopicsEnabled = prefsManager.isTopicsEnabled.first()
+            val isPeopleEnabled = prefsManager.isPeopleEnabled.first()
+            val isMoodEnabled = prefsManager.isMoodEnabled.first()
 
             val colorTheme = "Default"
             val autoTranscribe = true
@@ -101,7 +106,12 @@ class BackupExporter @Inject constructor(
                 tagGridView = tagGridView,
                 markdownEnabled = markdownEnabled,
                 screenPrivacyEnabled = screenPrivacyEnabled,
-                speechToTextEnabled = speechToTextEnabled
+                speechToTextEnabled = speechToTextEnabled,
+                isFolderEnabled = isFolderEnabled,
+                isNotesOrganisationEnabled = isNotesOrganisationEnabled,
+                isTopicsEnabled = isTopicsEnabled,
+                isPeopleEnabled = isPeopleEnabled,
+                isMoodEnabled = isMoodEnabled
             )
 
             val entriesJsonBytes = entriesJsonStr.toByteArray(StandardCharsets.UTF_8)

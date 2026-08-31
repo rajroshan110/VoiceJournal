@@ -11,6 +11,7 @@ import dev.voicejournal.data.backup.v1.dto.DisplayPreferences
 import dev.voicejournal.data.backup.v1.dto.EditorPreferences
 import dev.voicejournal.data.backup.v1.dto.RecordingPreferences
 import dev.voicejournal.data.backup.v1.dto.SecurityPreferences
+import dev.voicejournal.data.backup.v1.dto.TagOrganiserPreferences
 import dev.voicejournal.data.backup.v1.dto.TranscriptionPreferences
 import dev.voicejournal.data.local.db.relation.EntryWithTagsAndImages
 import dev.voicejournal.data.local.db.entity.TagEntity
@@ -106,7 +107,12 @@ class BackupSerializer {
         tagGridView: Boolean = true,
         markdownEnabled: Boolean = false,
         screenPrivacyEnabled: Boolean = false,
-        speechToTextEnabled: Boolean = true
+        speechToTextEnabled: Boolean = true,
+        isFolderEnabled: Boolean = false,
+        isNotesOrganisationEnabled: Boolean = false,
+        isTopicsEnabled: Boolean = true,
+        isPeopleEnabled: Boolean = true,
+        isMoodEnabled: Boolean = true
     ): String {
         val prefs = BackupPreferences(
             schemaVersion = 1,
@@ -141,6 +147,13 @@ class BackupSerializer {
             dataManagement = DataManagementPreferences(
                 trashRetentionDays = trashRetentionDays,
                 dailyReminder = dailyReminder
+            ),
+            tagOrganiser = TagOrganiserPreferences(
+                isFolderEnabled = isFolderEnabled,
+                isNotesOrganisationEnabled = isNotesOrganisationEnabled,
+                isTopicsEnabled = isTopicsEnabled,
+                isPeopleEnabled = isPeopleEnabled,
+                isMoodEnabled = isMoodEnabled
             )
         )
 

@@ -407,6 +407,13 @@ class BackupRestorer(
 
         // Data Management
         prefsManager.setDailyReminder(p.dataManagement.dailyReminder)
+
+        // Tag Organiser & Visibility
+        prefsManager.setFolderEnabled(p.tagOrganiser.isFolderEnabled)
+        prefsManager.setNotesOrganisationEnabled(p.tagOrganiser.isNotesOrganisationEnabled)
+        prefsManager.setTopicsEnabled(p.tagOrganiser.isTopicsEnabled)
+        prefsManager.setPeopleEnabled(p.tagOrganiser.isPeopleEnabled)
+        prefsManager.setMoodEnabled(p.tagOrganiser.isMoodEnabled)
     }
 
     private fun moveDirSafe(src: File, dest: File): Boolean {

@@ -15,6 +15,7 @@ import dev.voicejournal.data.backup.v1.dto.EditorPreferences
 import dev.voicejournal.data.backup.v1.dto.GeneratorInfo
 import dev.voicejournal.data.backup.v1.dto.RecordingPreferences
 import dev.voicejournal.data.backup.v1.dto.SecurityPreferences
+import dev.voicejournal.data.backup.v1.dto.TagOrganiserPreferences
 import dev.voicejournal.data.backup.v1.dto.TranscriptionPreferences
 import org.json.JSONArray
 import org.json.JSONObject
@@ -177,6 +178,7 @@ class BackupDeserializer {
         val edObj = root.optJSONObject("editor") ?: JSONObject()
         val secObj = root.optJSONObject("security") ?: JSONObject()
         val dmObj = root.optJSONObject("data_management") ?: JSONObject()
+        val toObj = root.optJSONObject("tag_organiser") ?: JSONObject()
 
         return BackupPreferences(
             schemaVersion = root.optInt("schema_version", 1),
@@ -211,6 +213,13 @@ class BackupDeserializer {
             dataManagement = DataManagementPreferences(
                 trashRetentionDays = dmObj.optInt("trash_retention_days", 7),
                 dailyReminder = dmObj.optBoolean("daily_reminder", false)
+            ),
+            tagOrganiser = TagOrganiserPreferences(
+                isFolderEnabled = toObj.optBoolean("is_folder_enabled", false),
+                isNotesOrganisationEnabled = toObj.optBoolean("is_notes_organisation_enabled", false),
+                isTopicsEnabled = toObj.optBoolean("is_topics_enabled", true),
+                isPeopleEnabled = toObj.optBoolean("is_people_enabled", true),
+                isMoodEnabled = toObj.optBoolean("is_mood_enabled", true)
             )
         )
     }

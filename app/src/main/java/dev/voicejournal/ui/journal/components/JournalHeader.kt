@@ -134,7 +134,7 @@ fun JournalHeader(
                     }
 
                     Text(
-                        text = if (isSelectionMode) "$selectedCount selected" else "Journal",
+                        text = if (isSelectionMode) "$selectedCount selected" else "Voice",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (isSelectionMode) colors.primary else colors.textPrimary,
                         fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal

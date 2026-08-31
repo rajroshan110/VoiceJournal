@@ -93,11 +93,11 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val audioFormat: Flow<AudioFormat> = dataStore.data.map { prefs ->
-        val formatStr = prefs[AUDIO_FORMAT] ?: AudioFormat.WAV_16KHZ.name
+        val formatStr = prefs[AUDIO_FORMAT] ?: AudioFormat.M4A_AAC_128KBPS.name
         try {
             AudioFormat.valueOf(formatStr)
         } catch (e: Exception) {
-            AudioFormat.WAV_16KHZ
+            AudioFormat.M4A_AAC_128KBPS
         }
     }
 
@@ -110,13 +110,13 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val appThemeMode: StateFlow<AppThemeMode> = dataStore.data.map { prefs ->
-        val modeStr = prefs[APP_THEME_MODE] ?: AppThemeMode.DARK.name
+        val modeStr = prefs[APP_THEME_MODE] ?: AppThemeMode.SYSTEM.name
         try {
             AppThemeMode.valueOf(modeStr)
         } catch (e: Exception) {
-            AppThemeMode.DARK
+            AppThemeMode.SYSTEM
         }
-    }.stateIn(scope, SharingStarted.Eagerly, AppThemeMode.DARK)
+    }.stateIn(scope, SharingStarted.Eagerly, AppThemeMode.SYSTEM)
 
     val sortOption: Flow<SortOption> = dataStore.data.map { prefs ->
         val sortStr = prefs[SORT_OPTION] ?: SortOption.MODIFIED_DESC.name
@@ -128,7 +128,7 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val isMarkdownEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[IS_MARKDOWN_ENABLED] ?: false
+        prefs[IS_MARKDOWN_ENABLED] ?: true
     }
 
     val timeFormat: Flow<TimeFormat> = dataStore.data.map { prefs ->
@@ -200,18 +200,18 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val isFolderEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[IS_FOLDER_ENABLED] ?: true
+        prefs[IS_FOLDER_ENABLED] ?: false
     }
 
     val isFolderEnabledState: StateFlow<Boolean> = isFolderEnabled
-        .stateIn(scope, SharingStarted.Eagerly, true)
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     val isNotesOrganisationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[IS_NOTES_ORGANISATION_ENABLED] ?: true
+        prefs[IS_NOTES_ORGANISATION_ENABLED] ?: false
     }
 
     val isNotesOrganisationEnabledState: StateFlow<Boolean> = isNotesOrganisationEnabled
-        .stateIn(scope, SharingStarted.Eagerly, true)
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     val isTopicsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_TOPICS_ENABLED] ?: true
