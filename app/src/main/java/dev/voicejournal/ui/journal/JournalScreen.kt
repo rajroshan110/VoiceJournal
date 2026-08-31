@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -201,6 +202,9 @@ fun JournalScreen(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = !selectionState.isSelectionMode,
@@ -237,17 +241,32 @@ fun JournalScreen(
                         selectedCount = selectionState.selectedEntryIds.size,
                         onCategorizeSelected = { showCategorizeSheet = true },
                         onDeleteSelected = { showDeleteDialog = true },
-                        onClearSelection = { viewModel.clearSelection() }
+                        onClearSelection = { viewModel.clearSelection() },
+                        filterContent = if (isCompactLandscape && !uiState.isSearchActive) {
+                            {
+                                FilterBar(
+                                    selectedTagsCount = uiState.filterState.selectedTags.size,
+                                    selectedPeopleCount = uiState.filterState.selectedPeople.size,
+                                    selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                                    onAllClick = { viewModel.clearAllFilters() },
+                                    onTagsClick = { activeSheet = ActiveSheet.TAGS },
+                                    onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
+                                    onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                                )
+                            }
+                        } else null
                     )
-                    FilterBar(
-                        selectedTagsCount = uiState.filterState.selectedTags.size,
-                        selectedPeopleCount = uiState.filterState.selectedPeople.size,
-                        selectedMoodsCount = uiState.filterState.selectedMoods.size,
-                        onAllClick = { viewModel.clearAllFilters() },
-                        onTagsClick = { activeSheet = ActiveSheet.TAGS },
-                        onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
-                        onMoodClick = { activeSheet = ActiveSheet.MOOD }
-                    )
+                    if (!isCompactLandscape) {
+                        FilterBar(
+                            selectedTagsCount = uiState.filterState.selectedTags.size,
+                            selectedPeopleCount = uiState.filterState.selectedPeople.size,
+                            selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                            onAllClick = { viewModel.clearAllFilters() },
+                            onTagsClick = { activeSheet = ActiveSheet.TAGS },
+                            onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
+                            onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                        )
+                    }
                 }
             },
             bottomBar = {

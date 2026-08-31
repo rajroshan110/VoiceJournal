@@ -25,6 +25,7 @@ import java.time.format.DateTimeFormatter
 fun DayCell(
     dayItem: CalendarDayItem,
     onClick: () -> Unit,
+    isCompact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -39,10 +40,12 @@ fun DayCell(
         else -> colors.textPrimary
     }
 
+    val visualSize = if (isCompact) 40.dp else 48.dp
+
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
-            .size(48.dp)
+            .size(visualSize)
             .padding(2.dp)
             .clip(CircleShape)
             .background(

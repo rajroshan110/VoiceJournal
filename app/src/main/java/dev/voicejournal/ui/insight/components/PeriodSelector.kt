@@ -30,8 +30,8 @@ fun PeriodSelector(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surfaceVariant, RoundedCornerShape(24.dp))
-            .padding(4.dp),
+            .background(colors.surfaceVariant, RoundedCornerShape(22.dp))
+            .padding(2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -58,18 +58,26 @@ fun PeriodSelector(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .defaultMinSize(minHeight = 48.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(backgroundColor)
                     .clickable { onPeriodSelect(period) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = label,
-                    color = textColor,
-                    fontSize = 14.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(backgroundColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = textColor,
+                        fontSize = 14.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
             }
         }
     }

@@ -33,7 +33,7 @@ fun FilterBar(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = Spacing.SpaceX2s),
+            .padding(vertical = 2.dp),
         contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
         horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
         verticalAlignment = Alignment.CenterVertically

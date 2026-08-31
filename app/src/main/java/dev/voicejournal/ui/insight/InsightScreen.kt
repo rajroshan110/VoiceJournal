@@ -34,6 +34,7 @@ fun InsightScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val isWideLayout = configuration.screenWidthDp >= 600
+    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
 
     Scaffold(
         containerColor = colors.background,
@@ -108,7 +109,7 @@ fun InsightScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Minimalistic Sticky Header: Period Selector starts right at top
                         stickyHeader {
@@ -116,11 +117,18 @@ fun InsightScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(colors.background)
-                                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp)
+                                    .padding(
+                                        start = 16.dp,
+                                        top = if (isCompactLandscape) 2.dp else 6.dp,
+                                        end = 16.dp,
+                                        bottom = if (isCompactLandscape) 2.dp else 4.dp
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
                                 PeriodSelector(
                                     selectedPeriod = uiState.period,
-                                    onPeriodSelect = { viewModel.setPeriod(it) }
+                                    onPeriodSelect = { viewModel.setPeriod(it) },
+                                    modifier = Modifier.widthIn(max = if (isCompactLandscape) 280.dp else androidx.compose.ui.unit.Dp.Unspecified)
                                 )
                             }
                         }

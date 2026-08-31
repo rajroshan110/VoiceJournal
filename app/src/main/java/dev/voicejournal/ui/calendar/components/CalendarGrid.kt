@@ -24,6 +24,7 @@ fun CalendarGrid(
     gridDays: List<CalendarDayItem>,
     startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
     onDateSelect: (CalendarDayItem) -> Unit,
+    isCompact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -42,13 +43,13 @@ fun CalendarGrid(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
     ) {
         // Header Row: Days of Week (Mon, Tue, Wed...)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             dayLabels.forEach { label ->
@@ -75,7 +76,8 @@ fun CalendarGrid(
                         ) {
                             DayCell(
                                 dayItem = dayItem,
-                                onClick = { onDateSelect(dayItem) }
+                                onClick = { onDateSelect(dayItem) },
+                                isCompact = isCompact
                             )
                         }
                     }

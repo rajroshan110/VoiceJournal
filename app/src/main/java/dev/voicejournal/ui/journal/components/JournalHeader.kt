@@ -84,6 +84,7 @@ fun JournalHeader(
     onCategorizeSelected: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onClearSelection: () -> Unit = {},
+    filterContent: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -98,7 +99,7 @@ fun JournalHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s),
+                .padding(horizontal = Spacing.SpaceMd, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -132,9 +133,19 @@ fun JournalHeader(
                         text = if (isSelectionMode) "$selectedCount selected" else "Journal",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (isSelectionMode) colors.primary else colors.textPrimary,
-                        fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.padding(vertical = Spacing.SpaceX2s)
+                        fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal
                     )
+                }
+
+                if (filterContent != null && !isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        filterContent()
+                    }
                 }
 
                 if (isSelectionMode) {

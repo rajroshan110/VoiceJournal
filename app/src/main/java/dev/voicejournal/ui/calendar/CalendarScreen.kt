@@ -73,6 +73,9 @@ fun CalendarScreen(
             uiState.filterState.selectedPeople.isNotEmpty() ||
             uiState.filterState.selectedMoods.isNotEmpty()
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+
     Scaffold(
         containerColor = AppTheme.colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -92,17 +95,32 @@ fun CalendarScreen(
                     onTitleClick = {
                         val now = LocalDate.now()
                         viewModel.jumpToDate(now.year, now.monthValue, now.dayOfMonth)
-                    }
+                    },
+                    filterContent = if (isCompactLandscape) {
+                        {
+                            FilterBar(
+                                selectedTagsCount = uiState.filterState.selectedTags.size,
+                                selectedPeopleCount = uiState.filterState.selectedPeople.size,
+                                selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                                onAllClick = { viewModel.clearAllFilters() },
+                                onTagsClick = { activeSheet = ActiveSheet.TAGS },
+                                onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
+                                onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                            )
+                        }
+                    } else null
                 )
-                FilterBar(
-                    selectedTagsCount = uiState.filterState.selectedTags.size,
-                    selectedPeopleCount = uiState.filterState.selectedPeople.size,
-                    selectedMoodsCount = uiState.filterState.selectedMoods.size,
-                    onAllClick = { viewModel.clearAllFilters() },
-                    onTagsClick = { activeSheet = ActiveSheet.TAGS },
-                    onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
-                    onMoodClick = { activeSheet = ActiveSheet.MOOD }
-                )
+                if (!isCompactLandscape) {
+                    FilterBar(
+                        selectedTagsCount = uiState.filterState.selectedTags.size,
+                        selectedPeopleCount = uiState.filterState.selectedPeople.size,
+                        selectedMoodsCount = uiState.filterState.selectedMoods.size,
+                        onAllClick = { viewModel.clearAllFilters() },
+                        onTagsClick = { activeSheet = ActiveSheet.TAGS },
+                        onPeopleClick = { activeSheet = ActiveSheet.PEOPLE },
+                        onMoodClick = { activeSheet = ActiveSheet.MOOD }
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -140,6 +158,7 @@ fun CalendarScreen(
                                 gridDays = uiState.gridDays,
                                 startOfWeek = uiState.startOfWeek,
                                 onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
+                                isCompact = isCompactLandscape,
                                 modifier = Modifier.pointerInput(Unit) {
                                     var hasScrolled = false
                                     detectHorizontalDragGestures(
@@ -220,6 +239,7 @@ fun CalendarScreen(
                                 gridDays = uiState.gridDays,
                                 startOfWeek = uiState.startOfWeek,
                                 onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
+                                isCompact = isCompactLandscape,
                                 modifier = Modifier.pointerInput(Unit) {
                                     var hasScrolled = false
                                     detectHorizontalDragGestures(

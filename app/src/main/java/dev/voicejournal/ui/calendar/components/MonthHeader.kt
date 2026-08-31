@@ -65,6 +65,7 @@ fun MonthHeader(
     onNext: () -> Unit,
     onDatePickerClick: () -> Unit,
     onTitleClick: () -> Unit,
+    filterContent: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -80,7 +81,7 @@ fun MonthHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -88,10 +89,19 @@ fun MonthHeader(
                 text = formattedTitle,
                 style = MaterialTheme.typography.titleLarge,
                 color = colors.textPrimary,
-                modifier = Modifier
-                    .clickable { onTitleClick() }
-                    .padding(vertical = 4.dp)
+                modifier = Modifier.clickable { onTitleClick() }
             )
+
+            if (filterContent != null) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    filterContent()
+                }
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

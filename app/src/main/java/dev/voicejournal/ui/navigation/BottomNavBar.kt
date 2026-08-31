@@ -1,6 +1,7 @@
 package dev.voicejournal.ui.navigation
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -131,11 +132,14 @@ fun BottomNavBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val colors = AppTheme.colors
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
 
     NavigationBar(
         containerColor = colors.secondaryBackground,
+        tonalElevation = 0.dp,
         windowInsets = WindowInsets.navigationBars,
-        modifier = modifier
+        modifier = if (isCompactLandscape) modifier.height(56.dp) else modifier
     ) {
         items.forEach { screen ->
             val isSelected = currentRoute == screen.route
@@ -164,6 +168,7 @@ fun BottomNavBar(
             NavigationBarItem(
                 icon = { Icon(icon, contentDescription = label) },
                 label = { Text(label) },
+                alwaysShowLabel = !isCompactLandscape,
                 selected = isSelected,
                 onClick = {
                     if (isSelected) {
