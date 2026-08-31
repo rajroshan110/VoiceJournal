@@ -62,6 +62,8 @@ class UserPreferencesManager @Inject constructor(
         val CUSTOM_PIN_ENCRYPTED = stringPreferencesKey("custom_pin_encrypted")
         val IS_SCREEN_PRIVACY_ENABLED = booleanPreferencesKey("is_screen_privacy_enabled")
         val IS_SPEECH_TO_TEXT_ENABLED = booleanPreferencesKey("is_speech_to_text_enabled")
+        val IS_FOLDER_ENABLED = booleanPreferencesKey("is_folder_enabled")
+        val IS_NOTES_ORGANISATION_ENABLED = booleanPreferencesKey("is_notes_organisation_enabled")
         
         // Lockout State
         val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
@@ -192,6 +194,14 @@ class UserPreferencesManager @Inject constructor(
 
     val isSpeechToTextEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_SPEECH_TO_TEXT_ENABLED] ?: true
+    }
+
+    val isFolderEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_FOLDER_ENABLED] ?: true
+    }
+
+    val isNotesOrganisationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_NOTES_ORGANISATION_ENABLED] ?: true
     }
 
     val pinFailedAttempts: Flow<Int> = dataStore.data.map { prefs ->
@@ -348,6 +358,18 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setSpeechToTextEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[IS_SPEECH_TO_TEXT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setFolderEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_FOLDER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setNotesOrganisationEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_NOTES_ORGANISATION_ENABLED] = enabled
         }
     }
 

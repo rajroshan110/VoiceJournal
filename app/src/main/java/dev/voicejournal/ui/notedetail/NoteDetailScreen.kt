@@ -619,6 +619,7 @@ fun NoteDetailScreen(
         JournalTagsDialog(
             tags = uiState.tags,
             allAvailableTags = uiState.allAvailableTags,
+            isFolderEnabled = uiState.isFolderEnabled,
             onSaveTags = { newTags -> viewModel.setTags(newTags) },
             onDismiss = { showTagsDialog = false }
         )

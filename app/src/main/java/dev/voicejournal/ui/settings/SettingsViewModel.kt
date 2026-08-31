@@ -52,6 +52,8 @@ data class SettingsUiState(
     val customPin: String? = null,
     val isScreenPrivacyEnabled: Boolean = false,
     val isSpeechToTextEnabled: Boolean = true,
+    val isFolderEnabled: Boolean = true,
+    val isNotesOrganisationEnabled: Boolean = true,
     val isModelDownloaded: Boolean = false,
     val downloadProgress: Float? = null,
     val sttModelDownloadState: ModelDownloadState = ModelDownloadState.Idle,
@@ -136,6 +138,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.isSpeechToTextEnabled.collect { enabled ->
                 _uiState.value = _uiState.value.copy(isSpeechToTextEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isFolderEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isNotesOrganisationEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isNotesOrganisationEnabled = enabled)
             }
         }
         viewModelScope.launch {
@@ -274,6 +286,18 @@ class SettingsViewModel @Inject constructor(
     fun setSpeechToTextEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesManager.setSpeechToTextEnabled(enabled)
+        }
+    }
+
+    fun setFolderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setFolderEnabled(enabled)
+        }
+    }
+
+    fun setNotesOrganisationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesManager.setNotesOrganisationEnabled(enabled)
         }
     }
 

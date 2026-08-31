@@ -81,6 +81,7 @@ fun JournalHeader(
     onMenuClick: () -> Unit = {},
     isSelectionMode: Boolean = false,
     selectedCount: Int = 0,
+    isNotesOrganisationEnabled: Boolean = true,
     onCategorizeSelected: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onClearSelection: () -> Unit = {},
@@ -154,14 +155,16 @@ fun JournalHeader(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
                         if (selectedCount > 0) {
-                            IconButton(
-                                onClick = onCategorizeSelected,
-                                modifier = Modifier.minimumInteractiveComponentSize()
-                            ) {
-                                Icon(
-                                    imageVector = getTagIcon(colors.primary),
-                                    contentDescription = "Organize selected notes"
-                                )
+                            if (isNotesOrganisationEnabled) {
+                                IconButton(
+                                    onClick = onCategorizeSelected,
+                                    modifier = Modifier.minimumInteractiveComponentSize()
+                                ) {
+                                    Icon(
+                                        imageVector = getTagIcon(colors.primary),
+                                        contentDescription = "Organize selected notes"
+                                    )
+                                }
                             }
 
                             IconButton(

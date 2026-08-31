@@ -210,6 +210,7 @@ fun JournalScreen(
         gesturesEnabled = !selectionState.isSelectionMode,
         drawerContent = {
             JournalDrawerContent(
+                isFolderEnabled = uiState.isFolderEnabled,
                 onNavigateToArchive = { navController.navigate(Screen.Archive.route) },
                 onNavigateToDraft = { navController.navigate(Screen.Draft.route) },
                 onNavigateToFolders = { navController.navigate(Screen.Folders.route) },
@@ -239,6 +240,7 @@ fun JournalScreen(
                         onMenuClick = { scope.launch { drawerState.open() } },
                         isSelectionMode = selectionState.isSelectionMode,
                         selectedCount = selectionState.selectedEntryIds.size,
+                        isNotesOrganisationEnabled = uiState.isNotesOrganisationEnabled,
                         onCategorizeSelected = { showCategorizeSheet = true },
                         onDeleteSelected = { showDeleteDialog = true },
                         onClearSelection = { viewModel.clearSelection() },
@@ -611,6 +613,7 @@ fun JournalScreen(
 
                 BatchCategorizeSheet(
                     selectedCount = selectionState.selectedEntryIds.size,
+                    isFolderEnabled = uiState.isFolderEnabled,
                     availableFolders = (listOf("Personal", "Work", "Ideas", "Journal") + uiState.availableTags.filter { it.type == TagType.FOLDER }.map { it.name }).distinct(),
                     availableTags = uiState.availableTags,
                     availablePeople = uiState.availablePeople,

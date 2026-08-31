@@ -12,7 +12,8 @@ data class SearchResultItem(
 enum class SettingsSubScreen {
     GENERAL,
     PRIVACY_SECURITY,
-    SYNC_BACKUP
+    SYNC_BACKUP,
+    TAG_ORGANISER
 }
 
 object SettingRegistry {
@@ -120,6 +121,22 @@ object SettingRegistry {
             parentCategory = "Sync & Backup > Local Backup",
             targetPreferenceKey = "import_backup",
             targetSubScreen = SettingsSubScreen.SYNC_BACKUP
+        ),
+        SearchResultItem(
+            id = "is_folder_enabled",
+            title = "Enable Folder",
+            subtitle = "Control folder visibility across the sidebar, tags, and notes",
+            parentCategory = "Tag Organiser > Organisation",
+            targetPreferenceKey = "is_folder_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
+        ),
+        SearchResultItem(
+            id = "is_notes_organisation_enabled",
+            title = "Notes Organisation",
+            subtitle = "Show organise action button when selecting notes in the journal screen",
+            parentCategory = "Tag Organiser > Organisation",
+            targetPreferenceKey = "is_notes_organisation_enabled",
+            targetSubScreen = SettingsSubScreen.TAG_ORGANISER
         )
     )
 

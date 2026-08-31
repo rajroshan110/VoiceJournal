@@ -26,6 +26,7 @@ import dev.voicejournal.ui.designsystem.theme.AppTheme
 @Composable
 fun TagEditorSection(
     tags: List<Tag>,
+    isFolderEnabled: Boolean = true,
     onAddTag: (Tag) -> Unit,
     onRemoveTag: (Tag) -> Unit
 ) {
@@ -80,7 +81,8 @@ fun TagEditorSection(
                             val type = when {
                                 trimmed.startsWith("#") -> TagType.TOPIC
                                 trimmed.startsWith("@") -> TagType.PERSON
-                                else -> TagType.FOLDER
+                                isFolderEnabled -> TagType.FOLDER
+                                else -> TagType.TOPIC
                             }
                             onAddTag(Tag(name = trimmed.removePrefix("#").removePrefix("@"), type = type))
                         }

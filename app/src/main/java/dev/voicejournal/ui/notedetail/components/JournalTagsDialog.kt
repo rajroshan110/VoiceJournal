@@ -35,6 +35,7 @@ import dev.voicejournal.ui.designsystem.theme.AppTheme
 fun JournalTagsDialog(
     tags: List<Tag>,
     allAvailableTags: List<Tag> = emptyList(),
+    isFolderEnabled: Boolean = true,
     onSaveTags: (List<Tag>) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -46,16 +47,20 @@ fun JournalTagsDialog(
     val colors = AppTheme.colors
 
     // Compute suggestion list matching current user input prefix and text
-    val suggestions by remember(tagInput.text, allAvailableTags, localTags, activeCategory) {
+    val suggestions by remember(tagInput.text, allAvailableTags, localTags, activeCategory, isFolderEnabled) {
         derivedStateOf {
             val inputTrimmed = tagInput.text.trim()
             val (prefixCategory, query) = when {
                 inputTrimmed.startsWith("#") -> TagType.TOPIC to inputTrimmed.removePrefix("#").trim()
                 inputTrimmed.startsWith("@") -> TagType.PERSON to inputTrimmed.removePrefix("@").trim()
-                else -> TagType.FOLDER to inputTrimmed
+                isFolderEnabled -> TagType.FOLDER to inputTrimmed
+                else -> TagType.TOPIC to inputTrimmed
             }
 
             allAvailableTags.filter { tag ->
+                if (!isFolderEnabled && (tag.type == TagType.FOLDER || tag.type == TagType.THING)) {
+                    return@filter false
+                }
                 val isCategoryMatch = when (prefixCategory) {
                     TagType.FOLDER -> tag.type == TagType.FOLDER || tag.type == TagType.THING
                     else -> tag.type == prefixCategory
@@ -87,27 +92,35 @@ fun JournalTagsDialog(
                 }
                 else -> {
                     val cleanName = trimmed
-                    // Strictly check if a FOLDER tag already exists in allAvailableTags or localTags
-                    val folderExistsInAll = allAvailableTags.any { 
-                        it.name.equals(cleanName, ignoreCase = true) && 
-                        (it.type == TagType.FOLDER || it.type == TagType.THING) 
-                    }
-                    val folderExistsInLocal = localTags.any { 
-                        it.name.equals(cleanName, ignoreCase = true) && 
-                        (it.type == TagType.FOLDER || it.type == TagType.THING) 
-                    }
-
-                    if (folderExistsInAll || folderExistsInLocal) {
-                        // Already exists as a Folder tag: add as Folder tag directly without popup dialog
-                        val tagAlreadyInNote = localTags.any { it.name.equals(cleanName, ignoreCase = true) && it.type == TagType.FOLDER }
-                        if (!tagAlreadyInNote) {
-                            localTags = localTags + Tag(name = cleanName, type = TagType.FOLDER)
+                    if (isFolderEnabled) {
+                        // Strictly check if a FOLDER tag already exists in allAvailableTags or localTags
+                        val folderExistsInAll = allAvailableTags.any { 
+                            it.name.equals(cleanName, ignoreCase = true) && 
+                            (it.type == TagType.FOLDER || it.type == TagType.THING) 
                         }
-                        tagInput = TextFieldValue("", selection = TextRange(0))
+                        val folderExistsInLocal = localTags.any { 
+                            it.name.equals(cleanName, ignoreCase = true) && 
+                            (it.type == TagType.FOLDER || it.type == TagType.THING) 
+                        }
+
+                        if (folderExistsInAll || folderExistsInLocal) {
+                            // Already exists as a Folder tag: add as Folder tag directly without popup dialog
+                            val tagAlreadyInNote = localTags.any { it.name.equals(cleanName, ignoreCase = true) && it.type == TagType.FOLDER }
+                            if (!tagAlreadyInNote) {
+                                localTags = localTags + Tag(name = cleanName, type = TagType.FOLDER)
+                            }
+                            tagInput = TextFieldValue("", selection = TextRange(0))
+                        } else {
+                            // Folder tag does NOT exist yet (even if Topic or Person with that name exists): prompt dialog!
+                            pendingNewFolderTagName = cleanName
+                            tagInput = TextFieldValue("", selection = TextRange(0))
+                        }
                     } else {
-                        // Folder tag does NOT exist yet (even if Topic or Person with that name exists): prompt dialog!
-                        pendingNewFolderTagName = cleanName
-                        tagInput = TextFieldValue("", selection = TextRange(0))
+                        // Folder disabled: default plain text to Topic
+                        if (cleanName.isNotEmpty() && localTags.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                            localTags = localTags + Tag(name = cleanName, type = TagType.TOPIC)
+                        }
+                        tagInput = TextFieldValue("#", selection = TextRange(1))
                     }
                 }
             }
@@ -181,10 +194,11 @@ fun JournalTagsDialog(
                                         if (localTags.none { it.name.equals(suggestionTag.name, ignoreCase = true) }) {
                                             localTags = localTags + suggestionTag
                                         }
-                                        tagInput = when (activeCategory) {
-                                            TagType.TOPIC -> TextFieldValue("#", selection = TextRange(1))
-                                            TagType.PERSON -> TextFieldValue("@", selection = TextRange(1))
-                                            else -> TextFieldValue("", selection = TextRange(0))
+                                        tagInput = when {
+                                            activeCategory == TagType.TOPIC -> TextFieldValue("#", selection = TextRange(1))
+                                            activeCategory == TagType.PERSON -> TextFieldValue("@", selection = TextRange(1))
+                                            isFolderEnabled && activeCategory == TagType.FOLDER -> TextFieldValue("", selection = TextRange(0))
+                                            else -> TextFieldValue("#", selection = TextRange(1))
                                         }
                                     }
                                 )
@@ -216,17 +230,17 @@ fun JournalTagsDialog(
                                         activeCategory = TagType.PERSON
                                         tagInput = newValue
                                     } else {
-                                        activeCategory = TagType.FOLDER
+                                        activeCategory = if (isFolderEnabled) TagType.FOLDER else TagType.TOPIC
                                         tagInput = newValue
                                     }
                                 },
                                 placeholder = {
                                     Text(
-                                        when (activeCategory) {
-                                            TagType.TOPIC -> "Add #topic tag..."
-                                            TagType.PERSON -> "Add @person tag..."
-                                            TagType.FOLDER -> "Add folder tag..."
-                                            else -> "Add tag..."
+                                        when {
+                                            activeCategory == TagType.TOPIC -> "Add #topic tag..."
+                                            activeCategory == TagType.PERSON -> "Add @person tag..."
+                                            isFolderEnabled && activeCategory == TagType.FOLDER -> "Add folder tag..."
+                                            else -> "Add #topic tag..."
                                         },
                                         color = colors.textSecondary,
                                         fontSize = 14.sp
@@ -271,11 +285,14 @@ fun JournalTagsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(
-                        TagType.TOPIC to "# Topics",
-                        TagType.PERSON to "@ People",
-                        TagType.FOLDER to "📁 Folder"
-                    ).forEach { (type, label) ->
+                    val categoryList = buildList {
+                        add(TagType.TOPIC to "# Topics")
+                        add(TagType.PERSON to "@ People")
+                        if (isFolderEnabled) {
+                            add(TagType.FOLDER to "📁 Folder")
+                        }
+                    }
+                    categoryList.forEach { (type, label) ->
                         val isSelected = activeCategory == type
                         Box(
                             modifier = Modifier
@@ -289,7 +306,7 @@ fun JournalTagsDialog(
                                     // Automatic input prefix with cursor positioned cleanly AFTER prefix (#| or @|)
                                     tagInput = when (type) {
                                         TagType.TOPIC -> {
-                                            val text = if (tagInput.text.startsWith("#")) tagInput.text else "#" + tagInput.text.removePrefix("@")
+                                             val text = if (tagInput.text.startsWith("#")) tagInput.text else "#" + tagInput.text.removePrefix("@")
                                             TextFieldValue(text, selection = TextRange(text.length))
                                         }
                                         TagType.PERSON -> {
@@ -329,11 +346,13 @@ fun JournalTagsDialog(
                     onRemoveTag = { tag -> localTags = localTags - tag }
                 )
 
-                TagCategoryCard(
-                    title = "Folders (📁)",
-                    tags = localTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING },
-                    onRemoveTag = { tag -> localTags = localTags - tag }
-                )
+                if (isFolderEnabled) {
+                    TagCategoryCard(
+                        title = "Folders (📁)",
+                        tags = localTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING },
+                        onRemoveTag = { tag -> localTags = localTags - tag }
+                    )
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 
 @Composable
 fun JournalDrawerContent(
+    isFolderEnabled: Boolean = true,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToDraft: () -> Unit = {},
     onNavigateToFolders: () -> Unit = {},
@@ -160,38 +161,40 @@ fun JournalDrawerContent(
                     .padding(vertical = 4.dp)
             )
 
-            // 3. Folder Navigation Item (Below Draft)
-            NavigationDrawerItem(
-                icon = {
-                    Icon(
-                        imageVector = getFolderIcon(colors.primary),
-                        contentDescription = "Folders",
-                        tint = colors.primary
-                    )
-                },
-                label = {
-                    Text(
-                        text = "Folders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary
-                    )
-                },
-                selected = false,
-                onClick = {
-                    onCloseDrawer()
-                    onNavigateToFolders()
-                },
-                colors = NavigationDrawerItemDefaults.colors(
-                    unselectedContainerColor = colors.surfaceVariant.copy(alpha = 0.5f),
-                    unselectedIconColor = colors.primary,
-                    unselectedTextColor = colors.textPrimary
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            )
+            // 3. Folder Navigation Item (Below Draft, shown only when isFolderEnabled)
+            if (isFolderEnabled) {
+                NavigationDrawerItem(
+                    icon = {
+                        Icon(
+                            imageVector = getFolderIcon(colors.primary),
+                            contentDescription = "Folders",
+                            tint = colors.primary
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = "Folders",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.textPrimary
+                        )
+                    },
+                    selected = false,
+                    onClick = {
+                        onCloseDrawer()
+                        onNavigateToFolders()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = colors.surfaceVariant.copy(alpha = 0.5f),
+                        unselectedIconColor = colors.primary,
+                        unselectedTextColor = colors.textPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
 
             // 4. Tags Navigation Item (Below Folders)
             NavigationDrawerItem(

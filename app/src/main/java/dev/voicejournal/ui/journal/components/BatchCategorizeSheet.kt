@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun BatchCategorizeSheet(
     selectedCount: Int,
+    isFolderEnabled: Boolean = true,
     availableFolders: List<String> = listOf("Personal", "Work", "Ideas", "Journal"),
     availableTags: List<Tag>,
     availablePeople: List<String>,
@@ -41,7 +42,7 @@ fun BatchCategorizeSheet(
 ) {
     val colors = AppTheme.colors
 
-    var activeTab by rememberSaveable { mutableStateOf(0) } // 0: Folders, 1: Topics, 2: People
+    var activeTab by rememberSaveable(isFolderEnabled) { mutableStateOf(if (isFolderEnabled) 0 else 1) } // 0: Folders, 1: Topics, 2: People
 
     var selectedFolder by remember(appliedFolder) { mutableStateOf<String?>(appliedFolder) }
     var customFolderInput by rememberSaveable { mutableStateOf("") }
@@ -102,18 +103,21 @@ fun BatchCategorizeSheet(
             }
 
             // Segmented Category Tabs (Folders / Topics / People)
+            val selectedTabIndex = if (isFolderEnabled) activeTab else if (activeTab == 2) 1 else 0
             TabRow(
-                selectedTabIndex = activeTab,
+                selectedTabIndex = selectedTabIndex,
                 containerColor = colors.surfaceVariant,
                 contentColor = colors.primary,
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                Tab(
-                    selected = activeTab == 0,
-                    onClick = { activeTab = 0 },
-                    text = { Text("Folders", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                    icon = { Icon(getFolderIcon(if (activeTab == 0) colors.primary else colors.textSecondary), contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
+                if (isFolderEnabled) {
+                    Tab(
+                        selected = activeTab == 0,
+                        onClick = { activeTab = 0 },
+                        text = { Text("Folders", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
+                        icon = { Icon(getFolderIcon(if (activeTab == 0) colors.primary else colors.textSecondary), contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                }
                 Tab(
                     selected = activeTab == 1,
                     onClick = { activeTab = 1 },

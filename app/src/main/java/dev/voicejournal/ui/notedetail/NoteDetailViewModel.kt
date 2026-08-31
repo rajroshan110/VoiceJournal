@@ -85,6 +85,7 @@ data class NoteDetailUiState(
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
     val isMarkdownEnabled: Boolean = false,
     val isSpeechToTextEnabled: Boolean = true,
+    val isFolderEnabled: Boolean = true,
     val audioTracks: List<AudioTrack> = emptyList(),
     val isTranscribing: Boolean = false,
     val transcribingTrackId: String? = null,
@@ -145,6 +146,11 @@ class NoteDetailViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.isSpeechToTextEnabled.collect { enabled ->
                 _uiState.value = _uiState.value.copy(isSpeechToTextEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesManager.isFolderEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
             }
         }
         // Observe SpeechToTextEngine model download state and progress

@@ -35,10 +35,12 @@ import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.settings.components.CategoryNavCard
 import dev.voicejournal.ui.settings.components.SettingSearchRow
+import dev.voicejournal.ui.components.getTagIcon
 import dev.voicejournal.ui.settings.model.SettingsSubScreen
 import dev.voicejournal.ui.settings.screens.GeneralSettingsScreen
 import dev.voicejournal.ui.settings.screens.LocalBackupScreen
 import dev.voicejournal.ui.settings.screens.PrivacySecurityScreen
+import dev.voicejournal.ui.settings.screens.TagOrganiserScreen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 private val GitHubIcon: ImageVector = ImageVector.Builder(
@@ -157,6 +159,7 @@ fun SettingsHomeScreen(
                                     !isExpanded && selectedCompactSubScreen == SettingsSubScreen.GENERAL -> "General Settings"
                                     !isExpanded && selectedCompactSubScreen == SettingsSubScreen.PRIVACY_SECURITY -> "Privacy & Security"
                                     !isExpanded && selectedCompactSubScreen == SettingsSubScreen.SYNC_BACKUP -> "Sync & Backup"
+                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.TAG_ORGANISER -> "Tag Organiser"
                                     else -> "Settings"
                                 },
                                 color = colors.textPrimary
@@ -306,6 +309,17 @@ fun SettingsHomeScreen(
                                 }
                             )
 
+                            CategoryNavCard(
+                                title = "Tag Organiser",
+                                subtitle = "Choose tags, enable folder, notes organisation",
+                                icon = getTagIcon(colors.textPrimary),
+                                isSelected = uiState.activeSubScreen == SettingsSubScreen.TAG_ORGANISER,
+                                onClick = {
+                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
+                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
+                                }
+                            )
+
                             Spacer(modifier = Modifier.weight(1f))
 
                             SettingsFooter()
@@ -331,6 +345,7 @@ fun SettingsHomeScreen(
                             SettingsSubScreen.SYNC_BACKUP -> Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                                 LocalBackupScreen(uiState = uiState, viewModel = viewModel)
                             }
+                            SettingsSubScreen.TAG_ORGANISER -> TagOrganiserScreen(uiState = uiState, viewModel = viewModel)
                         }
                     }
                 }
@@ -378,6 +393,16 @@ fun SettingsHomeScreen(
                                 }
                             )
 
+                            CategoryNavCard(
+                                title = "Tag Organiser",
+                                subtitle = "Choose tags, enable folder, notes organisation",
+                                icon = getTagIcon(colors.textPrimary),
+                                onClick = {
+                                    selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
+                                    viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
+                                }
+                            )
+
                             Spacer(modifier = Modifier.weight(1f))
 
                             SettingsFooter()
@@ -398,6 +423,7 @@ fun SettingsHomeScreen(
                             SettingsSubScreen.SYNC_BACKUP -> Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                                 LocalBackupScreen(uiState = uiState, viewModel = viewModel)
                             }
+                            SettingsSubScreen.TAG_ORGANISER -> TagOrganiserScreen(uiState = uiState, viewModel = viewModel)
                             else -> {}
                         }
                     }

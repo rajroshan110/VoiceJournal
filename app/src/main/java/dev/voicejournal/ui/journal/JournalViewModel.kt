@@ -69,7 +69,9 @@ data class JournalUiState(
     val isSearchActive: Boolean = false,
     val permissionGranted: Boolean = true,
     val isRefreshing: Boolean = false,
-    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,
+    val isFolderEnabled: Boolean = true,
+    val isNotesOrganisationEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -200,13 +202,21 @@ class JournalViewModel @Inject constructor(
                 Triple(rawEntries, allTags, extractedPeople)
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
+            val prefConfigFlow = combine(
+                userPreferencesManager.timeFormat,
+                userPreferencesManager.isFolderEnabled,
+                userPreferencesManager.isNotesOrganisationEnabled
+            ) { timeFormatPref, isFolderEnabled, isNotesOrganisationEnabled ->
+                Triple(timeFormatPref, isFolderEnabled, isNotesOrganisationEnabled)
+            }
+
             val filteredDataFlow = combine(
                 extractedDataFlow,
                 _filterState,
                 _sortOption,
                 _searchQuery,
-                userPreferencesManager.timeFormat
-            ) { data, filters, sort, query, timeFormatPref ->
+                prefConfigFlow
+            ) { data, filters, sort, query, prefs ->
                 val rawEntries = data.first
                 val allTags = data.second
                 val extractedPeople = data.third
@@ -258,7 +268,9 @@ class JournalViewModel @Inject constructor(
                     filterState = filters,
                     sortOption = sort,
                     searchQuery = query,
-                    timeFormat = timeFormatPref
+                    timeFormat = prefs.first,
+                    isFolderEnabled = prefs.second,
+                    isNotesOrganisationEnabled = prefs.third
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
