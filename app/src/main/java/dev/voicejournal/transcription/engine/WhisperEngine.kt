@@ -31,8 +31,7 @@ class WhisperEngine @Inject constructor(
     companion object {
         private const val TAG = "WhisperEngine"
         private const val PERF_TAG = "WhisperPerf"
-        // TODO: The developer must provide the verified SHA-256 for ggml-base-q5_1.bin here
-        private const val WHISPER_MODEL_EXPECTED_SHA256 = "TODO_DEVELOPER_INSERT_SHA256_HERE"
+        const val WHISPER_MODEL_EXPECTED_SHA256 = "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"
 
         private val MODEL_URLS = listOf(
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
@@ -175,13 +174,7 @@ class WhisperEngine @Inject constructor(
                 if (tempFile.exists() && tempFile.length() > 25_000_000L) {
                     val actualSha = calculateSha256(tempFile)
 
-                    if (WHISPER_MODEL_EXPECTED_SHA256 == "TODO_DEVELOPER_INSERT_SHA256_HERE") {
-                        if (BuildConfig.DEBUG) {
-                            Log.w(TAG, "Skipping SHA-256 validation because the developer has not provided the trusted hash yet. Actual SHA-256: $actualSha")
-                        } else {
-                            throw Exception("SHA-256 verification failed! Release builds cannot bypass integrity checks with a placeholder constant. Provide the actual SHA-256.")
-                        }
-                    } else if (actualSha != WHISPER_MODEL_EXPECTED_SHA256) {
+                    if (actualSha != WHISPER_MODEL_EXPECTED_SHA256) {
                         throw Exception("SHA-256 verification failed! Expected $WHISPER_MODEL_EXPECTED_SHA256, got $actualSha")
                     }
                     
