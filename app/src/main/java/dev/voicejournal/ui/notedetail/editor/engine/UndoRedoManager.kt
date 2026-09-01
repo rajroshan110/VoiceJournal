@@ -8,38 +8,58 @@ data class EditorSnapshot(
     val selection: TextRange
 )
 
+enum class MutationKind {
+    TYPING,
+    DELETION,
+    STRUCTURAL
+}
+
 class UndoRedoManager(private val maxHistorySize: Int = 50) {
     private val undoStack = ArrayDeque<EditorSnapshot>()
     private val redoStack = ArrayDeque<EditorSnapshot>()
     private var lastPushTimestamp: Long = 0L
+    private var currentSessionKind: MutationKind? = null
 
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
-    fun pushState(document: RichTextDocument, selection: TextRange, forceSnapshot: Boolean = false) {
+    fun pushState(
+        document: RichTextDocument,
+        selection: TextRange,
+        kind: MutationKind = MutationKind.STRUCTURAL
+    ) {
         val now = System.currentTimeMillis()
         if (undoStack.isNotEmpty()) {
             val last = undoStack.last()
             // Avoid duplicate consecutive snapshots
             if (last.document == document && last.selection == selection) return
 
-            // Batch typing snapshots if typing within 1 second without a forced boundary (e.g. format change, space, or enter)
-            if (!forceSnapshot && (now - lastPushTimestamp < 1000L)) {
+            // Batch continuous typing or deletion sessions within 1500ms
+            if (kind != MutationKind.STRUCTURAL && kind == currentSessionKind && (now - lastPushTimestamp < 1500L)) {
+                lastPushTimestamp = now
                 return
             }
         }
+
         undoStack.addLast(EditorSnapshot(document, selection))
         if (undoStack.size > maxHistorySize) {
             undoStack.removeFirst()
         }
         redoStack.clear()
         lastPushTimestamp = now
+        currentSessionKind = kind
+    }
+
+    fun pushState(document: RichTextDocument, selection: TextRange, forceSnapshot: Boolean) {
+        pushState(document, selection, if (forceSnapshot) MutationKind.STRUCTURAL else MutationKind.TYPING)
     }
 
     fun undo(currentDocument: RichTextDocument, currentSelection: TextRange): EditorSnapshot? {
         if (!canUndo) return null
         val previous = undoStack.removeLast()
         redoStack.addLast(EditorSnapshot(currentDocument, currentSelection))
+        currentSessionKind = null
+        lastPushTimestamp = 0L
         return previous
     }
 
@@ -47,6 +67,8 @@ class UndoRedoManager(private val maxHistorySize: Int = 50) {
         if (!canRedo) return null
         val next = redoStack.removeLast()
         undoStack.addLast(EditorSnapshot(currentDocument, currentSelection))
+        currentSessionKind = null
+        lastPushTimestamp = 0L
         return next
     }
 
@@ -54,5 +76,6 @@ class UndoRedoManager(private val maxHistorySize: Int = 50) {
         undoStack.clear()
         redoStack.clear()
         lastPushTimestamp = 0L
+        currentSessionKind = null
     }
 }

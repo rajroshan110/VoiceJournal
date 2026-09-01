@@ -275,12 +275,9 @@ class NoteDetailViewModel @Inject constructor(
             }
         }
 
-        // Automatically observe rich text document updates to track unsaved modifications with debouncing and offloading to background thread
+        // Automatically observe rich text document updates to track unsaved modifications immediately
         viewModelScope.launch {
-            @OptIn(FlowPreview::class)
             snapshotFlow { richTextState.document }
-                .debounce(300L)
-                .flowOn(Dispatchers.Default)
                 .collect {
                     updateUnsavedChangesState()
                 }
@@ -301,12 +298,10 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     private fun updateUnsavedChangesState() {
-        viewModelScope.launch(Dispatchers.Default) {
-            val current = createCurrentSnapshot()
-            val isDirty = current != initialSnapshot || pendingFileDeletions.isNotEmpty() || pendingFileAdditions.isNotEmpty()
-            if (_uiState.value.hasUnsavedChanges != isDirty) {
-                _uiState.value = _uiState.value.copy(hasUnsavedChanges = isDirty)
-            }
+        val current = createCurrentSnapshot()
+        val isDirty = current != initialSnapshot || pendingFileDeletions.isNotEmpty() || pendingFileAdditions.isNotEmpty()
+        if (_uiState.value.hasUnsavedChanges != isDirty) {
+            _uiState.value = _uiState.value.copy(hasUnsavedChanges = isDirty)
         }
     }
 

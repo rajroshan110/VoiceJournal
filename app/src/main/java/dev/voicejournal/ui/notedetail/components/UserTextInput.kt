@@ -1,15 +1,20 @@
 package dev.voicejournal.ui.notedetail.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -25,16 +30,36 @@ fun UserTextInput(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val visualTransformation = remember(richTextState.document) {
-        RichTextVisualTransformation { richTextState.document }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val visualTransformation = remember(richTextState.document, colors.isLight) {
+        RichTextVisualTransformation(
+            linkColor = colors.primary,
+            quoteColor = colors.textSecondary,
+            codeBackground = if (colors.isLight) Color(0xFFE5DACB) else Color(0xFF383838),
+            codeTextColor = colors.textPrimary
+        ) { richTextState.document }
+    }
+
+    val textSelectionColors = remember(colors.primary) {
+        TextSelectionColors(
+            handleColor = colors.primary,
+            backgroundColor = colors.primary.copy(alpha = 0.35f)
+        )
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 150.dp)
-            .clickable { focusRequester.requestFocus() }
+            .defaultMinSize(minHeight = 180.dp)
             .padding(vertical = 4.dp)
+            .clipToBounds()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
     ) {
         if (richTextState.document.isEmpty) {
             Text(
@@ -45,23 +70,25 @@ fun UserTextInput(
                 fontFamily = FontFamily.SansSerif
             )
         }
-        BasicTextField(
-            value = richTextState.textFieldValue,
-            onValueChange = { newValue ->
-                richTextState.onTextFieldValueChange(newValue)
-            },
-            textStyle = TextStyle(
-                color = colors.textPrimary,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
-                fontFamily = FontFamily.SansSerif
-            ),
-            visualTransformation = visualTransformation,
-            cursorBrush = SolidColor(colors.primary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .focusRequester(focusRequester)
-        )
+        CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors) {
+            BasicTextField(
+                value = richTextState.textFieldValue,
+                onValueChange = { newValue ->
+                    richTextState.onTextFieldValueChange(newValue)
+                },
+                textStyle = TextStyle(
+                    color = colors.textPrimary,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp,
+                    fontFamily = FontFamily.SansSerif
+                ),
+                visualTransformation = visualTransformation,
+                cursorBrush = SolidColor(colors.primary),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 180.dp)
+                    .focusRequester(focusRequester)
+            )
+        }
     }
 }

@@ -52,11 +52,9 @@ data class JournalEntry(
 
     val plainUserText: String?
         get() = userText?.let {
-            if (it.contains("<")) {
-                dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.toPlainText(
-                    dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.fromHtml(it)
-                )
-            } else it
+            dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.toPlainText(
+                dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.fromHtml(it)
+            )
         }
 
     // All active audio tracks (Max 3)

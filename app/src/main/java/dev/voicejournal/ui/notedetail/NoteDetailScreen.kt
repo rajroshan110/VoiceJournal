@@ -13,12 +13,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
@@ -29,9 +30,11 @@ import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
@@ -215,6 +218,9 @@ fun NoteDetailScreen(
 
     val colors = AppTheme.colors
 
+    val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Scaffold(
         containerColor = colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -254,7 +260,9 @@ fun NoteDetailScreen(
             if (uiState.isMarkdownEnabled) {
                 EditorToolbar(
                     richTextState = viewModel.richTextState,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .imePadding()
                 )
             }
         },
@@ -279,172 +287,169 @@ fun NoteDetailScreen(
             )
         }
     ) { paddingValues ->
-        val isKeyboardOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-        val bottomPadding = if (isKeyboardOpen) {
-            100.dp
-        } else {
-            paddingValues.calculateBottomPadding() + 100.dp
-        }
-
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.background)
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    start = paddingValues.calculateStartPadding(androidx.compose.ui.platform.LocalLayoutDirection.current),
-                    end = paddingValues.calculateEndPadding(androidx.compose.ui.platform.LocalLayoutDirection.current)
-                )
-                .imePadding(),
-            contentPadding = PaddingValues(
-                top = 16.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = bottomPadding
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Photo Mosaic Section
-            if (uiState.attachedImages.isNotEmpty()) {
-                item {
-                    ImageMosaic(
-                        images = uiState.attachedImages,
-                        isSelectionMode = trackSelectionState.isSelectionMode,
-                        selectedImages = trackSelectionState.selectedImagePaths,
-                        onImageClick = { idx ->
-                            if (idx in uiState.attachedImages.indices) {
-                                selectedLightboxImage = uiState.attachedImages[idx]
-                            }
-                        },
-                        onImageLongClick = { idx ->
-                            if (idx in uiState.attachedImages.indices) {
-                                viewModel.toggleImageSelectionMode(uiState.attachedImages[idx])
-                            }
-                        }
-                    )
+                .padding(paddingValues)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
                 }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds()
+                    .verticalScroll(scrollState)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    }
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Photo Mosaic Section
+            if (uiState.attachedImages.isNotEmpty()) {
+                ImageMosaic(
+                    images = uiState.attachedImages,
+                    isSelectionMode = trackSelectionState.isSelectionMode,
+                    selectedImages = trackSelectionState.selectedImagePaths,
+                    onImageClick = { idx ->
+                        if (idx in uiState.attachedImages.indices) {
+                            selectedLightboxImage = uiState.attachedImages[idx]
+                        }
+                    },
+                    onImageLongClick = { idx ->
+                        if (idx in uiState.attachedImages.indices) {
+                            viewModel.toggleImageSelectionMode(uiState.attachedImages[idx])
+                        }
+                    }
+                )
             }
 
             // Title Field
-            item {
-                OutlinedTextField(
-                    value = uiState.titleText,
-                    onValueChange = { viewModel.setTitleText(it) },
-                    placeholder = {
-                        Text(
-                            "Add title",
-                            color = colors.textSecondary,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    textStyle = LocalTextStyle.current.copy(
-                        color = colors.textPrimary,
+            OutlinedTextField(
+                value = uiState.titleText,
+                onValueChange = { viewModel.setTitleText(it) },
+                placeholder = {
+                    Text(
+                        "Add title",
+                        color = colors.textSecondary,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold
-                    ),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-                )
-            }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    focusedTextColor = colors.textPrimary,
+                    unfocusedTextColor = colors.textPrimary
+                ),
+                textStyle = LocalTextStyle.current.copy(
+                    color = colors.textPrimary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+            )
 
             // Date, Time & Tag Control Row
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    color = colors.surfaceVariant,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.clickable {
+                        datePickerTab = 0
+                        showDatePicker = true
+                    }
                 ) {
-                    Surface(
-                        color = colors.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable {
-                            datePickerTab = 0
-                            showDatePicker = true
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = formattedDate,
+                            color = colors.textPrimary,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                Surface(
+                    color = colors.surfaceVariant,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.clickable {
+                        datePickerTab = 1
+                        showDatePicker = true
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = formattedTime,
+                            color = colors.textPrimary,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f, fill = false))
+
+                val hasAnyTagsEnabled = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
+                if (hasAnyTagsEnabled) {
+                    val visibleTags = remember(uiState.tags, uiState.isFolderEnabled, uiState.isTopicsEnabled, uiState.isPeopleEnabled, uiState.isMoodEnabled) {
+                        uiState.tags.filter { tag ->
+                            when (tag.type) {
+                                TagType.TOPIC -> uiState.isTopicsEnabled
+                                TagType.PERSON -> uiState.isPeopleEnabled
+                                TagType.FOLDER, TagType.THING -> uiState.isFolderEnabled
+                                TagType.MOOD -> uiState.isMoodEnabled
+                            }
                         }
+                    }
+
+                    Surface(
+                        color = if (visibleTags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.clickable { showTagsDialog = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.DateRange, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("🏷️ ", fontSize = 12.sp)
                             Text(
-                                text = formattedDate,
-                                color = colors.textPrimary,
+                                text = if (visibleTags.isNotEmpty()) "Tags (${visibleTags.size})" else "Tags",
+                                color = if (visibleTags.isNotEmpty()) colors.primary else colors.textSecondary,
                                 fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 softWrap = false
                             )
-                        }
-                    }
-
-                    Surface(
-                        color = colors.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable {
-                            datePickerTab = 1
-                            showDatePicker = true
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = formattedTime,
-                                color = colors.textPrimary,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f, fill = false))
-
-                    val hasAnyTagsEnabled = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
-                    if (hasAnyTagsEnabled) {
-                        val visibleTags = remember(uiState.tags, uiState.isFolderEnabled, uiState.isTopicsEnabled, uiState.isPeopleEnabled, uiState.isMoodEnabled) {
-                            uiState.tags.filter { tag ->
-                                when (tag.type) {
-                                    TagType.TOPIC -> uiState.isTopicsEnabled
-                                    TagType.PERSON -> uiState.isPeopleEnabled
-                                    TagType.FOLDER, TagType.THING -> uiState.isFolderEnabled
-                                    TagType.MOOD -> uiState.isMoodEnabled
-                                }
-                            }
-                        }
-
-                        Surface(
-                            color = if (visibleTags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.clickable { showTagsDialog = true }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("🏷️ ", fontSize = 12.sp)
-                                Text(
-                                    text = if (visibleTags.isNotEmpty()) "Tags (${visibleTags.size})" else "Tags",
-                                    color = if (visibleTags.isNotEmpty()) colors.primary else colors.textSecondary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
                         }
                     }
                 }
@@ -452,7 +457,7 @@ fun NoteDetailScreen(
 
             // Multi-Track Audio Players with Long-Press & Selection State (Max 3 tracks)
             if (uiState.audioTracks.isNotEmpty()) {
-                itemsIndexed(uiState.audioTracks) { index, track ->
+                uiState.audioTracks.forEachIndexed { index, track ->
                     val isTrackSelected = track.id in trackSelectionState.selectedTrackIds
                     val isTrackActive = uiState.playingTrackId == track.id
                     val isPlayingThisTrack = isTrackActive && uiState.isPlaying
@@ -570,14 +575,16 @@ fun NoteDetailScreen(
             }
 
             // Text Content Input Area
-            item {
-                UserTextInput(
-                    richTextState = viewModel.richTextState,
-                    focusRequester = focusRequester
-                )
-            }
+            UserTextInput(
+                richTextState = viewModel.richTextState,
+                focusRequester = focusRequester,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 350.dp)
+            )
         }
     }
+}
 
     // June Interactive Date & Time Picker Dialog
     if (showDatePicker) {
