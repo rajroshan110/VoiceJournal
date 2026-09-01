@@ -514,7 +514,10 @@ class NoteDetailViewModel @Inject constructor(
                     }
 
                     val doc = RichTextHtmlSerializer.fromHtml(e.userText)
-                    richTextState.setDocument(doc)
+                    // Keep the current caret when refreshing the document. On the first
+                    // screen load this is TextRange.Zero, so BasicTextField does not
+                    // bring the document's end into view before the user's first tap.
+                    richTextState.setDocument(doc, richTextState.selection)
 
                     pendingFileDeletions.clear()
                     pendingFileAdditions.clear()
