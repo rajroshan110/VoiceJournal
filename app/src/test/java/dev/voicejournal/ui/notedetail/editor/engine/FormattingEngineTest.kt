@@ -334,6 +334,41 @@ class FormattingEngineTest {
     }
 
     @Test
+    fun `adjustSpansOnTextChange preserves bullet sequence when Enter is pressed in the middle and start of an item`() {
+        val doc = RichTextDocument(
+            text = "Hel\nlo",
+            paragraphs = listOf(
+                ParagraphRange(ParagraphType.BulletList, 0, 3),
+                ParagraphRange(ParagraphType.BulletList, 4, 6)
+            )
+        )
+
+        // Enter at start of 2nd bullet (pos 4)
+        val atStart = FormattingEngine.adjustSpansOnTextChange(
+            oldDocument = doc,
+            newText = "Hel\n\nlo",
+            changePos = 4,
+            charsDeleted = 0,
+            charsInserted = 1,
+            activeStyles = emptySet()
+        )
+        
+        // Should have 3 bullets: "Hel" (0-3), "" (4-4), "lo" (5-7)
+        assertEquals(3, atStart.paragraphs.size)
+        assertEquals(0, atStart.paragraphs[0].start)
+        assertEquals(3, atStart.paragraphs[0].end)
+        assertEquals(ParagraphType.BulletList, atStart.paragraphs[0].type)
+        
+        assertEquals(4, atStart.paragraphs[1].start)
+        assertEquals(4, atStart.paragraphs[1].end)
+        assertEquals(ParagraphType.BulletList, atStart.paragraphs[1].type)
+        
+        assertEquals(5, atStart.paragraphs[2].start)
+        assertEquals(7, atStart.paragraphs[2].end)
+        assertEquals(ParagraphType.BulletList, atStart.paragraphs[2].type)
+    }
+
+    @Test
     fun `adjustSpansOnTextChange exits bullet list on empty item`() {
         val doc = RichTextDocument(
             text = "Item 1\n",

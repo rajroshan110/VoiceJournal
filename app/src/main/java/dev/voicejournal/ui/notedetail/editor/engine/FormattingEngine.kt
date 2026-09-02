@@ -273,11 +273,9 @@ object FormattingEngine {
                     is ParagraphType.BulletList -> {
                         if (isLineBlank || (para.start == changePos && para.end == changePos)) {
                             // Exit list on empty bullet item -> line becomes normal paragraph
-                        } else if (changePos == para.start) {
-                            adjustedParagraphs.add(ParagraphRange(ParagraphType.BulletList, changePos + 1, para.end + 1))
                         } else {
                             // Continue bullet list
-                            if (para.start < changePos) {
+                            if (para.start <= changePos) {
                                 adjustedParagraphs.add(ParagraphRange(ParagraphType.BulletList, para.start, changePos))
                             }
                             adjustedParagraphs.add(ParagraphRange(ParagraphType.BulletList, changePos + 1, para.end + delta))
@@ -286,11 +284,9 @@ object FormattingEngine {
                     is ParagraphType.NumberedList -> {
                         if (isLineBlank || (para.start == changePos && para.end == changePos)) {
                             // Exit list on empty numbered item -> line becomes normal paragraph
-                        } else if (changePos == para.start) {
-                            adjustedParagraphs.add(ParagraphRange(ParagraphType.NumberedList(), changePos + 1, para.end + 1))
                         } else {
                             // Continue numbered list
-                            if (para.start < changePos) {
+                            if (para.start <= changePos) {
                                 adjustedParagraphs.add(ParagraphRange(ParagraphType.NumberedList(), para.start, changePos))
                             }
                             adjustedParagraphs.add(ParagraphRange(ParagraphType.NumberedList(), changePos + 1, para.end + delta))
@@ -299,11 +295,9 @@ object FormattingEngine {
                     is ParagraphType.Quote -> {
                         if (isLineBlank || (para.start == changePos && para.end == changePos)) {
                             // Exit quote on empty line -> line becomes normal paragraph
-                        } else if (changePos == para.start) {
-                            adjustedParagraphs.add(ParagraphRange(ParagraphType.Quote, changePos + 1, para.end + 1))
                         } else {
                             // Continue quote
-                            if (para.start < changePos) {
+                            if (para.start <= changePos) {
                                 adjustedParagraphs.add(ParagraphRange(ParagraphType.Quote, para.start, changePos))
                             }
                             adjustedParagraphs.add(ParagraphRange(ParagraphType.Quote, changePos + 1, para.end + delta))
