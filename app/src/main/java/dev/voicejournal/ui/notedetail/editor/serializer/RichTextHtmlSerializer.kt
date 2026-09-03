@@ -1,10 +1,12 @@
 package dev.voicejournal.ui.notedetail.editor.serializer
 
+import dev.voicejournal.ui.notedetail.editor.model.AlignmentRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanRange
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
 
 object RichTextHtmlSerializer {
 
@@ -31,7 +33,7 @@ object RichTextHtmlSerializer {
 
     fun toHtml(document: RichTextDocument): String {
         if (document.text.isEmpty()) return ""
-        if (document.spans.isEmpty() && document.paragraphs.isEmpty()) {
+        if (document.spans.isEmpty() && document.paragraphs.isEmpty() && document.alignments.isEmpty()) {
             return escapeHtml(document.text)
         }
 
@@ -105,6 +107,27 @@ object RichTextHtmlSerializer {
             }
         }
 
+        for (align in document.alignments) {
+            val start = align.start.coerceIn(0, len)
+            val end = align.end.coerceIn(0, len)
+            if (start >= end) continue
+
+            when (align.alignment) {
+                TextAlignment.Start -> {
+                    events.add(TagEvent(start, false, "<p style=\"text-align:left\">", 3))
+                    events.add(TagEvent(end, true, "</p>", -2))
+                }
+                TextAlignment.Center -> {
+                    events.add(TagEvent(start, false, "<p style=\"text-align:center\">", 3))
+                    events.add(TagEvent(end, true, "</p>", -2))
+                }
+                TextAlignment.End -> {
+                    events.add(TagEvent(start, false, "<p style=\"text-align:right\">", 3))
+                    events.add(TagEvent(end, true, "</p>", -2))
+                }
+            }
+        }
+
         events.sortWith(Comparator { a, b ->
             if (a.pos != b.pos) {
                 a.pos.compareTo(b.pos)
@@ -133,19 +156,13 @@ object RichTextHtmlSerializer {
         return sb.toString()
     }
 
-    private val HTML_TAG_REGEX = Regex("""<(?:b|strong|i|em|u|s|strike|del|code|mark|a|h[1-6]|blockquote|ul|ol|li)\b""", RegexOption.IGNORE_CASE)
+    private val HTML_TAG_REGEX = Regex("""<(?:b|strong|i|em|u|s|strike|del|code|mark|a|h[1-6]|blockquote|ul|ol|li|p|div|center)\b""", RegexOption.IGNORE_CASE)
 
     fun fromHtml(html: String?): RichTextDocument {
         if (html.isNullOrEmpty()) return RichTextDocument.EMPTY
 
         if (HTML_TAG_REGEX.containsMatchIn(html)) {
             return parseHtmlTags(html)
-        }
-
-        // Check if string contains legacy Markdown tags
-        if (html.contains("**") || html.contains("~~") || html.contains("<u>") || html.contains("`") ||
-            html.contains("*") || html.contains("_") || html.startsWith("#") || html.startsWith("- ")) {
-            return parseLegacyMarkdown(html)
         }
 
         if (html.contains("&")) {
@@ -206,6 +223,7 @@ object RichTextHtmlSerializer {
     private fun parseHtmlTags(html: String): RichTextDocument {
         val spans = mutableListOf<SpanRange>()
         val paragraphs = mutableListOf<ParagraphRange>()
+        val alignments = mutableListOf<AlignmentRange>()
         val cleanText = StringBuilder()
 
         val tagStack = mutableListOf<OpenTagInfo>()
@@ -267,6 +285,19 @@ object RichTextHtmlSerializer {
                                         }
                                     }
                                 }
+
+                                val style = openTag.attributes["style"] ?: ""
+                                val alignAttr = openTag.attributes["align"] ?: ""
+                                val alignment = when {
+                                    openTag.name == "center" -> TextAlignment.Center
+                                    style.contains("text-align:center", ignoreCase = true) || style.contains("text-align: center", ignoreCase = true) || alignAttr.equals("center", ignoreCase = true) -> TextAlignment.Center
+                                    style.contains("text-align:right", ignoreCase = true) || style.contains("text-align: right", ignoreCase = true) || alignAttr.equals("right", ignoreCase = true) -> TextAlignment.End
+                                    style.contains("text-align:left", ignoreCase = true) || style.contains("text-align: left", ignoreCase = true) || alignAttr.equals("left", ignoreCase = true) -> TextAlignment.Start
+                                    else -> null
+                                }
+                                if (alignment != null) {
+                                    alignments.add(AlignmentRange(alignment, startPos, endPos))
+                                }
                             }
                         }
                     }
@@ -324,58 +355,33 @@ object RichTextHtmlSerializer {
             }
         }
 
-        return RichTextDocument(
-            text = textStr,
-            spans = spans.sortedBy { it.start },
-            paragraphs = normalizedParagraphs.sortedBy { it.start }
-        ).normalize()
-    }
-
-    private fun parseLegacyMarkdown(raw: String): RichTextDocument {
-        var text = raw
-        val spans = mutableListOf<SpanRange>()
-
-        // Helper to safely apply markdown regex replacements without invalidating sequence indices
-        fun processRegex(pattern: Regex, createSpanType: (MatchResult) -> SpanType) {
-            val matches = pattern.findAll(text).toList()
-            // Process from right to left so earlier match ranges remain valid
-            for (m in matches.reversed()) {
-                val content = m.groupValues[1]
-                val matchStart = m.range.first
-                val matchEnd = m.range.last + 1
-                val delta = (matchEnd - matchStart) - content.length
-
-                // Shift any spans that start at or after this match position
-                for (idx in spans.indices) {
-                    val s = spans[idx]
-                    if (s.start >= matchEnd) {
-                        spans[idx] = s.copy(start = s.start - delta, end = s.end - delta)
+        val normalizedAlignments = mutableListOf<AlignmentRange>()
+        for (align in alignments) {
+            val aStart = align.start.coerceIn(0, textStr.length)
+            val aEnd = align.end.coerceIn(0, textStr.length)
+            if (aStart >= aEnd) continue
+            val alignSubstring = textStr.substring(aStart, aEnd)
+            if (alignSubstring.contains('\n')) {
+                var lineStart = aStart
+                while (lineStart < aEnd) {
+                    val nextNewline = textStr.indexOf('\n', lineStart)
+                    val lineEnd = if (nextNewline == -1 || nextNewline > aEnd) aEnd else nextNewline
+                    if (lineStart < lineEnd) {
+                        normalizedAlignments.add(AlignmentRange(align.alignment, lineStart, lineEnd))
                     }
+                    if (nextNewline == -1 || nextNewline >= aEnd) break
+                    lineStart = nextNewline + 1
                 }
-
-                text = text.replaceRange(m.range, content)
-                spans.add(SpanRange(createSpanType(m), matchStart, matchStart + content.length))
+            } else {
+                normalizedAlignments.add(align)
             }
         }
 
-        // Convert legacy **bold**
-        processRegex(Regex("\\*\\*(.+?)\\*\\*")) { SpanType.Bold }
-
-        // Convert legacy ~~strikethrough~~
-        processRegex(Regex("~~(.+?)~~")) { SpanType.Strikethrough }
-
-        // Convert legacy <u>underline</u>
-        processRegex(Regex("<u>(.+?)</u>", RegexOption.IGNORE_CASE)) { SpanType.Underline }
-
-        // Convert legacy `code`
-        processRegex(Regex("`(.+?)`")) { SpanType.Code }
-
-        // Convert legacy *italic* (not followed or preceded by *)
-        processRegex(Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")) { SpanType.Italic }
-
         return RichTextDocument(
-            text = text,
-            spans = spans.sortedBy { it.start }
+            text = textStr,
+            spans = spans.sortedBy { it.start },
+            paragraphs = normalizedParagraphs.sortedBy { it.start },
+            alignments = normalizedAlignments.sortedBy { it.start }
         ).normalize()
     }
 }

@@ -97,16 +97,6 @@ fun GeneralSettingsScreen(
             modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "time_format")
         )
 
-        // Markdown Editor Toggle
-        SettingToggleRow(
-            title = "Markdown editor",
-            subtitle = "Use rich text formatting when writing journals",
-            icon = Icons.Default.Edit,
-            checked = uiState.isMarkdownEnabled,
-            onCheckedChange = { viewModel.setMarkdownEnabled(it) },
-            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "is_markdown_enabled")
-        )
-
         // Start of the Week
         val startOfWeekSubtitle = when (uiState.startOfWeek) {
             StartOfWeek.SYSTEM_DEFAULT -> "System Default"
@@ -141,6 +131,16 @@ fun GeneralSettingsScreen(
                 }
             },
             modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "insight_date_range")
+        )
+
+        // Rich Text Editor Toggle (3rd position from bottom)
+        SettingToggleRow(
+            title = "Rich text editor",
+            subtitle = "Show rich text formatting toolbar when writing notes",
+            icon = Icons.Default.Edit,
+            checked = uiState.isMarkdownEnabled,
+            onCheckedChange = { viewModel.setMarkdownEnabled(it) },
+            modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "is_markdown_enabled")
         )
 
         // Audio Recording Quality

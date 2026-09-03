@@ -155,48 +155,22 @@ class RichTextHtmlSerializerTest {
     }
 
     @Test
-    fun `parseLegacyMarkdown handles multiple bold and strikethrough segments safely without crashing`() {
-        val markdown = "This is **bold 1** and ~~strike 1~~ followed by **bold 2** and `code`."
-        val doc = RichTextHtmlSerializer.fromHtml(markdown)
+    fun `fromHtml loads plain text notes literally without converting markdown symbols into spans`() {
+        val plainTextWithSymbols = "This is **bold 1** and ~~strike 1~~ followed by **bold 2** and `code`."
+        val doc = RichTextHtmlSerializer.fromHtml(plainTextWithSymbols)
 
-        assertEquals("This is bold 1 and strike 1 followed by bold 2 and code.", doc.text)
-        assertEquals(4, doc.spans.size)
-
-        // Verify bold 1: "bold 1"
-        val b1 = doc.spans[0]
-        assertEquals(8, b1.start)
-        assertEquals(14, b1.end)
-        assertEquals(SpanType.Bold, b1.type)
-        assertEquals("bold 1", doc.text.substring(b1.start, b1.end))
-
-        // Verify strike 1: "strike 1"
-        val s1 = doc.spans[1]
-        assertEquals(19, s1.start)
-        assertEquals(27, s1.end)
-        assertEquals(SpanType.Strikethrough, s1.type)
-        assertEquals("strike 1", doc.text.substring(s1.start, s1.end))
-
-        // Verify bold 2: "bold 2"
-        val b2 = doc.spans[2]
-        assertEquals(40, b2.start)
-        assertEquals(46, b2.end)
-        assertEquals(SpanType.Bold, b2.type)
-        assertEquals("bold 2", doc.text.substring(b2.start, b2.end))
-
-        // Verify code: "code"
-        val c1 = doc.spans[3]
-        assertEquals(51, c1.start)
-        assertEquals(55, c1.end)
-        assertEquals(SpanType.Code, c1.type)
-        assertEquals("code", doc.text.substring(c1.start, c1.end))
+        assertEquals(plainTextWithSymbols, doc.text)
+        assertTrue(doc.spans.isEmpty())
     }
 
     @Test
-    fun `parseLegacyMarkdown fails safely on malformed markdown`() {
-        val malformed = "This has **unclosed bold and ~~unclosed strike"
-        val doc = RichTextHtmlSerializer.fromHtml(malformed)
-        assertEquals(malformed, doc.text)
+    fun `fromHtml safely handles asterisks, underscores, and hashes without corrupting text or spans`() {
+        val raw = "# Header and *item* and _note_ and file_name_final.txt"
+        val doc = RichTextHtmlSerializer.fromHtml(raw)
+
+        assertEquals(raw, doc.text)
         assertTrue(doc.spans.isEmpty())
+        assertTrue(doc.paragraphs.isEmpty())
     }
 
     @Test

@@ -2,6 +2,7 @@ package dev.voicejournal.ui.notedetail.editor.renderer
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -9,11 +10,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
 
 class RichTextVisualTransformation(
     private val linkColor: Color = Color(0xFF2196F3),
@@ -142,6 +145,30 @@ class RichTextVisualTransformation(
                 is ParagraphType.BulletList, is ParagraphType.NumberedList -> {
                     // Do NOT override font weight on list text so manual Bold, Italic works cleanly
                 }
+            }
+        }
+
+        // 2.5 Apply Paragraph Alignments (strictly line-by-line across paragraph boundaries)
+        if (document.alignments.isNotEmpty()) {
+            val builderText = builder.toAnnotatedString().text
+            var lineStart = 0
+            while (lineStart <= builderText.length) {
+                val nextNl = builderText.indexOf('\n', lineStart)
+                val lineEnd = if (nextNl == -1) builderText.length else nextNl
+
+                val rawPos = if (lineStart < transformedToOriginal.size) transformedToOriginal[lineStart] else raw.length
+                val align = document.alignments.firstOrNull { it.start <= rawPos && rawPos <= it.end }?.alignment
+                if (align != null) {
+                    val composeAlign = when (align) {
+                        TextAlignment.Center -> TextAlign.Center
+                        TextAlignment.End -> TextAlign.End
+                        TextAlignment.Start -> TextAlign.Start
+                    }
+                    builder.addStyle(ParagraphStyle(textAlign = composeAlign), lineStart, lineEnd)
+                }
+
+                if (nextNl == -1) break
+                lineStart = nextNl + 1
             }
         }
 

@@ -44,8 +44,8 @@ object SettingRegistry {
         ),
         SearchResultItem(
             id = "is_markdown_enabled",
-            title = "Markdown Editor",
-            subtitle = "Enable rich text markdown rendering in journal detail view",
+            title = "Rich Text Editor",
+            subtitle = "Show rich text formatting toolbar when writing notes",
             parentCategory = "General Settings > Journaling & Editor",
             targetPreferenceKey = "is_markdown_enabled",
             targetSubScreen = SettingsSubScreen.GENERAL

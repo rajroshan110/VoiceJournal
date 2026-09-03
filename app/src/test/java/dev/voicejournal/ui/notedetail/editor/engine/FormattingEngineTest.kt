@@ -1,11 +1,14 @@
 package dev.voicejournal.ui.notedetail.editor.engine
 
 import androidx.compose.ui.text.TextRange
+import dev.voicejournal.ui.notedetail.editor.model.AlignmentRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanRange
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
+import dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -390,5 +393,106 @@ class FormattingEngineTest {
         assertEquals(1, result.paragraphs.size)
         assertEquals(0, result.paragraphs[0].start)
         assertEquals(6, result.paragraphs[0].end)
+    }
+
+    @Test
+    fun `setAlignment applies Center alignment to single line`() {
+        val doc = RichTextDocument(text = "Hello World")
+        val result = FormattingEngine.setAlignment(doc, TextAlignment.Center, TextRange(3, 3))
+
+        assertEquals(1, result.alignments.size)
+        assertEquals(TextAlignment.Center, result.alignments[0].alignment)
+        assertEquals(0, result.alignments[0].start)
+        assertEquals(11, result.alignments[0].end)
+    }
+
+    @Test
+    fun `setAlignment with null resets alignment`() {
+        val doc = RichTextDocument(
+            text = "Centered Line",
+            alignments = listOf(AlignmentRange(TextAlignment.Center, 0, 13))
+        )
+        val result = FormattingEngine.setAlignment(doc, null, TextRange(5, 5))
+
+        assertTrue(result.alignments.isEmpty())
+    }
+
+    @Test
+    fun `cycleAlignment cycles Left to Center to Right to Reset`() {
+        var doc = RichTextDocument(text = "Line")
+        // 1. Initial unaligned -> cycle -> Start (Left)
+        doc = FormattingEngine.cycleAlignment(doc, TextRange(0, 0))
+        assertEquals(1, doc.alignments.size)
+        assertEquals(TextAlignment.Start, doc.alignments[0].alignment)
+
+        // 2. Start -> cycle -> Center
+        doc = FormattingEngine.cycleAlignment(doc, TextRange(0, 0))
+        assertEquals(1, doc.alignments.size)
+        assertEquals(TextAlignment.Center, doc.alignments[0].alignment)
+
+        // 3. Center -> cycle -> End (Right)
+        doc = FormattingEngine.cycleAlignment(doc, TextRange(0, 0))
+        assertEquals(1, doc.alignments.size)
+        assertEquals(TextAlignment.End, doc.alignments[0].alignment)
+
+        // 4. End -> cycle -> Reset (unaligned)
+        doc = FormattingEngine.cycleAlignment(doc, TextRange(0, 0))
+        assertTrue(doc.alignments.isEmpty())
+    }
+
+    @Test
+    fun `setAlignment preserves existing Headings and Spans orthogonally`() {
+        val doc = RichTextDocument(
+            text = "Important Heading",
+            spans = listOf(SpanRange(SpanType.Bold, 0, 9)),
+            paragraphs = listOf(ParagraphRange(ParagraphType.Heading(1), 0, 17))
+        )
+        val result = FormattingEngine.setAlignment(doc, TextAlignment.Center, TextRange(0, 0))
+
+        assertEquals(1, result.spans.size)
+        assertEquals(1, result.paragraphs.size)
+        assertEquals(1, result.alignments.size)
+        assertEquals(TextAlignment.Center, result.alignments[0].alignment)
+        assertEquals(ParagraphType.Heading(1), result.paragraphs[0].type)
+    }
+
+    @Test
+    fun `adjustSpansOnTextChange propagates alignment to new line on Enter`() {
+        val doc = RichTextDocument(
+            text = "Centered",
+            alignments = listOf(AlignmentRange(TextAlignment.Center, 0, 8))
+        )
+        val result = FormattingEngine.adjustSpansOnTextChange(
+            oldDocument = doc,
+            newText = "Centered\nNew",
+            changePos = 8,
+            charsDeleted = 0,
+            charsInserted = 1,
+            activeStyles = emptySet()
+        )
+
+        assertEquals(2, result.alignments.size)
+        assertEquals(TextAlignment.Center, result.alignments[0].alignment)
+        assertEquals(0, result.alignments[0].start)
+        assertEquals(8, result.alignments[0].end)
+        assertEquals(TextAlignment.Center, result.alignments[1].alignment)
+        assertEquals(9, result.alignments[1].start)
+    }
+
+    @Test
+    fun `RichTextHtmlSerializer roundtrip preserves text alignment`() {
+        val original = RichTextDocument(
+            text = "Centered Title\nRight Signed",
+            alignments = listOf(
+                AlignmentRange(TextAlignment.Center, 0, 14),
+                AlignmentRange(TextAlignment.End, 15, 27)
+            )
+        )
+        val html = RichTextHtmlSerializer.toHtml(original)
+        val roundtrip = RichTextHtmlSerializer.fromHtml(html)
+
+        assertEquals(2, roundtrip.alignments.size)
+        assertEquals(TextAlignment.Center, roundtrip.alignments[0].alignment)
+        assertEquals(TextAlignment.End, roundtrip.alignments[1].alignment)
     }
 }

@@ -31,41 +31,36 @@ class RichTextStateTest {
     }
 
     @Test
-    fun `live markdown shortcuts convert bold anywhere in typed line`() {
+    fun `typed markdown symbols remain literal text without auto conversion`() {
         val state = RichTextState()
 
         // User types "**bold text**"
         state.onTextFieldValueChange(TextFieldValue(text = "**bold text**", selection = TextRange(13)))
 
-        assertEquals("bold text", state.document.text)
-        assertEquals(1, state.document.spans.size)
-        assertEquals(SpanType.Bold, state.document.spans[0].type)
-        assertEquals(0, state.document.spans[0].start)
-        assertEquals(9, state.document.spans[0].end)
+        assertEquals("**bold text**", state.document.text)
+        assertTrue(state.document.spans.isEmpty())
     }
 
     @Test
-    fun `live markdown shortcuts convert hash space into Heading 1`() {
+    fun `typed hash space remains literal text without converting to Heading`() {
         val state = RichTextState()
 
-        // User types "# "
-        state.onTextFieldValueChange(TextFieldValue(text = "# ", selection = TextRange(2)))
+        // User types "# Title"
+        state.onTextFieldValueChange(TextFieldValue(text = "# Title", selection = TextRange(7)))
 
-        assertEquals("", state.document.text)
-        assertEquals(1, state.document.paragraphs.size)
-        assertEquals(ParagraphType.Heading(1), state.document.paragraphs[0].type)
+        assertEquals("# Title", state.document.text)
+        assertTrue(state.document.paragraphs.isEmpty())
     }
 
     @Test
-    fun `live markdown shortcuts convert number dot space into NumberedList`() {
+    fun `typed number dot space remains literal text without converting to NumberedList`() {
         val state = RichTextState()
 
-        // User types "2. "
-        state.onTextFieldValueChange(TextFieldValue(text = "2. ", selection = TextRange(3)))
+        // User types "2. Item"
+        state.onTextFieldValueChange(TextFieldValue(text = "2. Item", selection = TextRange(7)))
 
-        assertEquals("", state.document.text)
-        assertEquals(1, state.document.paragraphs.size)
-        assertEquals(ParagraphType.NumberedList(), state.document.paragraphs[0].type)
+        assertEquals("2. Item", state.document.text)
+        assertTrue(state.document.paragraphs.isEmpty())
     }
 
     @Test
@@ -131,18 +126,20 @@ class RichTextStateTest {
     }
 
     @Test
-    fun `auto-link rule converts typed URL followed by space into link`() {
+    fun `typed URL remains literal text and is formatted via ribbon insertLink`() {
         val state = RichTextState()
 
         // User types "Visit https://google.com "
         state.onTextFieldValueChange(TextFieldValue(text = "Visit https://google.com ", selection = TextRange(25)))
 
         assertEquals("Visit https://google.com ", state.document.text)
+        assertTrue(state.document.spans.isEmpty())
+
+        // Formatted via ribbon link dialog
+        state.onTextFieldValueChange(TextFieldValue(text = "Visit Google ", selection = TextRange(6, 12)))
+        state.insertLink("Google", "https://google.com")
         assertEquals(1, state.document.spans.size)
-        val linkSpan = state.document.spans[0]
-        assertEquals(6, linkSpan.start)
-        assertEquals(24, linkSpan.end)
-        assertEquals(SpanType.Link("https://google.com"), linkSpan.type)
+        assertEquals(SpanType.Link("https://google.com"), state.document.spans[0].type)
     }
 
     @Test

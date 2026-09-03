@@ -1,11 +1,13 @@
 package dev.voicejournal.ui.notedetail.editor.engine
 
 import androidx.compose.ui.text.TextRange
+import dev.voicejournal.ui.notedetail.editor.model.AlignmentRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphRange
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanRange
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
 
 object FormattingEngine {
 
@@ -183,6 +185,40 @@ object FormattingEngine {
         return document.copy(paragraphs = newParagraphs.sortedBy { it.start })
     }
 
+    fun setAlignment(document: RichTextDocument, alignment: TextAlignment?, selection: TextRange): RichTextDocument {
+        val lineRanges = getLineRanges(document.text, selection)
+        if (lineRanges.isEmpty()) return document
+
+        val minStart = lineRanges.minOf { it.first }
+        val maxEnd = lineRanges.maxOf { it.second }
+
+        val otherAlignments = document.alignments.filterNot {
+            it.start <= maxEnd && it.end >= minStart
+        }
+
+        val newAlignments = if (alignment == null) {
+            otherAlignments
+        } else {
+            otherAlignments + lineRanges.map { (lStart, lEnd) ->
+                AlignmentRange(alignment, lStart, lEnd)
+            }
+        }
+
+        return document.copy(alignments = newAlignments.sortedBy { it.start })
+    }
+
+    fun cycleAlignment(document: RichTextDocument, selection: TextRange): RichTextDocument {
+        val (pStart, pEnd) = getParagraphBounds(document.text, selection)
+        val current = document.alignments.firstOrNull { it.start <= pStart && it.end >= pEnd }?.alignment
+        val next = when (current) {
+            null -> TextAlignment.Start
+            TextAlignment.Start -> TextAlignment.Center
+            TextAlignment.Center -> TextAlignment.End
+            TextAlignment.End -> null
+        }
+        return setAlignment(document, next, selection)
+    }
+
     fun adjustSpansOnTextChange(
         oldDocument: RichTextDocument,
         newText: String,
@@ -345,6 +381,58 @@ object FormattingEngine {
             }
         }
 
-        return doc.copy(paragraphs = adjustedParagraphs.sortedBy { it.start })
+        val adjustedAlignments = mutableListOf<AlignmentRange>()
+        for (align in oldDocument.alignments) {
+            if (isNewline && align.start <= changePos && changePos <= align.end) {
+                // User pressed Enter inside or at boundary of an aligned paragraph
+                if (changePos == align.start) {
+                    adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, align.end + 1))
+                } else if (changePos == align.end) {
+                    adjustedAlignments.add(AlignmentRange(align.alignment, align.start, changePos))
+                    adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, changePos + 1))
+                } else {
+                    adjustedAlignments.add(AlignmentRange(align.alignment, align.start, changePos))
+                    adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, align.end + 1))
+                }
+            } else if (isNewline) {
+                if (align.end < changePos) {
+                    adjustedAlignments.add(align)
+                } else if (align.start >= changePos) {
+                    adjustedAlignments.add(align.copy(start = align.start + 1, end = align.end + 1))
+                }
+            } else {
+                if (charsDeleted > 0) {
+                    val delStart = changePos
+                    val delEnd = changePos + charsDeleted
+                    if (align.end <= delStart) {
+                        adjustedAlignments.add(align)
+                    } else if (align.start >= delEnd) {
+                        val ns = (align.start + delta).coerceIn(0, newText.length)
+                        val ne = (align.end + delta).coerceIn(0, newText.length)
+                        if (ns <= ne) adjustedAlignments.add(align.copy(start = ns, end = ne))
+                    } else {
+                        val ns = minOf(align.start, delStart).coerceIn(0, newText.length)
+                        val ne = maxOf(delStart, align.end + delta).coerceIn(0, newText.length)
+                        if (ns <= ne) adjustedAlignments.add(align.copy(start = ns, end = ne))
+                    }
+                } else {
+                    if (align.end < changePos) {
+                        adjustedAlignments.add(align)
+                    } else if (align.start > changePos) {
+                        val ns = (align.start + delta).coerceIn(0, newText.length)
+                        val ne = (align.end + delta).coerceIn(0, newText.length)
+                        if (ns <= ne) adjustedAlignments.add(align.copy(start = ns, end = ne))
+                    } else {
+                        val ne = (align.end + delta).coerceIn(0, newText.length)
+                        adjustedAlignments.add(align.copy(start = align.start, end = ne))
+                    }
+                }
+            }
+        }
+
+        return doc.copy(
+            paragraphs = adjustedParagraphs.sortedBy { it.start },
+            alignments = adjustedAlignments.sortedBy { it.start }
+        )
     }
 }

@@ -10,6 +10,7 @@ import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanRange
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
 
 class RichTextState(
     initialDocument: RichTextDocument = RichTextDocument.EMPTY,
@@ -57,6 +58,11 @@ class RichTextState(
                 it.type == paragraphType && it.start <= pStart && it.end >= pEnd
             }
         }
+    }
+
+    fun getAlignmentAtCursor(): TextAlignment? {
+        val (pStart, pEnd) = FormattingEngine.getParagraphBounds(document.text, selection)
+        return document.alignments.firstOrNull { it.start <= pStart && it.end >= pEnd }?.alignment
     }
 
     private fun commitMutation(newDocument: RichTextDocument, newSelection: TextRange, clearUndo: Boolean = false) {
@@ -155,14 +161,6 @@ class RichTextState(
             } else {
                 updatedDoc = document.copy(text = newText)
             }
-
-            // Check if user just completed a live rule (markdown shortcut or auto-link)
-            val liveRuleResult = checkAndApplyLiveMarkdownRules(updatedDoc, newValue.selection.start)
-            if (liveRuleResult != null) {
-                undoRedoManager.pushState(document, selection, MutationKind.STRUCTURAL)
-                updatedDoc = liveRuleResult.first
-                updatedSel = liveRuleResult.second
-            }
         } else {
             // Deletion
             val deleteCount = -deltaLength
@@ -183,149 +181,6 @@ class RichTextState(
 
         composition = newValue.composition
         commitMutation(updatedDoc, updatedSel)
-    }
-
-    private fun checkAndApplyLiveMarkdownRules(currentDoc: RichTextDocument, cursorPos: Int): Pair<RichTextDocument, TextRange>? {
-        val currentText = currentDoc.text
-        if (cursorPos <= 0 || cursorPos > currentText.length) return null
-
-        val currentLineStart = if (cursorPos == 0) 0 else {
-            val idx = currentText.lastIndexOf('\n', (cursorPos - 1).coerceAtLeast(0))
-            if (idx == -1) 0 else idx + 1
-        }
-        val currentLineEnd = currentText.indexOf('\n', cursorPos).let { if (it == -1) currentText.length else it }
-        val lineText = currentText.substring(currentLineStart, currentLineEnd)
-
-        // 1. Block prefix triggers at the start of a line
-        if (cursorPos > currentLineStart && currentText[cursorPos - 1] == ' ') {
-            val prefixText = currentText.substring(currentLineStart, cursorPos)
-
-            val headingLevel = when (prefixText) {
-                "# " -> 1
-                "## " -> 2
-                "### " -> 3
-                "#### " -> 4
-                "##### " -> 5
-                "###### " -> 6
-                else -> null
-            }
-            if (headingLevel != null) {
-                val updatedText = currentText.removeRange(currentLineStart, cursorPos)
-                val newEnd = currentLineEnd - prefixText.length
-                val newDoc = currentDoc.copy(
-                    text = updatedText,
-                    paragraphs = (currentDoc.paragraphs.filterNot { it.start < currentLineEnd && it.end > currentLineStart } +
-                            ParagraphRange(ParagraphType.Heading(headingLevel), currentLineStart, newEnd)).sortedBy { it.start }
-                )
-                return Pair(newDoc, TextRange(currentLineStart))
-            }
-
-            if (prefixText == "- " || prefixText == "* ") {
-                val updatedText = currentText.removeRange(currentLineStart, cursorPos)
-                val newEnd = currentLineEnd - prefixText.length
-                val newDoc = currentDoc.copy(
-                    text = updatedText,
-                    paragraphs = (currentDoc.paragraphs.filterNot { it.start < currentLineEnd && it.end > currentLineStart } +
-                            ParagraphRange(ParagraphType.BulletList, currentLineStart, newEnd)).sortedBy { it.start }
-                )
-                return Pair(newDoc, TextRange(currentLineStart))
-            }
-
-            val numMatch = Regex("""^(\d+)\.\s$""").find(prefixText)
-            if (numMatch != null) {
-                val updatedText = currentText.removeRange(currentLineStart, cursorPos)
-                val newEnd = currentLineEnd - prefixText.length
-                val newDoc = currentDoc.copy(
-                    text = updatedText,
-                    paragraphs = (currentDoc.paragraphs.filterNot { it.start < currentLineEnd && it.end > currentLineStart } +
-                            ParagraphRange(ParagraphType.NumberedList(), currentLineStart, newEnd)).sortedBy { it.start }
-                )
-                return Pair(newDoc, TextRange(currentLineStart))
-            }
-
-            if (prefixText == "> ") {
-                val updatedText = currentText.removeRange(currentLineStart, cursorPos)
-                val newEnd = currentLineEnd - prefixText.length
-                val newDoc = currentDoc.copy(
-                    text = updatedText,
-                    paragraphs = (currentDoc.paragraphs.filterNot { it.start < currentLineEnd && it.end > currentLineStart } +
-                            ParagraphRange(ParagraphType.Quote, currentLineStart, newEnd)).sortedBy { it.start }
-                )
-                return Pair(newDoc, TextRange(currentLineStart))
-            }
-        }
-
-        // 2. Inline markdown shortcuts anywhere in the current line
-        val boldMatch = Regex("""\*\*([^\*\n]+)\*\*""").find(lineText)
-        if (boldMatch != null) {
-            val content = boldMatch.groupValues[1]
-            val matchStart = currentLineStart + boldMatch.range.first
-            val matchEnd = currentLineStart + boldMatch.range.last + 1
-            val updatedText = currentText.substring(0, matchStart) + content + currentText.substring(matchEnd)
-            val newEnd = matchStart + content.length
-            val newDoc = currentDoc.copy(text = updatedText)
-            val formattedDoc = FormattingEngine.applySpan(newDoc, SpanType.Bold, matchStart, newEnd)
-            val adjustedCursor = if (cursorPos >= matchEnd) cursorPos - 4 else if (cursorPos > matchStart) matchStart + content.length else cursorPos
-            return Pair(formattedDoc, TextRange(adjustedCursor.coerceIn(0, updatedText.length)))
-        }
-
-        val strikeMatch = Regex("""~~([^~\n]+)~~""").find(lineText)
-        if (strikeMatch != null) {
-            val content = strikeMatch.groupValues[1]
-            val matchStart = currentLineStart + strikeMatch.range.first
-            val matchEnd = currentLineStart + strikeMatch.range.last + 1
-            val updatedText = currentText.substring(0, matchStart) + content + currentText.substring(matchEnd)
-            val newEnd = matchStart + content.length
-            val newDoc = currentDoc.copy(text = updatedText)
-            val formattedDoc = FormattingEngine.applySpan(newDoc, SpanType.Strikethrough, matchStart, newEnd)
-            val adjustedCursor = if (cursorPos >= matchEnd) cursorPos - 4 else if (cursorPos > matchStart) matchStart + content.length else cursorPos
-            return Pair(formattedDoc, TextRange(adjustedCursor.coerceIn(0, updatedText.length)))
-        }
-
-        val codeMatch = Regex("""`([^`\n]+)`""").find(lineText)
-        if (codeMatch != null) {
-            val content = codeMatch.groupValues[1]
-            val matchStart = currentLineStart + codeMatch.range.first
-            val matchEnd = currentLineStart + codeMatch.range.last + 1
-            val updatedText = currentText.substring(0, matchStart) + content + currentText.substring(matchEnd)
-            val newEnd = matchStart + content.length
-            val newDoc = currentDoc.copy(text = updatedText)
-            val formattedDoc = FormattingEngine.applySpan(newDoc, SpanType.Code, matchStart, newEnd)
-            val adjustedCursor = if (cursorPos >= matchEnd) cursorPos - 2 else if (cursorPos > matchStart) matchStart + content.length else cursorPos
-            return Pair(formattedDoc, TextRange(adjustedCursor.coerceIn(0, updatedText.length)))
-        }
-
-        // 3. Auto-link trigger after typing space or newline following a valid URL
-        if (cursorPos > currentLineStart && (currentText[cursorPos - 1] == ' ' || currentText[cursorPos - 1] == '\n')) {
-            val textBeforeCursor = currentText.substring(currentLineStart, cursorPos - 1)
-            val lastWord = textBeforeCursor.substringAfterLast(' ')
-            if ((lastWord.startsWith("http://") || lastWord.startsWith("https://") || lastWord.startsWith("www.")) && lastWord.length > 4) {
-                val urlStart = currentLineStart + textBeforeCursor.length - lastWord.length
-                val urlEnd = urlStart + lastWord.length
-                val normalizedUrl = if (lastWord.startsWith("www.")) "https://$lastWord" else lastWord
-
-                val isAlreadyLinked = currentDoc.spans.any { it.type is SpanType.Link && it.intersects(urlStart, urlEnd) }
-                if (!isAlreadyLinked) {
-                    val formattedDoc = FormattingEngine.applySpan(currentDoc, SpanType.Link(normalizedUrl), urlStart, urlEnd)
-                    return Pair(formattedDoc, TextRange(cursorPos))
-                }
-            }
-        }
-
-        val uMatch = Regex("""<u>([^<\n]+)</u>""", RegexOption.IGNORE_CASE).find(lineText)
-        if (uMatch != null) {
-            val content = uMatch.groupValues[1]
-            val matchStart = currentLineStart + uMatch.range.first
-            val matchEnd = currentLineStart + uMatch.range.last + 1
-            val updatedText = currentText.substring(0, matchStart) + content + currentText.substring(matchEnd)
-            val newEnd = matchStart + content.length
-            val newDoc = currentDoc.copy(text = updatedText)
-            val formattedDoc = FormattingEngine.applySpan(newDoc, SpanType.Underline, matchStart, newEnd)
-            val adjustedCursor = if (cursorPos >= matchEnd) cursorPos - 7 else if (cursorPos > matchStart) matchStart + content.length else cursorPos
-            return Pair(formattedDoc, TextRange(adjustedCursor.coerceIn(0, updatedText.length)))
-        }
-
-        return null
     }
 
     fun insertLink(displayText: String, url: String) {
@@ -406,6 +261,18 @@ class RichTextState(
     fun toggleParagraph(paragraphType: ParagraphType) {
         undoRedoManager.pushState(document, selection, forceSnapshot = true)
         val updated = FormattingEngine.toggleParagraph(document, paragraphType, selection)
+        commitMutation(updated, selection)
+    }
+
+    fun setAlignment(alignment: TextAlignment?) {
+        undoRedoManager.pushState(document, selection, forceSnapshot = true)
+        val updated = FormattingEngine.setAlignment(document, alignment, selection)
+        commitMutation(updated, selection)
+    }
+
+    fun cycleAlignment() {
+        undoRedoManager.pushState(document, selection, forceSnapshot = true)
+        val updated = FormattingEngine.cycleAlignment(document, selection)
         commitMutation(updated, selection)
     }
 

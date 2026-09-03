@@ -3,7 +3,8 @@ package dev.voicejournal.ui.notedetail.editor.model
 data class RichTextDocument(
     val text: String = "",
     val spans: List<SpanRange> = emptyList(),
-    val paragraphs: List<ParagraphRange> = emptyList()
+    val paragraphs: List<ParagraphRange> = emptyList(),
+    val alignments: List<AlignmentRange> = emptyList()
 ) {
     val length: Int get() = text.length
     val isEmpty: Boolean get() = text.isEmpty()
@@ -51,12 +52,18 @@ data class RichTextDocument(
             }
         }
 
-        // 2. Sanitize paragraphs: strictly line-aligned, 1-to-1 per line, non-overlapping
+        // 2. Sanitize paragraphs & alignments: strictly line-aligned, 1-to-1 per line, non-overlapping
         val validParas = mutableListOf<ParagraphRange>()
+        val validAlignments = mutableListOf<AlignmentRange>()
+
         if (maxLen == 0) {
             val firstPara = paragraphs.firstOrNull()
             if (firstPara != null) {
                 validParas.add(firstPara.copy(start = 0, end = 0))
+            }
+            val firstAlign = alignments.firstOrNull()
+            if (firstAlign != null) {
+                validAlignments.add(firstAlign.copy(start = 0, end = 0))
             }
         } else {
             // Compute all line bounds in text
@@ -95,11 +102,37 @@ data class RichTextDocument(
                     validParas.add(ParagraphRange(type, line.first, line.second))
                 }
             }
+
+            // Map each line to its assigned TextAlignment (non-default: Center, End)
+            val lineAlignMap = mutableMapOf<Pair<Int, Int>, TextAlignment>()
+            for (align in alignments) {
+                val s = align.start.coerceIn(0, maxLen)
+                val e = align.end.coerceIn(0, maxLen)
+                for (line in lineRanges) {
+                    val (lStart, lEnd) = line
+                    val intersects = if (s == e) {
+                        s in lStart..lEnd
+                    } else {
+                        s < lEnd && e > lStart || (s == lStart && e == lEnd) || (s <= lStart && e >= lEnd)
+                    }
+                    if (intersects) {
+                        lineAlignMap[line] = align.alignment
+                    }
+                }
+            }
+
+            for (line in lineRanges) {
+                val align = lineAlignMap[line]
+                if (align != null) {
+                    validAlignments.add(AlignmentRange(align, line.first, line.second))
+                }
+            }
         }
 
         return copy(
             spans = mergedSpans.sortedBy { it.start },
-            paragraphs = validParas.sortedBy { it.start }
+            paragraphs = validParas.sortedBy { it.start },
+            alignments = validAlignments.sortedBy { it.start }
         )
     }
 
