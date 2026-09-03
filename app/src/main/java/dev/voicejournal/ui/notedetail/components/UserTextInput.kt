@@ -1,8 +1,14 @@
 package dev.voicejournal.ui.notedetail.components
 
+import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -12,17 +18,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.renderer.RichTextVisualTransformation
-import dev.voicejournal.ui.designsystem.theme.AppTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserTextInput(
     richTextState: RichTextState,
@@ -30,7 +46,9 @@ fun UserTextInput(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
+
     val visualTransformation = remember(richTextState.document, colors.isLight) {
         RichTextVisualTransformation(
             linkColor = colors.primary,
@@ -47,19 +65,74 @@ fun UserTextInput(
         )
     }
 
+    var isTextFieldFocused by remember { mutableStateOf(false) }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val cursorBringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    val currentTextLayoutResult by rememberUpdatedState(textLayoutResult)
+    val currentSelection by rememberUpdatedState(richTextState.textFieldValue.selection)
+    val currentText by rememberUpdatedState(richTextState.textFieldValue.text)
+
+    val imeInsets = WindowInsets.ime
+    val imeBottom = imeInsets.getBottom(density)
+    val isKeyboardOpen = imeBottom > 0
+
+    suspend fun bringCursorIntoView(source: String) {
+        val layout = currentTextLayoutResult ?: return
+        val rawText = currentText
+        val selection = currentSelection
+        val rawOffset = selection.start.coerceIn(0, rawText.length)
+        val transformed = visualTransformation.filter(AnnotatedString(rawText))
+        val transformedOffset = transformed.offsetMapping.originalToTransformed(rawOffset)
+            .coerceIn(0, layout.layoutInput.text.length)
+        val rawCursorRect = layout.getCursorRect(transformedOffset)
+        Log.d(
+            "VoiceJournalDebug",
+            "UserTextInput bringCursorIntoView ($source): rawOffset=$rawOffset, transformedOffset=$transformedOffset, rect=$rawCursorRect, imeBottom=$imeBottom"
+        )
+        cursorBringIntoViewRequester.bringIntoView(rawCursorRect)
+    }
+
+    // 1. When the keyboard opens or resizes, wait for the IME animation to settle
+    // so the container reaches its final open height before bringing the cursor into view.
+    LaunchedEffect(isTextFieldFocused) {
+        if (!isTextFieldFocused) return@LaunchedEffect
+        snapshotFlow { imeInsets.getBottom(density) }
+            .distinctUntilChanged()
+            .collectLatest { bottom ->
+                if (bottom > 0) {
+                    delay(50)
+                    bringCursorIntoView("IME settled ($bottom px)")
+                }
+            }
+    }
+
+    // 2. When the selection changes, text layout is updated, or keyboard becomes open:
+    // bring the cursor into view immediately.
+    LaunchedEffect(richTextState.textFieldValue.selection, textLayoutResult, isKeyboardOpen) {
+        if (isTextFieldFocused && isKeyboardOpen) {
+            bringCursorIntoView("selection/layout/imeOpen")
+        }
+    }
+
+    // Isolate BasicTextField's internal bring-into-view so it does not evaluate
+    // scroll calculations against its own unbounded height and swallow requests.
+    val textFieldBringIntoViewSpec = remember {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float = 0f
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 180.dp)
+            .defaultMinSize(minHeight = 350.dp)
             .padding(vertical = 4.dp)
             .clipToBounds()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            }
     ) {
         if (richTextState.document.isEmpty) {
             Text(
@@ -70,11 +143,17 @@ fun UserTextInput(
                 fontFamily = FontFamily.SansSerif
             )
         }
-        CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors) {
+        CompositionLocalProvider(
+            LocalTextSelectionColors provides textSelectionColors,
+            LocalBringIntoViewSpec provides textFieldBringIntoViewSpec
+        ) {
             BasicTextField(
                 value = richTextState.textFieldValue,
                 onValueChange = { newValue ->
                     richTextState.onTextFieldValueChange(newValue)
+                },
+                onTextLayout = { layout ->
+                    textLayoutResult = layout
                 },
                 textStyle = TextStyle(
                     color = colors.textPrimary,
@@ -86,8 +165,13 @@ fun UserTextInput(
                 cursorBrush = SolidColor(colors.primary),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = 180.dp)
+                    .defaultMinSize(minHeight = 350.dp)
+                    .bringIntoViewRequester(cursorBringIntoViewRequester)
                     .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        isTextFieldFocused = focusState.isFocused
+                        Log.d("VoiceJournalDebug", "UserTextInput onFocusChanged: isFocused=${focusState.isFocused}")
+                    }
             )
         }
     }

@@ -3,6 +3,7 @@ package dev.voicejournal.ui.notedetail
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +39,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
@@ -220,6 +225,59 @@ fun NoteDetailScreen(
 
     val colors = AppTheme.colors
 
+    val density = LocalDensity.current
+    val currentImeBottom by rememberUpdatedState(WindowInsets.ime.getBottom(density))
+    val noteEditorBringIntoViewSpec = remember(density) {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float {
+                // When keyboard is closed (not active), NEVER scroll the note container!
+                // This completely prevents Bug 1: clicking the blank space / bottom margin from
+                // prematurely sucking down the note to the top/bottom before the keyboard opens.
+                val isKeyboardActive = currentImeBottom > 0
+                if (!isKeyboardActive) {
+                    Log.d("VoiceJournalDebug", "calculateScrollDistance: keyboard closed -> 0f (offset=$offset, size=$size)")
+                    return 0f
+                }
+
+                // If the item requesting to be brought into view is large (like the entire BasicTextField itself
+                // on initial focus gain), NEVER scroll the container to its bottom or top!
+                // Full containers should not jump the viewport; only targeted cursor rects should scroll.
+                if (size > containerSize * 0.5f) {
+                    Log.d("VoiceJournalDebug", "calculateScrollDistance: Ignored large child (size=$size > 0.5*container=$containerSize, offset=$offset)")
+                    return 0f
+                }
+
+                // Graceful breathing room (+1 line height above where mic/toolbar sits: 56dp mic + 8dp bottom padding + 24dp text line = 88dp):
+                val gracefulBreathingPx = with(density) { 88.dp.toPx() }
+                val targetBottom = containerSize - gracefulBreathingPx
+
+                // 1. If cursor is ALREADY visible above the target bottom and below top, DO NOT JUMP:
+                if (offset >= 0f && offset + size <= targetBottom) {
+                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor already visible (offset=$offset, size=$size, targetBottom=$targetBottom) -> 0f")
+                    return 0f
+                }
+
+                // 2. Only if the cursor is obscured below the target bottom:
+                if (offset + size > targetBottom) {
+                    val result = (offset + size) - targetBottom
+                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor obscured -> result=$result, offset=$offset, targetBottom=$targetBottom")
+                    return result
+                }
+
+                // 3. If cursor is above the visible viewport (e.g. typing or arrowing up):
+                if (offset < 0f) {
+                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor above viewport -> offset=$offset")
+                    return offset
+                }
+
+                return 0f
+            }
+        }
+    }
     val scrollState = rememberScrollState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val configuration = LocalConfiguration.current
@@ -296,29 +354,17 @@ fun NoteDetailScreen(
                 .fillMaxSize()
                 .background(colors.background)
                 .padding(paddingValues)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    focusRequester.requestFocus()
-                    keyboardController?.show()
-                }
+                .then(if (uiState.isMarkdownEnabled) Modifier else Modifier.imePadding())
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clipToBounds()
-                    .verticalScroll(scrollState)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusRequester.requestFocus()
-                        keyboardController?.show()
-                    }
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            CompositionLocalProvider(LocalBringIntoViewSpec provides noteEditorBringIntoViewSpec) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clipToBounds()
+                        .verticalScroll(scrollState)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                 // Photo Mosaic Section
             if (uiState.attachedImages.isNotEmpty()) {
                 ImageMosaic(
@@ -599,12 +645,15 @@ fun NoteDetailScreen(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
+                        val endPos = viewModel.richTextState.document.length
+                        viewModel.richTextState.updateSelection(TextRange(endPos))
                         focusRequester.requestFocus()
                         keyboardController?.show()
                     }
             )
         }
     }
+}
 }
 
     // June Interactive Date & Time Picker Dialog

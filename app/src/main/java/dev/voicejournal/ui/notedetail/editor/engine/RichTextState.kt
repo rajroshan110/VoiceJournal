@@ -116,6 +116,14 @@ class RichTextState(
         commitMutation(newDocument, newSelection, clearUndo = true)
     }
 
+    fun updateSelection(newSelection: TextRange) {
+        val maxLen = document.length
+        val s = minOf(newSelection.start, newSelection.end).coerceIn(0, maxLen)
+        val e = maxOf(newSelection.start, newSelection.end).coerceIn(0, maxLen)
+        selection = if (newSelection.reversed) TextRange(e, s) else TextRange(s, e)
+        updateActiveStylesForCursor(selection)
+    }
+
     fun onTextFieldValueChange(newValue: TextFieldValue) {
         val oldText = document.text
         val newText = newValue.text
