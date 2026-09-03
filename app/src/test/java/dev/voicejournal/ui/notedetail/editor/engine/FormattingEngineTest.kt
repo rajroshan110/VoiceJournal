@@ -495,4 +495,44 @@ class FormattingEngineTest {
         assertEquals(TextAlignment.Center, roundtrip.alignments[0].alignment)
         assertEquals(TextAlignment.End, roundtrip.alignments[1].alignment)
     }
+
+    @Test
+    fun `typing with active Code style expands span to support multi-word code snippets with spaces`() {
+        val initialDoc = RichTextDocument(
+            text = "val x",
+            spans = listOf(SpanRange(SpanType.Code, 0, 5))
+        )
+
+        // Typing space while Code style is active (e.g. typing "val x = 10")
+        val withActive = FormattingEngine.adjustSpansOnTextChange(
+            oldDocument = initialDoc,
+            newText = "val x ",
+            changePos = 5,
+            charsDeleted = 0,
+            charsInserted = 1,
+            activeStyles = setOf(SpanType.Code)
+        )
+
+        assertEquals("val x ", withActive.text)
+        assertEquals(1, withActive.spans.size)
+        // Code span expands so the space and next words stay in code format
+        assertEquals(0, withActive.spans[0].start)
+        assertEquals(6, withActive.spans[0].end)
+        assertEquals(SpanType.Code, withActive.spans[0].type)
+
+        // If toggled off via ribbon (activeStyles is empty), boundary typing does NOT expand
+        val withInactive = FormattingEngine.adjustSpansOnTextChange(
+            oldDocument = initialDoc,
+            newText = "val x ",
+            changePos = 5,
+            charsDeleted = 0,
+            charsInserted = 1,
+            activeStyles = emptySet()
+        )
+
+        assertEquals("val x ", withInactive.text)
+        assertEquals(1, withInactive.spans.size)
+        assertEquals(0, withInactive.spans[0].start)
+        assertEquals(5, withInactive.spans[0].end)
+    }
 }

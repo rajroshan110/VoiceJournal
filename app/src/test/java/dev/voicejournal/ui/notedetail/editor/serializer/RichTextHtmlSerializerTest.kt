@@ -244,4 +244,23 @@ class RichTextHtmlSerializerTest {
         assertEquals(20, boldSpan.end)
         assertEquals(SpanType.Bold, boldSpan.type)
     }
+
+    @Test
+    fun `fromHtml parses pre tags and nested pre code tags as Code spans`() {
+        val htmlWithPre = "<p>Here is <pre>val num = 42</pre> in pre</p>"
+        val doc1 = RichTextHtmlSerializer.fromHtml(htmlWithPre)
+
+        assertEquals("Here is val num = 42 in pre", doc1.text)
+        assertEquals(1, doc1.spans.size)
+        assertEquals(SpanType.Code, doc1.spans[0].type)
+        assertEquals("val num = 42", doc1.text.substring(doc1.spans[0].start, doc1.spans[0].end))
+
+        val htmlWithPreCode = "<pre><code>fun test() = Unit</code></pre>"
+        val doc2 = RichTextHtmlSerializer.fromHtml(htmlWithPreCode)
+
+        assertEquals("fun test() = Unit", doc2.text)
+        assertEquals(1, doc2.spans.size)
+        assertEquals(SpanType.Code, doc2.spans[0].type)
+        assertEquals("fun test() = Unit", doc2.text.substring(doc2.spans[0].start, doc2.spans[0].end))
+    }
 }

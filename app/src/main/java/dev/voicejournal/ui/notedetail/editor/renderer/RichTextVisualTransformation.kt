@@ -218,6 +218,8 @@ class RichTextVisualTransformation(
                 is SpanType.Code -> builder.addStyle(
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp,
+                        letterSpacing = (-0.2).sp,
                         background = codeBackground,
                         color = codeTextColor
                     ),

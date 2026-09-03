@@ -156,7 +156,7 @@ object RichTextHtmlSerializer {
         return sb.toString()
     }
 
-    private val HTML_TAG_REGEX = Regex("""<(?:b|strong|i|em|u|s|strike|del|code|mark|a|h[1-6]|blockquote|ul|ol|li|p|div|center)\b""", RegexOption.IGNORE_CASE)
+    private val HTML_TAG_REGEX = Regex("""<(?:b|strong|i|em|u|s|strike|del|code|pre|mark|a|h[1-6]|blockquote|ul|ol|li|p|div|center)\b""", RegexOption.IGNORE_CASE)
 
     fun fromHtml(html: String?): RichTextDocument {
         if (html.isNullOrEmpty()) return RichTextDocument.EMPTY
@@ -253,7 +253,7 @@ object RichTextHtmlSerializer {
                                     "i", "em" -> spans.add(SpanRange(SpanType.Italic, startPos, endPos))
                                     "u" -> spans.add(SpanRange(SpanType.Underline, startPos, endPos))
                                     "s", "strike", "del" -> spans.add(SpanRange(SpanType.Strikethrough, startPos, endPos))
-                                    "code" -> spans.add(SpanRange(SpanType.Code, startPos, endPos))
+                                    "code", "pre" -> spans.add(SpanRange(SpanType.Code, startPos, endPos))
                                     "mark" -> spans.add(SpanRange(SpanType.Highlight(), startPos, endPos))
                                     "a" -> {
                                         val url = openTag.attributes["href"] ?: ""
