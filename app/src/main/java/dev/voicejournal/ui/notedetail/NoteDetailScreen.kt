@@ -27,12 +27,14 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
+import android.content.res.Configuration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -220,6 +222,8 @@ fun NoteDetailScreen(
 
     val scrollState = rememberScrollState()
     val keyboardController = LocalSoftwareKeyboardController.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
         containerColor = colors.background,
@@ -262,7 +266,7 @@ fun NoteDetailScreen(
                     richTextState = viewModel.richTextState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .imePadding()
+                        .then(if (isLandscape) Modifier else Modifier.imePadding())
                 )
             }
         },
@@ -581,6 +585,23 @@ fun NoteDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 350.dp)
+            )
+
+            // Standardized bottom breathing space:
+            // Ensures the last lines of note text can be comfortably scrolled well above
+            // the footer/keyboard with ample room to view and edit without feeling cramped.
+            // Also forwards taps to focus so tapping the empty margin pops up the keyboard.
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    }
             )
         }
     }

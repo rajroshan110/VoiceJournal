@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.notedetail.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,13 +55,14 @@ fun EditorToolbar(
     val isBulletListActive = richTextState.isParagraphActive(ParagraphType.BulletList)
     val isNumberedListActive = richTextState.isParagraphActive(ParagraphType.NumberedList())
 
-    val isH1Active = richTextState.isParagraphActive(ParagraphType.Heading(1))
     val scrollState = rememberScrollState()
+    var showHeadingBar by rememberSaveable { mutableStateOf(false) }
 
-    val isH3Active = richTextState.isParagraphActive(ParagraphType.Heading(3))
-    val isH4Active = richTextState.isParagraphActive(ParagraphType.Heading(4))
-    val isH5Active = richTextState.isParagraphActive(ParagraphType.Heading(5))
-    val isH6Active = richTextState.isParagraphActive(ParagraphType.Heading(6))
+    // Detect active heading level (1..6) if any at the caret
+    val activeHeadingLevel = (1..6).firstOrNull { level ->
+        richTextState.isParagraphActive(ParagraphType.Heading(level))
+    }
+    val isHeadingActive = activeHeadingLevel != null
 
     Column(
         modifier = modifier
@@ -69,6 +73,95 @@ fun EditorToolbar(
             richTextState = richTextState,
             onEditLink = { showLinkDialog = true }
         )
+
+        // Expandable Paragraph & Heading Selector Bar (opens above the ribbon)
+        AnimatedVisibility(
+            visible = showHeadingBar,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Surface(
+                color = colors.surface,
+                shape = RoundedCornerShape(12.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 4.dp,
+                border = BorderStroke(1.dp, colors.textSecondary.copy(alpha = 0.15f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Normal Body Paragraph (clears active heading)
+                    ToolbarButton(
+                        isActive = !isHeadingActive,
+                        contentDescription = "Normal Body Text",
+                        modifier = Modifier
+                            .height(38.dp)
+                            .defaultMinSize(minWidth = 58.dp)
+                            .padding(horizontal = 2.dp),
+                        onClick = {
+                            if (activeHeadingLevel != null) {
+                                richTextState.toggleParagraph(ParagraphType.Heading(activeHeadingLevel))
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "¶ Body",
+                            fontSize = 13.sp,
+                            fontWeight = if (!isHeadingActive) FontWeight.Bold else FontWeight.Normal,
+                            color = colors.textPrimary
+                        )
+                    }
+
+                    VerticalDivider(
+                        modifier = Modifier
+                            .height(20.dp)
+                            .padding(horizontal = 2.dp),
+                        color = colors.textSecondary.copy(alpha = 0.25f)
+                    )
+
+                    // Headings H1 through H6
+                    for (level in 1..6) {
+                        val isLevelActive = activeHeadingLevel == level
+                        ToolbarButton(
+                            isActive = isLevelActive,
+                            contentDescription = "Heading $level",
+                            onClick = {
+                                richTextState.toggleParagraph(ParagraphType.Heading(level))
+                            }
+                        ) {
+                            Text(
+                                text = "H$level",
+                                fontSize = 13.sp,
+                                fontWeight = if (isLevelActive) FontWeight.Bold else FontWeight.Medium,
+                                color = colors.textPrimary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f, fill = false))
+
+                    IconButton(
+                        onClick = { showHeadingBar = false },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Heading Selector",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -186,20 +279,25 @@ fun EditorToolbar(
                         color = colors.textSecondary.copy(alpha = 0.25f)
                     )
 
-                    // GROUP 3: Headings H1–H6
-                    for (level in 1..6) {
-                        ToolbarButton(
-                            isActive = richTextState.isParagraphActive(ParagraphType.Heading(level)),
-                            contentDescription = "Heading $level",
-                            onClick = { richTextState.toggleParagraph(ParagraphType.Heading(level)) }
-                        ) {
-                            Text(
-                                text = "H$level",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
-                            )
-                        }
+                    // GROUP 3: Paragraph & Heading Selector
+                    // Consolidates H1–H6 into a single adaptive button that displays the active heading
+                    // and opens the heading bar above the ribbon with an upward pointer (▴).
+                    val headingButtonText = if (activeHeadingLevel != null) "H$activeHeadingLevel ▴" else "¶ ▴"
+                    ToolbarButton(
+                        isActive = isHeadingActive || showHeadingBar,
+                        contentDescription = if (activeHeadingLevel != null) "Heading $activeHeadingLevel (Tap to change)" else "Paragraph Style (Tap to change)",
+                        modifier = Modifier
+                            .height(38.dp)
+                            .defaultMinSize(minWidth = 44.dp)
+                            .padding(horizontal = 2.dp),
+                        onClick = { showHeadingBar = !showHeadingBar }
+                    ) {
+                        Text(
+                            text = headingButtonText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
                     }
                 }
 
@@ -324,6 +422,7 @@ private fun ToolbarButton(
     isActive: Boolean,
     contentDescription: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier.size(38.dp),
     content: @Composable () -> Unit
 ) {
     val colors = AppTheme.colors
@@ -331,8 +430,7 @@ private fun ToolbarButton(
     val borderStroke = if (isActive) BorderStroke(1.dp, colors.primary) else null
 
     Box(
-        modifier = Modifier
-            .size(38.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .then(if (borderStroke != null) Modifier.border(borderStroke, RoundedCornerShape(8.dp)) else Modifier)

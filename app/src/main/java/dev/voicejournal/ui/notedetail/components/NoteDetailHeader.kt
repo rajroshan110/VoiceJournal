@@ -2,9 +2,14 @@ package dev.voicejournal.ui.notedetail.components
 
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,17 +24,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.util.TimeFormatter
@@ -119,6 +130,10 @@ fun NoteDetailHeader(
     val context = LocalContext.current
     var moodMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var moreMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    val moreMenuTransitionState = remember { MutableTransitionState(false) }
+    LaunchedEffect(moreMenuExpanded) {
+        moreMenuTransitionState.targetState = moreMenuExpanded
+    }
 
     val formattedCreated = remember(createdAt, timeFormat, context) {
         if (createdAt > 0) {
@@ -192,25 +207,24 @@ fun NoteDetailHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(colors.background)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Cluster: Close (X) + Mood Selector + Add Attachment (+)
+            // Left Cluster: Close (X) + Mood Selector + Archive + Add Attachment (+)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Minimalist Close Button (Circle X)
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clickable { onClose() }
-                        .padding(4.dp)
-                        .background(colors.surfaceVariant, CircleShape),
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.surfaceVariant)
+                        .clickable { onClose() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textPrimary)
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textPrimary, modifier = Modifier.size(20.dp))
                 }
 
                 // Minimalist Emoji Selector Button (Circle Emoji)
@@ -218,18 +232,19 @@ fun NoteDetailHeader(
                     Box {
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clickable { moodMenuExpanded = true }
-                                .padding(4.dp)
-                                .background(colors.surfaceVariant, CircleShape),
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colors.surfaceVariant)
+                                .clickable { moodMenuExpanded = true },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = currentMood, fontSize = 20.sp)
+                            Text(text = currentMood, fontSize = 18.sp)
                         }
 
                         DropdownMenu(
                             expanded = moodMenuExpanded,
                             onDismissRequest = { moodMenuExpanded = false },
+                            shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.background(colors.surface)
                         ) {
                             EMOTION_EMOJIS.forEach { (emoji, label) ->
@@ -248,36 +263,40 @@ fun NoteDetailHeader(
                 // Minimalist Archive Button (Circle Archive)
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clickable { onArchiveClick() }
-                        .padding(4.dp)
-                        .background(colors.surfaceVariant, CircleShape),
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.surfaceVariant)
+                        .clickable { onArchiveClick() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = ArchiveIcon,
                         contentDescription = "Archive Note",
-                        tint = colors.textPrimary
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
                 // Minimalist Attachment Button (Circle +)
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clickable { onAddPhoto() }
-                        .padding(4.dp)
-                        .background(colors.surfaceVariant, CircleShape),
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.surfaceVariant)
+                        .clickable { onAddPhoto() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Item", tint = colors.textPrimary)
+                    Icon(Icons.Default.Add, contentDescription = "Add Item", tint = colors.textPrimary, modifier = Modifier.size(21.dp))
                 }
             }
+
+            // Flexible separator pinning Left Cluster to start and Right Cluster to end
+            Spacer(modifier = Modifier.weight(1f))
 
             // Right Cluster: Save + Options (⋮)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Save Pill Button (Pure alpha fade in / fade out)
                 AnimatedVisibility(
@@ -290,87 +309,131 @@ fun NoteDetailHeader(
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                         shape = RoundedCornerShape(17.dp),
                         modifier = Modifier.height(34.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
                     ) {
                         Text("Save", color = colors.onPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
-                // Minimalist 3-Dot Options Button (Circle ⋮)
+                // Minimalist 3-Dot Options Button (Circle ⋮) with smooth animated popup
                 Box {
+                    val density = LocalDensity.current
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clickable { moreMenuExpanded = true }
-                            .padding(4.dp)
-                            .background(colors.surfaceVariant, CircleShape),
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (moreMenuExpanded) colors.primary.copy(alpha = 0.15f) else colors.surfaceVariant)
+                            .clickable { moreMenuExpanded = !moreMenuExpanded },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More Options", tint = colors.textPrimary)
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More Options",
+                            tint = if (moreMenuExpanded) colors.primary else colors.textPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
-                    DropdownMenu(
-                        expanded = moreMenuExpanded,
-                        onDismissRequest = { moreMenuExpanded = false },
-                        modifier = Modifier
-                            .widthIn(min = 220.dp)
-                            .background(colors.surface)
-                    ) {
-                        // Created & Modified Time Info Header
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                    if (moreMenuTransitionState.currentState || moreMenuTransitionState.targetState) {
+                        Popup(
+                            alignment = Alignment.TopEnd,
+                            offset = IntOffset(x = 0, y = with(density) { 46.dp.roundToPx() }),
+                            onDismissRequest = { moreMenuExpanded = false },
+                            properties = PopupProperties(focusable = true)
                         ) {
-                            Text(
-                                text = "Created",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.textSecondary
-                            )
-                            Text(
-                                text = formattedCreated,
-                                fontSize = 13.sp,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Last Modified",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.textSecondary
-                            )
-                            Text(
-                                text = formattedUpdated,
-                                fontSize = 13.sp,
-                                color = colors.textPrimary
-                            )
-                        }
+                            Box {
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visibleState = moreMenuTransitionState,
+                                    enter = fadeIn(animationSpec = tween(180)) + scaleIn(
+                                        animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                        transformOrigin = TransformOrigin(1f, 0f),
+                                        initialScale = 0.75f
+                                    ),
+                                    exit = fadeOut(animationSpec = tween(140)) + scaleOut(
+                                        animationSpec = tween(140, easing = FastOutSlowInEasing),
+                                        transformOrigin = TransformOrigin(1f, 0f),
+                                        targetScale = 0.75f
+                                    )
+                                ) {
+                                    Surface(
+                                        color = colors.surface,
+                                    shape = RoundedCornerShape(18.dp),
+                                    shadowElevation = 12.dp,
+                                    tonalElevation = 6.dp,
+                                    border = BorderStroke(1.dp, colors.textSecondary.copy(alpha = 0.15f)),
+                                    modifier = Modifier
+                                        .widthIn(min = 220.dp, max = 260.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        // Created & Modified Time Info Header
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "Created",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colors.textSecondary
+                                            )
+                                            Text(
+                                                text = formattedCreated,
+                                                fontSize = 13.sp,
+                                                color = colors.textPrimary
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "Last Modified",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colors.textSecondary
+                                            )
+                                            Text(
+                                                text = formattedUpdated,
+                                                fontSize = 13.sp,
+                                                color = colors.textPrimary
+                                            )
+                                        }
 
-                        if (onDeleteNote != null) {
-                            HorizontalDivider(color = colors.divider)
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = "Delete Note",
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Note",
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                onClick = {
-                                    moreMenuExpanded = false
-                                    onDeleteNote()
+                                        if (onDeleteNote != null) {
+                                            HorizontalDivider(
+                                                color = colors.divider.copy(alpha = 0.5f),
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .clickable {
+                                                        moreMenuExpanded = false
+                                                        onDeleteNote()
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete Note",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text(
+                                                    text = "Delete Note",
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -379,3 +442,6 @@ fun NoteDetailHeader(
     }
 }
 }
+}
+
+
