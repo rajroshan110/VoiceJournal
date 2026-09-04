@@ -10,6 +10,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
@@ -149,16 +151,13 @@ class RichTextVisualTransformation(
         }
 
         // 2.5 Apply Paragraph Alignments
-        // Only non-default alignments (Center, End) require explicit ParagraphStyles.
-        // Default text alignment (Start/Left) is naturally applied to all unstyled text without
-        // splitting paragraphs or inserting unwanted blank lines.
-        // Contiguous lines with the same non-default alignment are merged into a single ParagraphStyle
-        // to preserve normal line spacing and prevent fragmenting lists or block quotes.
-        val nonDefaultAlignments = document.alignments.filter {
-            it.alignment == TextAlignment.Center || it.alignment == TextAlignment.End
-        }
+        // All explicit alignments in document.alignments (Start, Center, End) receive ParagraphStyles
+        // with balanced line-wrapping and automatic hyphenation to prevent awkward premature line breaks.
+        // Unaligned text (not in document.alignments) generates 0 ParagraphStyle objects,
+        // completely preserving natural Compose flow and standard list/quote spacing.
+        val activeAlignments = document.alignments
 
-        if (nonDefaultAlignments.isNotEmpty()) {
+        if (activeAlignments.isNotEmpty()) {
             val builderText = builder.toAnnotatedString().text
 
             data class LineInfo(
@@ -174,7 +173,7 @@ class RichTextVisualTransformation(
                 val lineEndWithNl = if (nextNl == -1) builderText.length else nextNl + 1
 
                 val rawPos = if (lineStart < transformedToOriginal.size) transformedToOriginal[lineStart] else raw.length
-                val align = nonDefaultAlignments.firstOrNull { it.start <= rawPos && rawPos <= it.end }?.alignment
+                val align = activeAlignments.firstOrNull { it.start <= rawPos && rawPos <= it.end }?.alignment
 
                 lines.add(LineInfo(lineStart, lineEndWithNl, align))
 
@@ -198,10 +197,18 @@ class RichTextVisualTransformation(
                     val composeAlign = when (currentAlign) {
                         TextAlignment.Center -> TextAlign.Center
                         TextAlignment.End -> TextAlign.End
-                        else -> TextAlign.Start
+                        TextAlignment.Start -> TextAlign.Start
                     }
                     if (groupStart < groupEnd) {
-                        builder.addStyle(ParagraphStyle(textAlign = composeAlign), groupStart, groupEnd)
+                        builder.addStyle(
+                            ParagraphStyle(
+                                textAlign = composeAlign,
+                                lineBreak = LineBreak.Heading,
+                                hyphens = Hyphens.Auto
+                            ),
+                            groupStart,
+                            groupEnd
+                        )
                     }
                     idx = nextIdx
                 } else {

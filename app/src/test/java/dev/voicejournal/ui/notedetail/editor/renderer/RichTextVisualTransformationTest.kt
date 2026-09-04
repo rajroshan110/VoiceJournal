@@ -6,6 +6,8 @@ import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.model.SpanRange
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import dev.voicejournal.ui.notedetail.editor.model.AlignmentRange
 import dev.voicejournal.ui.notedetail.editor.engine.FormattingEngine
@@ -293,7 +295,7 @@ class RichTextVisualTransformationTest {
     }
 
     @Test
-    fun `document with only default Start alignments produces zero paragraph styles`() {
+    fun `document with explicit Start alignments produces styled paragraph with balanced line break and hyphens`() {
         val doc = RichTextDocument(
             text = "Line 1\nLine 2",
             alignments = listOf(
@@ -303,7 +305,13 @@ class RichTextVisualTransformationTest {
         val result = RichTextVisualTransformation { doc }.filter(AnnotatedString(doc.text))
 
         assertEquals("Line 1\nLine 2", result.text.text)
-        assertEquals(0, result.text.paragraphStyles.size)
+        assertEquals(1, result.text.paragraphStyles.size)
+        val p = result.text.paragraphStyles[0]
+        assertEquals(0, p.start)
+        assertEquals(7, p.end)
+        assertEquals(TextAlign.Start, p.item.textAlign)
+        assertEquals(LineBreak.Heading, p.item.lineBreak)
+        assertEquals(Hyphens.Auto, p.item.hyphens)
     }
 
     @Test
