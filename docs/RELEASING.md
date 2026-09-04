@@ -44,6 +44,11 @@ Pushing the tag starts `.github/workflows/release.yml`. It runs unit tests,
 builds the release APK, and creates a private GitHub Release with generated
 notes and the APK attached. Tags containing `-dev` are marked as pre-releases.
 
+If a tag already exists but its workflow failed, open the GitHub Actions page,
+select **Build and publish release**, choose **Run workflow**, enter the
+existing tag, and run it again. This is useful for recovering a failed release
+without creating another version tag.
+
 GitHub generates notes from commits and pull requests since the previous
 release. Prefer clear titles such as `feat: add rich-text alignment`,
 `fix: repair audio playback state`, and `ui: improve settings spacing`.
