@@ -311,7 +311,7 @@ fun JournalDrawerContent(
                         clipboard.setPrimaryClip(
                             ClipData.newPlainText(
                                 "App Version",
-                                "VoiceJournal v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})"
+                                "VoiceJournal v${BuildConfig.VERSION_NAME}"
                             )
                         )
                         Toast.makeText(context, "Version info copied to clipboard", Toast.LENGTH_SHORT).show()
@@ -325,18 +325,6 @@ fun JournalDrawerContent(
                     color = colors.textSecondary.copy(alpha = 0.8f),
                     fontSize = 12.sp
                 )
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = colors.surfaceVariant
-                ) {
-                    Text(
-                        text = "Build ${BuildConfig.VERSION_CODE}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.textSecondary,
-                        fontSize = 10.sp,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
             }
         }
     }
