@@ -10,20 +10,12 @@ android {
     namespace = "dev.voicejournal"
     compileSdk = 35
 
-    // Release builds can provide these values from the Git tag through Gradle
-    // properties. Local Android Studio builds keep the defaults below.
-    val appVersionName = providers.gradleProperty("releaseVersion").orNull ?: "0.1.0"
-    val appVersionCode = providers.gradleProperty("releaseVersionCode")
-        .orNull
-        ?.toIntOrNull()
-        ?: 1
-
     defaultConfig {
         applicationId = "dev.voicejournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = appVersionCode
-        versionName = appVersionName
+        versionCode = 1
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

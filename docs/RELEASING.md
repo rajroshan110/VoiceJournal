@@ -5,15 +5,28 @@ in-app update check: the version shown in the drawer is build metadata only.
 
 ## What to update
 
-For a release, update nothing in the app source. The release tag supplies the
-version to the CI build:
+Manually update these two values in `app/build.gradle.kts`:
 
 ```text
-v0.2.0
+versionCode = 200
+versionName = "1.2.0"
 ```
 
-The workflow builds the APK as `versionName = 0.2.0` and `versionCode = 200`.
-The code is calculated as `major * 10000 + minor * 100 + patch`.
+The drawer already reads these values through `BuildConfig`; no app code or
+network logic is needed. The workflow checks that the pushed tag matches
+`versionName` before building.
+
+Use these tag styles:
+
+```text
+v1.0             stable release
+v1.1             stable improvement
+v1.1.1           bug fix
+v1.2.0-dev1      development/pre-release
+v1.2.0-dev2      next development/pre-release
+```
+
+Every tag must be unique. Increase `versionCode` for every APK you build.
 
 ## Release steps
 
@@ -22,14 +35,14 @@ Merge the changes you want to release into `main`, then create and push a tag:
 ```bash
 git switch main
 git pull origin main
-git tag -a v0.2.0 -m "VoiceJournal v0.2.0"
+git tag -a v1.2.0 -m "VoiceJournal v1.2.0"
 git push origin main
-git push origin v0.2.0
+git push origin v1.2.0
 ```
 
 Pushing the tag starts `.github/workflows/release.yml`. It runs unit tests,
 builds the release APK, and creates a private GitHub Release with generated
-notes and the APK attached.
+notes and the APK attached. Tags containing `-dev` are marked as pre-releases.
 
 GitHub generates notes from commits and pull requests since the previous
 release. Prefer clear titles such as `feat: add rich-text alignment`,
