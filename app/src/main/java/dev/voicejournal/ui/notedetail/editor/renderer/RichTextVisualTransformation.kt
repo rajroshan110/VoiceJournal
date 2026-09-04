@@ -148,27 +148,65 @@ class RichTextVisualTransformation(
             }
         }
 
-        // 2.5 Apply Paragraph Alignments (strictly line-by-line across paragraph boundaries)
-        if (document.alignments.isNotEmpty()) {
+        // 2.5 Apply Paragraph Alignments
+        // Only non-default alignments (Center, End) require explicit ParagraphStyles.
+        // Default text alignment (Start/Left) is naturally applied to all unstyled text without
+        // splitting paragraphs or inserting unwanted blank lines.
+        // Contiguous lines with the same non-default alignment are merged into a single ParagraphStyle
+        // to preserve normal line spacing and prevent fragmenting lists or block quotes.
+        val nonDefaultAlignments = document.alignments.filter {
+            it.alignment == TextAlignment.Center || it.alignment == TextAlignment.End
+        }
+
+        if (nonDefaultAlignments.isNotEmpty()) {
             val builderText = builder.toAnnotatedString().text
+
+            data class LineInfo(
+                val start: Int,
+                val endWithNl: Int,
+                val alignment: TextAlignment?
+            )
+
+            val lines = mutableListOf<LineInfo>()
             var lineStart = 0
             while (lineStart <= builderText.length) {
                 val nextNl = builderText.indexOf('\n', lineStart)
-                val lineEnd = if (nextNl == -1) builderText.length else nextNl
+                val lineEndWithNl = if (nextNl == -1) builderText.length else nextNl + 1
 
                 val rawPos = if (lineStart < transformedToOriginal.size) transformedToOriginal[lineStart] else raw.length
-                val align = document.alignments.firstOrNull { it.start <= rawPos && rawPos <= it.end }?.alignment
-                if (align != null) {
-                    val composeAlign = when (align) {
-                        TextAlignment.Center -> TextAlign.Center
-                        TextAlignment.End -> TextAlign.End
-                        TextAlignment.Start -> TextAlign.Start
-                    }
-                    builder.addStyle(ParagraphStyle(textAlign = composeAlign), lineStart, lineEnd)
-                }
+                val align = nonDefaultAlignments.firstOrNull { it.start <= rawPos && rawPos <= it.end }?.alignment
+
+                lines.add(LineInfo(lineStart, lineEndWithNl, align))
 
                 if (nextNl == -1) break
                 lineStart = nextNl + 1
+            }
+
+            // Merge contiguous lines with the same non-default alignment into a single ParagraphStyle
+            var idx = 0
+            while (idx < lines.size) {
+                val currentAlign = lines[idx].alignment
+                if (currentAlign != null) {
+                    val groupStart = lines[idx].start
+                    var groupEnd = lines[idx].endWithNl
+                    var nextIdx = idx + 1
+                    while (nextIdx < lines.size && lines[nextIdx].alignment == currentAlign) {
+                        groupEnd = maxOf(groupEnd, lines[nextIdx].endWithNl)
+                        nextIdx++
+                    }
+
+                    val composeAlign = when (currentAlign) {
+                        TextAlignment.Center -> TextAlign.Center
+                        TextAlignment.End -> TextAlign.End
+                        else -> TextAlign.Start
+                    }
+                    if (groupStart < groupEnd) {
+                        builder.addStyle(ParagraphStyle(textAlign = composeAlign), groupStart, groupEnd)
+                    }
+                    idx = nextIdx
+                } else {
+                    idx++
+                }
             }
         }
 
@@ -245,6 +283,7 @@ class RichTextVisualTransformation(
             }
         }
 
-        return TransformedText(builder.toAnnotatedString(), offsetMapping)
+        val transformed = builder.toAnnotatedString()
+        return TransformedText(transformed, offsetMapping)
     }
 }

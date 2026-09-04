@@ -385,11 +385,11 @@ object FormattingEngine {
         for (align in oldDocument.alignments) {
             if (isNewline && align.start <= changePos && changePos <= align.end) {
                 // User pressed Enter inside or at boundary of an aligned paragraph
-                if (changePos == align.start) {
-                    adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, align.end + 1))
-                } else if (changePos == align.end) {
+                if (changePos == align.end) {
                     adjustedAlignments.add(AlignmentRange(align.alignment, align.start, changePos))
                     adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, changePos + 1))
+                } else if (changePos == align.start) {
+                    adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, align.end + 1))
                 } else {
                     adjustedAlignments.add(AlignmentRange(align.alignment, align.start, changePos))
                     adjustedAlignments.add(AlignmentRange(align.alignment, changePos + 1, align.end + 1))
