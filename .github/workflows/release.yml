@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag && 'main' || github.ref }}
+          fetch-depth: 0
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -62,6 +63,127 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Generate release notes from every comparable commit
+        id: notes
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const currentTag = process.env.RELEASE_TAG;
+
+            function parseTag(tag) {
+              const match = tag.match(/^v(\d+)\.(\d+)(?:\.(\d+))?(?:-dev(\d+))?$/);
+              if (!match) return null;
+              return {
+                tag,
+                major: Number(match[1]),
+                minor: Number(match[2]),
+                patch: Number(match[3] || 0),
+                dev: match[4] == null ? null : Number(match[4]),
+              };
+            }
+
+            function compareBase(a, b) {
+              return (a.major - b.major) || (a.minor - b.minor) || (a.patch - b.patch);
+            }
+
+            const current = parseTag(currentTag);
+            if (!current) core.setFailed(`Unsupported release tag: ${currentTag}`);
+            else {
+              const tags = await github.paginate(github.rest.repos.listTags, {
+                owner, repo, per_page: 100,
+              });
+              const parsed = tags.map(item => parseTag(item.name)).filter(Boolean);
+
+              let candidates;
+              if (current.dev !== null) {
+                candidates = parsed.filter(item =>
+                  item.tag !== currentTag &&
+                  item.dev !== null &&
+                  compareBase(item, current) === 0 &&
+                  item.dev < current.dev
+                );
+                if (candidates.length === 0) {
+                  candidates = parsed.filter(item =>
+                    item.tag !== currentTag &&
+                    item.dev === null &&
+                    compareBase(item, current) <= 0
+                  );
+                }
+              } else {
+                candidates = parsed.filter(item =>
+                  item.tag !== currentTag &&
+                  item.dev === null &&
+                  compareBase(item, current) < 0
+                );
+              }
+
+              candidates.sort((a, b) => {
+                const baseOrder = compareBase(b, a);
+                if (baseOrder !== 0) return baseOrder;
+                return (b.dev ?? -1) - (a.dev ?? -1);
+              });
+              const previousTag = candidates[0]?.tag || null;
+
+              let commits;
+              if (previousTag) {
+                const comparison = await github.rest.repos.compareCommitsWithBasehead({
+                  owner, repo, basehead: `${previousTag}...${currentTag}`,
+                });
+                commits = comparison.data.commits;
+              } else {
+                commits = await github.paginate(github.rest.repos.listCommits, {
+                  owner, repo, sha: currentTag, per_page: 100,
+                });
+                commits = commits.reverse();
+              }
+
+              const lines = [];
+              for (const commit of commits) {
+                const message = (commit.commit?.message || '').split('\n')[0].trim();
+                if (!message) continue;
+                const login = commit.author?.login || commit.commit?.author?.name || 'unknown';
+                let pullRequest = null;
+                try {
+                  const prs = await github.paginate(
+                    github.rest.repos.listPullRequestsAssociatedWithCommit,
+                    { owner, repo, commit_sha: commit.sha, per_page: 100 }
+                  );
+                  pullRequest = prs.find(pr => pr.merged_at) || prs[0] || null;
+                } catch (error) {
+                  core.warning(`Could not find PR for ${commit.sha}: ${error.message}`);
+                }
+
+                const authorText = login.startsWith('@') ? login : `@${login}`;
+                const suffix = pullRequest
+                  ? ` by ${authorText} in [#${pullRequest.number}](${pullRequest.html_url})`
+                  : ` by ${authorText} ([${commit.sha.slice(0, 7)}](${commit.html_url}))`;
+                lines.push(`- ${message}${suffix}`);
+              }
+
+              const compareUrl = previousTag
+                ? `https://github.com/${owner}/${repo}/compare/${previousTag}...${currentTag}`
+                : `https://github.com/${owner}/${repo}/commits/${currentTag}`;
+              const heading = current.dev !== null ? '## Development changes' : '## Changes';
+              const previousText = previousTag ? ` since ${previousTag}` : '';
+              const body = [
+                heading,
+                `Every commit${previousText}:`,
+                '',
+                ...(lines.length ? lines : ['- No commits found in this comparison.']),
+                '',
+                `**[Full Changelog](${compareUrl})**`,
+                '',
+              ].join('\n');
+
+              fs.writeFileSync('release-notes.md', body);
+              core.info(`Generated ${lines.length} commit entries${previousTag ? ` from ${previousTag}` : ''}.`);
+            }
+
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
@@ -88,5 +210,5 @@ jobs:
           tag_name: ${{ inputs.tag || github.ref_name }}
           name: VoiceJournal ${{ steps.version.outputs.name }}
           prerelease: ${{ steps.version.outputs.prerelease }}
-          generate_release_notes: true
+          body_path: release-notes.md
           files: VoiceJournal-${{ steps.version.outputs.name }}.apk
