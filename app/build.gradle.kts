@@ -16,8 +16,8 @@ android {
         applicationId = "dev.voicejournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 100
-        versionName = "1.0.0"
+        versionCode = 101
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -54,6 +54,9 @@ android {
         releaseKeyAlias,
         releaseKeyPassword,
     ).all { !it.isNullOrBlank() }
+    val isReleaseTaskRequested = gradle.startParameter.taskNames.any {
+        it.contains("release", ignoreCase = true)
+    }
 
     if (hasReleaseSigning) {
         signingConfigs {
@@ -69,6 +72,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (isReleaseTaskRequested) {
+                check(hasReleaseSigning) {
+                    "Release signing is not configured. Set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD or create signing.properties."
+                }
+            }
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
