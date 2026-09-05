@@ -7,10 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.audio.AudioFileRepair
 import dev.voicejournal.audio.AudioPlayerManager
 import dev.voicejournal.audio.AudioRecorderManager
 import dev.voicejournal.audio.PlayerState
 import dev.voicejournal.audio.RecordingState
+import dev.voicejournal.data.storage.MediaStorageManager
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.domain.model.AudioFormat
 import dev.voicejournal.domain.model.AudioTrack
@@ -41,7 +43,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
 
@@ -634,9 +635,30 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun togglePlaybackForTrack(track: AudioTrack) {
-        val path = track.path
-        if (path.isEmpty() || !File(path).exists()) return
+        val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
+        val fileToPlay = if (track.path.isNotEmpty() && File(track.path).exists() && File(track.path).length() > 0L) {
+            File(track.path)
+        } else if (resolvedFile.exists() && resolvedFile.length() > 0L) {
+            resolvedFile
+        } else {
+            null
+        }
 
+        if (fileToPlay == null || !fileToPlay.exists() || fileToPlay.length() == 0L) {
+            _uiState.value = _uiState.value.copy(
+                isPlaying = false,
+                playingTrackId = null,
+                currentPositionMs = 0L,
+                errorMessage = "Audio track file unavailable"
+            )
+            return
+        }
+
+        if (fileToPlay.extension.equals("wav", ignoreCase = true)) {
+            AudioFileRepair.repairWavFile(fileToPlay)
+        }
+
+        val path = fileToPlay.absolutePath
         val currentPlayState = audioPlayerManager.playbackState.value
         val isCurrentTrackActive = _uiState.value.playingTrackId == track.id
 
@@ -661,6 +683,7 @@ class NoteDetailViewModel @Inject constructor(
 
     fun onLeaveScreen() {
         audioPlayerManager.stop()
+        clearErrorMessage()
         // Discard any uncommitted temporary draft files created during unsaved session
         pendingFileAdditions.forEach { path ->
             deletePhysicalFile(path)

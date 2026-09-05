@@ -16,6 +16,10 @@ import dev.voicejournal.ui.journal.CardPlaybackState
 import dev.voicejournal.ui.journal.PlaybackStatus
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.audio.AudioFileRepair
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
 
@@ -38,6 +42,7 @@ data class TagsUiState(
 
 @HiltViewModel
 class TagsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: JournalRepository,
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager
@@ -310,15 +315,27 @@ class TagsViewModel @Inject constructor(
     }
 
     private fun startPlaybackForTrack(entry: JournalEntry, track: AudioTrack) {
-        val path = track.path
-        if (path.isEmpty() || !File(path).exists()) {
+        val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
+        val fileToPlay = if (track.path.isNotEmpty() && File(track.path).exists() && File(track.path).length() > 0L) {
+            File(track.path)
+        } else if (resolvedFile.exists() && resolvedFile.length() > 0L) {
+            resolvedFile
+        } else {
+            null
+        }
+
+        if (fileToPlay == null || !fileToPlay.exists() || fileToPlay.length() == 0L) {
             _cardPlaybackState.value = CardPlaybackState(
                 activeEntryId = entry.id,
                 activeTrackId = track.id,
                 status = PlaybackStatus.Error,
-                errorMessage = "Audio file unavailable"
+                errorMessage = "Audio track file unavailable"
             )
             return
+        }
+
+        if (fileToPlay.extension.equals("wav", ignoreCase = true)) {
+            AudioFileRepair.repairWavFile(fileToPlay)
         }
 
         _cardPlaybackState.value = CardPlaybackState(
@@ -328,7 +345,16 @@ class TagsViewModel @Inject constructor(
             currentPositionMs = 0L
         )
 
-        audioPlayerManager.play(path, entry.title ?: "Voice Note Playback", entry.id)
+        audioPlayerManager.play(fileToPlay.absolutePath, entry.title ?: "Voice Note Playback", entry.id)
+    }
+
+    fun clearPlaybackError() {
+        if (_cardPlaybackState.value.status == PlaybackStatus.Error) {
+            _cardPlaybackState.value = _cardPlaybackState.value.copy(
+                status = PlaybackStatus.Idle,
+                errorMessage = null
+            )
+        }
     }
 
     fun seekTrackToFraction(entry: JournalEntry, track: AudioTrack, fraction: Float) {

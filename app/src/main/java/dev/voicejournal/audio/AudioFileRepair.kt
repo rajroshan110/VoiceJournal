@@ -28,36 +28,16 @@ object AudioFileRepair {
     private const val KEY_REPAIRED = "wav_headers_repaired_v1"
 
     /**
-     * Run once on app startup. Scans the audio directory for WAV files
+     * Run on app startup. Scans the audio directory for WAV files
      * with corrupt headers and rewrites the size fields based on actual file size.
      */
     fun repairIfNeeded(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_REPAIRED, false)) return
-
-        try {
-            val audioDirs = MediaStorageManager.getAllAudioDirs(context)
-            if (audioDirs.none { it.exists() }) {
-                prefs.edit().putBoolean(KEY_REPAIRED, true).apply()
-                return
-            }
-
-            audioDirs.filter { it.exists() }.forEach { dir ->
-                val wavFiles = dir.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
-                wavFiles?.forEach { file ->
-                    repairWavHeader(file)
-                }
-            }
-
-            prefs.edit().putBoolean(KEY_REPAIRED, true).apply()
-        } catch (e: Exception) {
-            // Don't crash the app on repair failure — will retry next launch
-        }
+        forceRepair(context)
     }
 
     /**
      * Unconditionally scan and repair all WAV files with corrupted headers.
-     * Can be invoked on pull-to-refresh or user-initiated repair.
+     * Can be invoked on startup, pull-to-refresh or user-initiated repair.
      */
     fun forceRepair(context: Context) {
         try {
@@ -65,7 +45,7 @@ object AudioFileRepair {
             audioDirs.filter { it.exists() }.forEach { dir ->
                 val wavFiles = dir.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
                 wavFiles?.forEach { file ->
-                    repairWavHeader(file)
+                    repairWavFile(file)
                 }
             }
         } catch (_: Exception) {
@@ -73,8 +53,8 @@ object AudioFileRepair {
         }
     }
 
-    private fun repairWavHeader(file: File) {
-        if (file.length() < 44) return // Too small to be a valid WAV
+    fun repairWavFile(file: File): Boolean {
+        if (!file.exists() || file.length() < 44) return false // Too small to be a valid WAV
 
         try {
             RandomAccessFile(file, "rw").use { raf ->
@@ -83,7 +63,7 @@ object AudioFileRepair {
                 raf.seek(0)
                 raf.readFully(magic)
                 if (String(magic) != "RIFF") {
-                    return
+                    return false
                 }
 
                 // Verify format is WAVE (bytes 8-11)
@@ -91,7 +71,7 @@ object AudioFileRepair {
                 raf.seek(8)
                 raf.readFully(format)
                 if (String(format) != "WAVE") {
-                    return
+                    return false
                 }
 
                 // Verify data subchunk marker (bytes 36-39 for standard PCM)
@@ -99,7 +79,7 @@ object AudioFileRepair {
                 raf.seek(36)
                 raf.readFully(dataMarker)
                 if (String(dataMarker) != "data") {
-                    return
+                    return false
                 }
 
                 // Read current ChunkSize (bytes 4-7)
@@ -129,10 +109,12 @@ object AudioFileRepair {
                     raf.seek(40)
                     val fixedDataSize = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(actualDataSize).array()
                     raf.write(fixedDataSize)
+                    return true
                 }
+                return true
             }
         } catch (_: Exception) {
-            // Skip this file if repair fails
+            return false
         }
     }
 }

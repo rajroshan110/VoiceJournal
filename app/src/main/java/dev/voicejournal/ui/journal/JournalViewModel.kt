@@ -23,6 +23,10 @@ import dev.voicejournal.ui.settings.BackupResultDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.audio.AudioFileRepair
+import dev.voicejournal.data.storage.MediaStorageManager
 import java.io.File
 import javax.inject.Inject
 
@@ -109,6 +113,7 @@ private data class JournalBackupState(
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val savedStateHandle: SavedStateHandle,
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
@@ -393,8 +398,16 @@ class JournalViewModel @Inject constructor(
     }
 
     private fun startPlaybackForTrack(track: AudioTrack, parentEntryId: Long) {
-        val path = track.path
-        if (path.isEmpty() || !File(path).exists()) {
+        val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
+        val fileToPlay = if (track.path.isNotEmpty() && File(track.path).exists() && File(track.path).length() > 0L) {
+            File(track.path)
+        } else if (resolvedFile.exists() && resolvedFile.length() > 0L) {
+            resolvedFile
+        } else {
+            null
+        }
+
+        if (fileToPlay == null || !fileToPlay.exists() || fileToPlay.length() == 0L) {
             _cardPlaybackState.value = CardPlaybackState(
                 activeEntryId = parentEntryId,
                 activeTrackId = track.id,
@@ -404,6 +417,10 @@ class JournalViewModel @Inject constructor(
             return
         }
 
+        if (fileToPlay.extension.equals("wav", ignoreCase = true)) {
+            AudioFileRepair.repairWavFile(fileToPlay)
+        }
+
         _cardPlaybackState.value = CardPlaybackState(
             activeEntryId = parentEntryId,
             activeTrackId = track.id,
@@ -411,7 +428,16 @@ class JournalViewModel @Inject constructor(
             currentPositionMs = 0L
         )
 
-        audioPlayerManager.play(path, "Voice Note Track", parentEntryId)
+        audioPlayerManager.play(fileToPlay.absolutePath, "Voice Note Track", parentEntryId)
+    }
+
+    fun clearPlaybackError() {
+        if (_cardPlaybackState.value.status == PlaybackStatus.Error) {
+            _cardPlaybackState.value = _cardPlaybackState.value.copy(
+                status = PlaybackStatus.Idle,
+                errorMessage = null
+            )
+        }
     }
 
     fun seekTrackToFraction(entry: JournalEntry, track: AudioTrack, fraction: Float) {

@@ -1,6 +1,5 @@
 package dev.voicejournal.ui.calendar
 
-import dev.voicejournal.audio.AudioPlayerManager
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.TimeFormat
@@ -10,8 +9,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import dev.voicejournal.audio.PlayerState
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -29,7 +26,6 @@ class CalendarViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var getAllEntriesUseCase: GetAllEntriesUseCase
     private lateinit var getAllTagsUseCase: GetAllTagsUseCase
-    private lateinit var audioPlayerManager: AudioPlayerManager
     private lateinit var userPreferencesManager: UserPreferencesManager
     private lateinit var viewModel: CalendarViewModel
 
@@ -42,9 +38,6 @@ class CalendarViewModelTest {
         getAllTagsUseCase = mockk(relaxed = true) {
             every { this@mockk.invoke() } returns flowOf(emptyList())
         }
-        audioPlayerManager = mockk(relaxed = true) {
-            every { playbackState } returns MutableStateFlow<PlayerState>(PlayerState.Idle)
-        }
         userPreferencesManager = mockk(relaxed = true) {
             every { startOfWeek } returns flowOf(StartOfWeek.SYSTEM_DEFAULT)
             every { timeFormat } returns flowOf(TimeFormat.SYSTEM_DEFAULT)
@@ -56,7 +49,6 @@ class CalendarViewModelTest {
         viewModel = CalendarViewModel(
             getAllEntriesUseCase = getAllEntriesUseCase,
             getAllTagsUseCase = getAllTagsUseCase,
-            audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,
             defaultDispatcher = testDispatcher
         )

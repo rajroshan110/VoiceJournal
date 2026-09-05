@@ -234,11 +234,46 @@ fun JournalScreen(
         }
     }
 
-    // Trigger Toast on playback error state
-    LaunchedEffect(cardPlaybackState.status) {
+    // Playback Error Dialog state
+    var audioErrorDialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(cardPlaybackState.status, cardPlaybackState.errorMessage) {
         if (cardPlaybackState.status == PlaybackStatus.Error && cardPlaybackState.errorMessage != null) {
-            Toast.makeText(context, cardPlaybackState.errorMessage, Toast.LENGTH_SHORT).show()
+            audioErrorDialogMessage = cardPlaybackState.errorMessage
+            viewModel.clearPlaybackError()
         }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearPlaybackError()
+        }
+    }
+
+    if (!audioErrorDialogMessage.isNullOrBlank()) {
+        AlertDialog(
+            onDismissRequest = { audioErrorDialogMessage = null },
+            title = {
+                Text(
+                    text = "Playback Error",
+                    color = AppTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = audioErrorDialogMessage ?: "",
+                    color = AppTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { audioErrorDialogMessage = null }) {
+                    Text("OK", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = AppTheme.colors.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 
     val configuration = LocalConfiguration.current

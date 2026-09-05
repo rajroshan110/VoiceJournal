@@ -20,8 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
-import dev.voicejournal.ui.journal.CardPlaybackState
-import dev.voicejournal.ui.journal.PlaybackStatus
 import dev.voicejournal.ui.journal.components.ShimmerSkeletonCard
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.LocalDate
@@ -140,8 +138,6 @@ fun DayEntryList(
     entries: List<JournalEntry>,
     hasActiveFilters: Boolean,
     isLoading: Boolean,
-    playbackState: CardPlaybackState,
-    onPlayPauseClick: (JournalEntry) -> Unit,
     onEntryClick: (Long) -> Unit,
     onClearFiltersClick: () -> Unit,
     timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT,

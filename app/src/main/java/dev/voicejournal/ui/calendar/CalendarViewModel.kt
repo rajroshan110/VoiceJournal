@@ -4,8 +4,6 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.voicejournal.audio.AudioPlayerManager
-import dev.voicejournal.audio.PlayerState
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.StartOfWeek
@@ -14,13 +12,10 @@ import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.domain.usecase.GetAllEntriesUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
-import dev.voicejournal.ui.journal.CardPlaybackState
 import dev.voicejournal.ui.journal.FilterState
-import dev.voicejournal.ui.journal.PlaybackStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -70,7 +65,6 @@ private data class CalendarPrefConfig(
 class CalendarViewModel internal constructor(
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
-    private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
     private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
@@ -79,85 +73,19 @@ class CalendarViewModel internal constructor(
     constructor(
         getAllEntriesUseCase: GetAllEntriesUseCase,
         getAllTagsUseCase: GetAllTagsUseCase,
-        audioPlayerManager: AudioPlayerManager,
         userPreferencesManager: UserPreferencesManager
-    ) : this(getAllEntriesUseCase, getAllTagsUseCase, audioPlayerManager, userPreferencesManager, Dispatchers.Default)
+    ) : this(getAllEntriesUseCase, getAllTagsUseCase, userPreferencesManager, Dispatchers.Default)
 
     private val _yearMonth = MutableStateFlow(YearMonth.now())
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     private val _filterState = MutableStateFlow(FilterState())
-    private val _cardPlaybackState = MutableStateFlow(CardPlaybackState())
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
-
-    val cardPlaybackState = _cardPlaybackState.asStateFlow()
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    private fun findTrackId(entryId: Long?, audioPath: String?): String? {
-        if (audioPath.isNullOrBlank()) return null
-        val targetEntry = _uiState.value.selectedDateEntries.firstOrNull { it.id == entryId }
-            ?: _uiState.value.monthEntries.firstOrNull { it.id == entryId }
-        return targetEntry?.allAudioTracks?.firstOrNull { it.path == audioPath || it.id == audioPath }?.id
-            ?: targetEntry?.allAudioTracks?.firstOrNull()?.id
-    }
-
     init {
-        // Observe player state for audio playback in Calendar tab
-        viewModelScope.launch {
-            audioPlayerManager.playbackState.collect { state ->
-                val current = _cardPlaybackState.value
-                when (state) {
-                    is PlayerState.Playing -> {
-                        val entryId = state.entryId ?: current.activeEntryId
-                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
-                        _cardPlaybackState.value = current.copy(
-                            activeEntryId = entryId,
-                            activeTrackId = trackId,
-                            status = PlaybackStatus.Playing,
-                            currentPositionMs = state.currentPosition
-                        )
-                    }
-                    is PlayerState.Paused -> {
-                        val entryId = state.entryId ?: current.activeEntryId
-                        val trackId = findTrackId(entryId, state.audioPath) ?: current.activeTrackId
-                        _cardPlaybackState.value = current.copy(
-                            activeEntryId = entryId,
-                            activeTrackId = trackId,
-                            status = PlaybackStatus.Paused,
-                            currentPositionMs = state.currentPosition
-                        )
-                    }
-                    is PlayerState.Ended -> {
-                        _cardPlaybackState.value = current.copy(
-                            activeEntryId = null,
-                            activeTrackId = null,
-                            status = PlaybackStatus.Idle,
-                            currentPositionMs = 0L
-                        )
-                    }
-                    is PlayerState.Idle -> {
-                        if (current.status != PlaybackStatus.Error) {
-                            _cardPlaybackState.value = current.copy(
-                                activeEntryId = null,
-                                activeTrackId = null,
-                                status = PlaybackStatus.Idle,
-                                currentPositionMs = 0L
-                            )
-                        }
-                    }
-                    is PlayerState.Error -> {
-                        _cardPlaybackState.value = current.copy(
-                            status = PlaybackStatus.Error,
-                            currentPositionMs = 0L
-                        )
-                        _errorMessage.value = state.message
-                    }
-                }
-            }
-        }
-
         viewModelScope.launch {
             val rawEntriesFlow = getAllEntriesUseCase().catch { e -> _errorMessage.value = e.message ?: "Failed to read database" }
             val rawTagsFlow = getAllTagsUseCase().catch { }
@@ -337,42 +265,6 @@ class CalendarViewModel internal constructor(
         selectDate(date)
     }
 
-    fun playAudio(entry: JournalEntry) {
-        val currentPlayback = _cardPlaybackState.value
-
-        if (currentPlayback.activeEntryId == entry.id) {
-            if (currentPlayback.status == PlaybackStatus.Playing) {
-                audioPlayerManager.pause()
-            } else if (currentPlayback.status == PlaybackStatus.Paused) {
-                audioPlayerManager.resume()
-            } else {
-                startPlaybackFor(entry)
-            }
-        } else {
-            audioPlayerManager.stop()
-            startPlaybackFor(entry)
-        }
-    }
-
-    private fun startPlaybackFor(entry: JournalEntry) {
-        val path = entry.audioUri
-        if (path.isNullOrEmpty() || !File(path).exists()) {
-            _cardPlaybackState.value = CardPlaybackState(
-                activeEntryId = entry.id,
-                status = PlaybackStatus.Error,
-                errorMessage = "Audio file unavailable"
-            )
-            return
-        }
-
-        _cardPlaybackState.value = CardPlaybackState(
-            activeEntryId = entry.id,
-            status = PlaybackStatus.Buffering,
-            currentPositionMs = 0L
-        )
-
-        audioPlayerManager.play(path, entry.title ?: "Voice Note Playback", entry.id)
-    }
 
     fun toggleTagFilter(tagName: String) {
         val cleanTag = tagName.removePrefix("#")
@@ -400,13 +292,5 @@ class CalendarViewModel internal constructor(
 
     fun retryLoad() {
         _errorMessage.value = null
-    }
-
-    fun stopAudioOnLeave(navigatingToEntryId: Long? = null) {
-        val activeId = _cardPlaybackState.value.activeEntryId
-        if (navigatingToEntryId == null || activeId == null || navigatingToEntryId != activeId) {
-            audioPlayerManager.stop()
-            _cardPlaybackState.value = CardPlaybackState()
-        }
     }
 }

@@ -576,6 +576,8 @@ fun NoteDetailScreen(
                             ) {
                                 UnifiedAudioPlayerBar(
                                     isPlaying = isPlayingThisTrack,
+                                    isBuffering = false,
+                                    isAudioError = isTrackActive && !uiState.errorMessage.isNullOrBlank(),
                                     currentPositionMs = if (isTrackActive) uiState.currentPositionMs else 0L,
                                     durationMs = track.durationMs,
                                     waveformAmplitudes = track.waveformAmplitudes,
@@ -797,14 +799,32 @@ fun NoteDetailScreen(
         )
     }
 
-    // Error Message Toast Observer
+    // Error Message Dialog
     val currentErrorMessage = uiState.errorMessage
-    LaunchedEffect(currentErrorMessage) {
-        if (!currentErrorMessage.isNullOrBlank()) {
-            Toast.makeText(context, currentErrorMessage, Toast.LENGTH_LONG).show()
-            kotlinx.coroutines.delay(2000L)
-            viewModel.clearErrorMessage()
-        }
+    if (!currentErrorMessage.isNullOrBlank()) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearErrorMessage() },
+            title = {
+                Text(
+                    text = "Playback Error",
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = currentErrorMessage,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearErrorMessage() }) {
+                    Text("OK", color = colors.primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 
     // Generate Transcript Confirmation Dialog

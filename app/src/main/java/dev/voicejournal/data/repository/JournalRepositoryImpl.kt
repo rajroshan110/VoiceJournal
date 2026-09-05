@@ -464,6 +464,9 @@ class JournalRepositoryImpl @Inject constructor(
                 if (entity.audioPath.isNotBlank()) {
                     val audioFile = MediaStorageManager.getAudioFile(context, entity.audioPath)
                     if (audioFile.exists() && audioFile.length() > 0) {
+                        if (audioFile.extension.equals("wav", ignoreCase = true)) {
+                            AudioFileRepair.repairWavFile(audioFile)
+                        }
                         if (entity.audioPath != audioFile.absolutePath) {
                             updatedEntity = updatedEntity.copy(audioPath = audioFile.absolutePath)
                             needsUpdate = true
@@ -488,6 +491,9 @@ class JournalRepositoryImpl @Inject constructor(
                             if (track.path.isNotBlank()) {
                                 val trackFile = MediaStorageManager.getAudioFile(context, track.path)
                                 if (trackFile.exists()) {
+                                    if (trackFile.extension.equals("wav", ignoreCase = true)) {
+                                        AudioFileRepair.repairWavFile(trackFile)
+                                    }
                                     if (track.path != trackFile.absolutePath) {
                                         modTrack = modTrack.copy(path = trackFile.absolutePath)
                                         tracksChanged = true
@@ -532,14 +538,14 @@ class JournalRepositoryImpl @Inject constructor(
                 }
             }
         } finally {
-            // 5. Force Room invalidation tracker to re-query and re-emit latest data to all active flows
-            try {
-                val db = appDatabase.openHelper.writableDatabase
-                db.execSQL("UPDATE room_table_modification_tracker SET invalidated = 1")
-            } catch (_: Exception) {}
+            // 5. Refresh Room invalidation tracker to re-query and re-emit latest data to all active flows
             try {
                 appDatabase.invalidationTracker.refreshVersionsSync()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                try {
+                    appDatabase.invalidationTracker.refreshVersionsAsync()
+                } catch (_: Exception) {}
+            }
         }
     }
 }

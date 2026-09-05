@@ -3,7 +3,6 @@ package dev.voicejournal.ui.calendar
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +23,6 @@ import dev.voicejournal.ui.journal.components.TopicFilterBottomSheet
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
-import dev.voicejournal.ui.util.findActivity
 import java.time.LocalDate
 
 @Composable
@@ -34,7 +32,6 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val isReducedMotion = remember(context) {
         dev.voicejournal.ui.designsystem.motion.NavigationMotion.isReducedMotion(context)
@@ -79,17 +76,6 @@ fun CalendarScreen(
         CalendarUtils.pageToYearMonth(pagerState.currentPage)
     }
 
-    val listState = rememberLazyListState()
-    var pendingNavEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
-
-    DisposableEffect(pendingNavEntryId) {
-        onDispose {
-            val activity = context.findActivity()
-            if (activity?.isChangingConfigurations != true) {
-                viewModel.stopAudioOnLeave(pendingNavEntryId)
-            }
-        }
-    }
 
     fun launchDatePicker() {
         val selected = uiState.selectedDate
@@ -232,10 +218,7 @@ fun CalendarScreen(
                             entries = uiState.selectedDateEntries,
                             hasActiveFilters = hasActiveFilters,
                             isLoading = uiState.isLoading,
-                            playbackState = cardPlaybackState,
-                            onPlayPauseClick = { entry -> viewModel.playAudio(entry) },
                             onEntryClick = { entryId ->
-                                pendingNavEntryId = entryId
                                 navController.navigate(Screen.NoteDetail.createRoute(entryId))
                             },
                             onClearFiltersClick = { viewModel.clearAllFilters() },
@@ -249,10 +232,7 @@ fun CalendarScreen(
                     entries = uiState.selectedDateEntries,
                     hasActiveFilters = hasActiveFilters,
                     isLoading = uiState.isLoading,
-                    playbackState = cardPlaybackState,
-                    onPlayPauseClick = { entry -> viewModel.playAudio(entry) },
                     onEntryClick = { entryId ->
-                        pendingNavEntryId = entryId
                         navController.navigate(Screen.NoteDetail.createRoute(entryId))
                     },
                     onClearFiltersClick = { viewModel.clearAllFilters() },
