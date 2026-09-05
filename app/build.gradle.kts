@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -32,9 +34,44 @@ android {
         }
     }
 
+    val signingProperties = Properties()
+    val signingPropertiesFile = rootProject.file("signing.properties")
+    if (signingPropertiesFile.exists()) {
+        signingPropertiesFile.inputStream().use(signingProperties::load)
+    }
+
+    fun signingValue(environmentName: String, propertyName: String): String? =
+        System.getenv(environmentName)?.takeIf { it.isNotBlank() }
+            ?: signingProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+
+    val releaseStoreFile = signingValue("RELEASE_STORE_FILE", "storeFile")
+    val releaseStorePassword = signingValue("RELEASE_STORE_PASSWORD", "storePassword")
+    val releaseKeyAlias = signingValue("RELEASE_KEY_ALIAS", "keyAlias")
+    val releaseKeyPassword = signingValue("RELEASE_KEY_PASSWORD", "keyPassword")
+    val hasReleaseSigning = listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

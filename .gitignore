@@ -51,6 +51,7 @@ local.properties
 *.pem
 *.key
 secrets.properties
+signing.properties
 
 # Log files
 *.log

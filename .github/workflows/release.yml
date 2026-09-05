@@ -187,22 +187,67 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
+      - name: Prepare release signing
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for variable in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing required GitHub Secret: $variable" >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/voicejournal-release.jks"
+          chmod 600 "$RUNNER_TEMP/voicejournal-release.jks"
+
+      - name: Verify release signing configuration
+        shell: bash
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/voicejournal-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:validateSigningRelease
+
       - name: Run unit tests
         run: ./gradlew test
 
       - name: Build release APK
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/voicejournal-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleRelease
+
+      - name: Verify signed release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' ! -name '*unsigned*.apk' | head -n 1)"
+          if [[ -z "$apk" ]]; then
+            echo "No signed release APK was produced" >&2
+            exit 1
+          fi
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort | tail -n 1)"
+          "$apksigner" verify --verbose "$apk"
 
       - name: Rename APK with release version
         shell: bash
         run: |
           set -euo pipefail
-          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)"
+          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' ! -name '*unsigned*.apk' | head -n 1)"
           if [[ -z "$apk" ]]; then
-            echo "No release APK was produced" >&2
+            echo "No signed release APK was produced" >&2
             exit 1
           fi
           cp "$apk" "VoiceJournal-${{ steps.version.outputs.name }}.apk"
+          sha256sum "VoiceJournal-${{ steps.version.outputs.name }}.apk" > "VoiceJournal-${{ steps.version.outputs.name }}.apk.sha256"
 
       - name: Create private GitHub Release
         uses: softprops/action-gh-release@v2
@@ -211,4 +256,6 @@ jobs:
           name: VoiceJournal ${{ steps.version.outputs.name }}
           prerelease: ${{ steps.version.outputs.prerelease }}
           body_path: release-notes.md
-          files: VoiceJournal-${{ steps.version.outputs.name }}.apk
+          files: |
+            VoiceJournal-${{ steps.version.outputs.name }}.apk
+            VoiceJournal-${{ steps.version.outputs.name }}.apk.sha256

@@ -58,7 +58,48 @@ Release from `main`, not from a feature branch. The current checkout is on
 
 ## Signing
 
-The project currently has no production signing configuration. The workflow
-can compile the release variant, but add a protected release keystore through
-GitHub Actions secrets before distributing the APK widely. Never commit the
-keystore or its passwords.
+Release APKs must be signed with one permanent release keystore. The Gradle
+configuration reads signing values from either a local ignored
+`signing.properties` file or GitHub Actions environment variables. Never commit
+the keystore or its passwords.
+
+Add these GitHub Actions secrets before publishing a release:
+
+```text
+RELEASE_KEYSTORE_BASE64
+RELEASE_STORE_PASSWORD
+RELEASE_KEY_ALIAS
+RELEASE_KEY_PASSWORD
+```
+
+Create the keystore once on a trusted machine and keep a backup in a secure
+password manager or encrypted storage:
+
+```bash
+keytool -genkeypair -v \
+  -keystore voicejournal-release.jks \
+  -alias voicejournal-release \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Use the passwords requested by `keytool` for `RELEASE_STORE_PASSWORD` and
+`RELEASE_KEY_PASSWORD`, and use `voicejournal-release` for
+`RELEASE_KEY_ALIAS`. Convert the keystore to one line for the
+`RELEASE_KEYSTORE_BASE64` secret:
+
+```bash
+base64 < voicejournal-release.jks | pbcopy
+```
+
+For local signed builds, create the ignored `signing.properties` file in the
+repository root, beside `settings.gradle.kts`:
+
+```text
+storeFile=/absolute/path/to/voicejournal-release.jks
+storePassword=your-keystore-password
+keyAlias=voicejournal-release
+keyPassword=your-key-password
+```
+
+The workflow decodes the keystore only on the temporary runner, verifies the
+APK signature, and uploads a matching `.apk.sha256` checksum file.
