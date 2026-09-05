@@ -303,6 +303,12 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    fun clearError() {
+        if (_playbackState.value is PlayerState.Error) {
+            _playbackState.value = PlayerState.Idle
+        }
+    }
+
     fun stop() {
         try {
             exoPlayer?.stop()

@@ -134,7 +134,7 @@ private fun getEventNoteIcon(tintColor: Color): ImageVector {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DayEntryList(
-    selectedDate: LocalDate,
+    selectedDate: LocalDate?,
     entries: List<JournalEntry>,
     hasActiveFilters: Boolean,
     isLoading: Boolean,
@@ -145,9 +145,13 @@ fun DayEntryList(
     headerContent: @Composable () -> Unit = {}
 ) {
     val colors = AppTheme.colors
-    val formattedDateStr = selectedDate.format(DateTimeFormatter.ofPattern("MMMM d"))
-    val headerText = "$formattedDateStr — ${entries.size} ${if (entries.size == 1) "entry" else "entries"}"
-    val isFutureDate = selectedDate.isAfter(LocalDate.now())
+    val formattedDateStr = selectedDate?.format(DateTimeFormatter.ofPattern("MMMM d")) ?: "Select Date"
+    val headerText = if (selectedDate != null) {
+        "$formattedDateStr — ${entries.size} ${if (entries.size == 1) "entry" else "entries"}"
+    } else {
+        "Select a date"
+    }
+    val isFutureDate = selectedDate?.isAfter(LocalDate.now()) == true
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -178,6 +182,31 @@ fun DayEntryList(
                 items(2) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         ShimmerSkeletonCard()
+                    }
+                }
+            }
+            selectedDate == null -> {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = getEventNoteIcon(colors.textSecondary),
+                            contentDescription = null,
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Tap any date to view recorded entries.",
+                            color = colors.textSecondary,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }

@@ -30,7 +30,7 @@ object CalendarUtils {
 
     fun buildGridDays(
         yearMonth: YearMonth,
-        selectedDate: LocalDate,
+        selectedDate: LocalDate?,
         startOfWeek: StartOfWeek,
         entriesByDate: Map<LocalDate, List<JournalEntry>>,
         today: LocalDate = LocalDate.now()
@@ -62,7 +62,7 @@ object CalendarUtils {
                 date = date,
                 isCurrentMonth = date.month == yearMonth.month && date.year == yearMonth.year,
                 isToday = date == today,
-                isSelected = date == selectedDate,
+                isSelected = selectedDate != null && date == selectedDate,
                 isFuture = date.isAfter(today),
                 entries = dayEntries,
                 categories = categories

@@ -71,7 +71,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun testSetYearMonthSyncsSelectedDateToViewedMonth() {
+    fun testSetYearMonthDoesNotAutoShiftSelectedDateAcrossMonths() {
         val now = YearMonth.now()
         val pastMonth = now.minusMonths(2)
 
@@ -79,16 +79,27 @@ class CalendarViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(pastMonth, viewModel.uiState.value.currentYearMonth)
-        val selDate = viewModel.uiState.value.selectedDate
-        assertEquals(pastMonth.year, selDate.year)
-        assertEquals(pastMonth.monthValue, selDate.monthValue)
+        // In past month with no explicit date clicked, selectedDate is null (no auto-shift)
+        org.junit.Assert.assertNull(viewModel.uiState.value.selectedDate)
 
-        // Switching back to current month restores today
+        // Switching back to current month defaults to today
         viewModel.setYearMonth(now)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(now, viewModel.uiState.value.currentYearMonth)
         assertEquals(LocalDate.now(), viewModel.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun testExplicitDateSelectionInPastMonthHighlightsSelectedDate() {
+        val pastMonth = YearMonth.now().minusMonths(2)
+        val pastDate = pastMonth.atDay(10)
+
+        viewModel.selectDate(pastDate)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(pastMonth, viewModel.uiState.value.currentYearMonth)
+        assertEquals(pastDate, viewModel.uiState.value.selectedDate)
     }
 
     @Test

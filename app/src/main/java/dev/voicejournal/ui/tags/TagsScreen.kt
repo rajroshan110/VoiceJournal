@@ -37,7 +37,6 @@ import dev.voicejournal.ui.tags.components.CategoryFolderCard
 import dev.voicejournal.ui.tags.components.TagCardGrid
 import dev.voicejournal.ui.tags.components.TagCardList
 import dev.voicejournal.ui.designsystem.theme.AppTheme
-import dev.voicejournal.ui.util.findActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +45,6 @@ fun TagsScreen(
     viewModel: TagsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -61,16 +59,6 @@ fun TagsScreen(
             viewModel.selectTag(null)
         } else if (uiState.selectedCategory != null) {
             viewModel.selectCategory(null)
-        }
-    }
-
-    val context = androidx.compose.ui.platform.LocalContext.current
-    DisposableEffect(Unit) {
-        onDispose {
-            val activity = context.findActivity()
-            if (activity?.isChangingConfigurations != true) {
-                viewModel.stopAudioOnLeave()
-            }
         }
     }
 

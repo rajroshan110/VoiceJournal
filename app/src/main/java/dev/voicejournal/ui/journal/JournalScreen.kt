@@ -235,7 +235,7 @@ fun JournalScreen(
     }
 
     // Playback Error Dialog state
-    var audioErrorDialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var audioErrorDialogMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cardPlaybackState.status, cardPlaybackState.errorMessage) {
         if (cardPlaybackState.status == PlaybackStatus.Error && cardPlaybackState.errorMessage != null) {
@@ -246,6 +246,7 @@ fun JournalScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            audioErrorDialogMessage = null
             viewModel.clearPlaybackError()
         }
     }
@@ -603,11 +604,6 @@ fun JournalScreen(
                                     cardPlaybackState.activeEntryId == entry.id && cardPlaybackState.status == PlaybackStatus.Buffering
                                 }
                             }
-                            val isAudioError by remember(entry.id) {
-                                derivedStateOf {
-                                    cardPlaybackState.activeEntryId == entry.id && cardPlaybackState.status == PlaybackStatus.Error
-                                }
-                            }
                             val currentPos by remember(entry.id) {
                                 derivedStateOf {
                                     if (cardPlaybackState.activeEntryId == entry.id) cardPlaybackState.currentPositionMs else 0L
@@ -621,7 +617,7 @@ fun JournalScreen(
                                 activeTrackId = cardPlaybackState.activeTrackId,
                                 isPlaying = isPlaying,
                                 isBuffering = isBuffering,
-                                isAudioError = isAudioError,
+                                isAudioError = false,
                                 currentPositionMs = currentPos,
                                 timeFormat = uiState.timeFormat,
                                 isMoodEnabled = uiState.isMoodEnabled,

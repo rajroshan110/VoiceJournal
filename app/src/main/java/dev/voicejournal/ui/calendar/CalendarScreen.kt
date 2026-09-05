@@ -78,7 +78,7 @@ fun CalendarScreen(
 
 
     fun launchDatePicker() {
-        val selected = uiState.selectedDate
+        val selected = uiState.selectedDate ?: LocalDate.now()
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->

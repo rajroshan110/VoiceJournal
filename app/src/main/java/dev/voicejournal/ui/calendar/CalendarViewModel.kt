@@ -37,7 +37,7 @@ data class CalendarDayItem(
 data class CalendarUiState(
     val isLoading: Boolean = false,
     val currentYearMonth: YearMonth = YearMonth.now(),
-    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate? = LocalDate.now(),
     val gridDays: List<CalendarDayItem> = emptyList(),
     val entriesByDate: Map<LocalDate, List<JournalEntry>> = emptyMap(),
     val selectedDateEntries: List<JournalEntry> = emptyList(),
@@ -77,7 +77,7 @@ class CalendarViewModel internal constructor(
     ) : this(getAllEntriesUseCase, getAllTagsUseCase, userPreferencesManager, Dispatchers.Default)
 
     private val _yearMonth = MutableStateFlow(YearMonth.now())
-    private val _selectedDate = MutableStateFlow(LocalDate.now())
+    private val _selectedDate = MutableStateFlow<LocalDate?>(null)
     private val _filterState = MutableStateFlow(FilterState())
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
@@ -174,19 +174,32 @@ class CalendarViewModel internal constructor(
                         .toLocalDate()
                 }
 
+                val todayYM = YearMonth.now()
+                val isCurrentMonth = ym == todayYM
+                val hasExplicitSelectionInMonth = selDate != null && selDate.year == ym.year && selDate.month == ym.month
+                val effectiveSelectedDate = when {
+                    hasExplicitSelectionInMonth -> selDate
+                    isCurrentMonth -> LocalDate.now()
+                    else -> null
+                }
+
                 val gridDays = CalendarUtils.buildGridDays(
                     yearMonth = ym,
-                    selectedDate = selDate,
+                    selectedDate = effectiveSelectedDate,
                     startOfWeek = startOfWeekSetting,
                     entriesByDate = entriesByLocalDate
                 )
 
-                val selectedEntries = entriesByLocalDate[selDate] ?: emptyList()
+                val selectedEntries = if (effectiveSelectedDate != null) {
+                    entriesByLocalDate[effectiveSelectedDate] ?: emptyList()
+                } else {
+                    emptyList()
+                }
 
                 CalendarUiState(
                     isLoading = false,
                     currentYearMonth = ym,
-                    selectedDate = selDate,
+                    selectedDate = effectiveSelectedDate,
                     gridDays = gridDays,
                     entriesByDate = entriesByLocalDate,
                     selectedDateEntries = selectedEntries,
@@ -227,16 +240,6 @@ class CalendarViewModel internal constructor(
         val todayYM = YearMonth.now()
         if (!yearMonth.isAfter(todayYM)) {
             _yearMonth.value = yearMonth
-            val currentSel = _selectedDate.value
-            if (currentSel.year != yearMonth.year || currentSel.monthValue != yearMonth.monthValue) {
-                val newDate = if (yearMonth == todayYM) {
-                    LocalDate.now()
-                } else {
-                    val day = currentSel.dayOfMonth.coerceAtMost(yearMonth.lengthOfMonth())
-                    yearMonth.atDay(day)
-                }
-                _selectedDate.value = newDate
-            }
         }
     }
 

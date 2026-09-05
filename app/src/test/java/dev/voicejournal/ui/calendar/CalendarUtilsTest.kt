@@ -141,4 +141,18 @@ class CalendarUtilsTest {
         assertTrue(dayWithEntry.categories.contains("Personal"))
         assertTrue(dayWithEntry.categories.contains("Mood"))
     }
+
+    @Test
+    fun testBuildGridDaysWithNullSelectedDateHasNoSelectedDays() {
+        val ym = YearMonth.of(2026, 8)
+        val days = CalendarUtils.buildGridDays(
+            yearMonth = ym,
+            selectedDate = null,
+            startOfWeek = StartOfWeek.MONDAY,
+            entriesByDate = emptyMap()
+        )
+
+        assertEquals(42, days.size)
+        assertTrue(days.none { it.isSelected })
+    }
 }

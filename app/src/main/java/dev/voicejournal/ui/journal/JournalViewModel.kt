@@ -433,10 +433,10 @@ class JournalViewModel @Inject constructor(
 
     fun clearPlaybackError() {
         if (_cardPlaybackState.value.status == PlaybackStatus.Error) {
-            _cardPlaybackState.value = _cardPlaybackState.value.copy(
-                status = PlaybackStatus.Idle,
-                errorMessage = null
-            )
+            _cardPlaybackState.value = CardPlaybackState()
+        }
+        if (audioPlayerManager.playbackState.value is PlayerState.Error) {
+            audioPlayerManager.clearError()
         }
     }
 

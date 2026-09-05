@@ -27,7 +27,7 @@ import java.util.Locale
 @Composable
 fun CalendarMonthPager(
     pagerState: PagerState,
-    selectedDate: LocalDate,
+    selectedDate: LocalDate?,
     currentYearMonth: YearMonth,
     currentGridDays: List<CalendarDayItem>,
     entriesByDate: Map<LocalDate, List<JournalEntry>>,
@@ -89,9 +89,12 @@ fun CalendarMonthPager(
                 if (pageYearMonth == currentYearMonth && currentGridDays.isNotEmpty()) {
                     currentGridDays
                 } else {
+                    val isPageCurrentMonth = pageYearMonth == YearMonth.now()
+                    val hasPageSelection = selectedDate != null && selectedDate.year == pageYearMonth.year && selectedDate.month == pageYearMonth.month
+                    val pageSelectedDate = if (hasPageSelection) selectedDate else if (isPageCurrentMonth) LocalDate.now() else null
                     CalendarUtils.buildGridDays(
                         yearMonth = pageYearMonth,
-                        selectedDate = selectedDate,
+                        selectedDate = pageSelectedDate,
                         startOfWeek = startOfWeek,
                         entriesByDate = entriesByDate
                     )

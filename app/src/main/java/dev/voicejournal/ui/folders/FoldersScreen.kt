@@ -33,14 +33,10 @@ import dev.voicejournal.ui.designsystem.components.SearchBar
 import dev.voicejournal.ui.folders.components.FolderCardGrid
 import dev.voicejournal.ui.folders.components.FolderCardList
 import dev.voicejournal.ui.components.getListViewIcon
-import dev.voicejournal.ui.journal.PlaybackStatus
-import dev.voicejournal.ui.journal.components.EntryCard
 import dev.voicejournal.ui.journal.components.LightboxDialog
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.ui.designsystem.theme.AppTheme
-import dev.voicejournal.ui.util.findActivity
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +45,6 @@ fun FoldersScreen(
     viewModel: FoldersViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
 
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -62,16 +57,6 @@ fun FoldersScreen(
             viewModel.setSearchQuery("")
         } else if (uiState.selectedFolder != null) {
             viewModel.selectFolder(null)
-        }
-    }
-
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        onDispose {
-            val activity = context.findActivity()
-            if (activity?.isChangingConfigurations != true) {
-                viewModel.stopAudioOnLeave()
-            }
         }
     }
 
