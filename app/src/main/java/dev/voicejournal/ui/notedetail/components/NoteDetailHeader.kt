@@ -161,47 +161,53 @@ fun NoteDetailHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colors.background)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Close / Clear Selection Button (Circle X)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable { onClearSelection() }
-                    .padding(4.dp)
-                    .background(colors.surfaceVariant, CircleShape),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Clear Selection", tint = colors.textPrimary)
-            }
+                // Close / Clear Selection Button (Circle X)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.surfaceVariant)
+                        .clickable { onClearSelection() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear Selection",
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
-            // Selection Count Title
-            Text(
-                text = "$selectedCount selected",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
-
-            // Delete Selected Tracks Button (Circle 🗑)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable { onDeleteSelectedTracks() }
-                    .padding(4.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Selected Tracks",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
+                // Selection Count Title
+                Text(
+                    text = "$selectedCount selected",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
                 )
+
+                // Delete Selected Tracks Button (Circle 🗑)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .clickable { onDeleteSelectedTracks() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Selected Tracks",
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-        }
-    } else {
+        } else {
         // Standard Note Detail Header Layout
         Row(
             modifier = Modifier
