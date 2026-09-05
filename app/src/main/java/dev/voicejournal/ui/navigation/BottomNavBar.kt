@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
@@ -142,7 +143,10 @@ fun BottomNavBar(
         modifier = if (isCompactLandscape) modifier.height(56.dp) else modifier
     ) {
         items.forEach { screen ->
-            val isSelected = currentRoute == screen.route
+            val isSelected = when (screen) {
+                is Screen.Journal -> currentRoute == "Journal" || currentRoute?.startsWith("Journal?") == true || currentRoute == Screen.Journal.route
+                else -> currentRoute == screen.route
+            }
             val icon: ImageVector
             val label: String
 
@@ -175,11 +179,15 @@ fun BottomNavBar(
                         if (screen is Screen.Journal) {
                             onJournalReselected?.invoke()
                         }
-                    } else if ((currentRoute == Screen.Folders.route || currentRoute == Screen.Tags.route || currentRoute == Screen.Archive.route || currentRoute == Screen.Draft.route || currentRoute == Screen.Trash.route) && screen.route == Screen.Journal.route) {
-                        navController.popBackStack(Screen.Journal.route, inclusive = false)
                     } else {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        val targetRoute = when (screen) {
+                            is Screen.Journal -> Screen.Journal.createRoute()
+                            else -> screen.route
+                        }
+                        navController.navigate(targetRoute) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
                             restoreState = true
                         }

@@ -44,6 +44,7 @@ data class CalendarUiState(
     val currentYearMonth: YearMonth = YearMonth.now(),
     val selectedDate: LocalDate = LocalDate.now(),
     val gridDays: List<CalendarDayItem> = emptyList(),
+    val entriesByDate: Map<LocalDate, List<JournalEntry>> = emptyMap(),
     val selectedDateEntries: List<JournalEntry> = emptyList(),
     val monthEntries: List<JournalEntry> = emptyList(),
     val filterState: FilterState = FilterState(),
@@ -66,12 +67,21 @@ private data class CalendarPrefConfig(
 )
 
 @HiltViewModel
-class CalendarViewModel @Inject constructor(
+class CalendarViewModel internal constructor(
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
     private val audioPlayerManager: AudioPlayerManager,
-    private val userPreferencesManager: UserPreferencesManager
+    private val userPreferencesManager: UserPreferencesManager,
+    private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        getAllEntriesUseCase: GetAllEntriesUseCase,
+        getAllTagsUseCase: GetAllTagsUseCase,
+        audioPlayerManager: AudioPlayerManager,
+        userPreferencesManager: UserPreferencesManager
+    ) : this(getAllEntriesUseCase, getAllTagsUseCase, audioPlayerManager, userPreferencesManager, Dispatchers.Default)
 
     private val _yearMonth = MutableStateFlow(YearMonth.now())
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -176,7 +186,7 @@ class CalendarViewModel @Inject constructor(
                 val allTags = allTagNames.mapIndexed { i, name -> Tag(i.toLong(), name) }
                 
                 Triple(rawEntries, allTags, extractedPeople)
-            }.distinctUntilChanged().flowOn(Dispatchers.Default)
+            }.distinctUntilChanged().flowOn(defaultDispatcher)
 
             val preferencesFlow = combine(
                 combine(
@@ -236,40 +246,12 @@ class CalendarViewModel @Inject constructor(
                         .toLocalDate()
                 }
 
-                val today = LocalDate.now()
-                val firstDayOfWeek = when (startOfWeekSetting) {
-                    StartOfWeek.SYSTEM_DEFAULT -> WeekFields.of(Locale.getDefault()).firstDayOfWeek
-                    StartOfWeek.MONDAY -> DayOfWeek.MONDAY
-                    StartOfWeek.SUNDAY -> DayOfWeek.SUNDAY
-                }
-                val firstOfMonth = ym.atDay(1)
-
-                var startLocalDate = firstOfMonth
-                while (startLocalDate.dayOfWeek != firstDayOfWeek) {
-                    startLocalDate = startLocalDate.minusDays(1)
-                }
-
-                val gridDays = (0 until 42).map { dayIndex ->
-                    val date = startLocalDate.plusDays(dayIndex.toLong())
-                    val dayEntries = entriesByLocalDate[date] ?: emptyList()
-                    val categories = dayEntries.flatMap { entry ->
-                        val list = mutableListOf<String>()
-                        if (entry.tags.isNotEmpty()) list.add("Work")
-                        if (entry.people.isNotEmpty()) list.add("Personal")
-                        if (entry.moodEmoji != null) list.add("Mood")
-                        list
-                    }.distinct()
-
-                    CalendarDayItem(
-                        date = date,
-                        isCurrentMonth = date.month == ym.month && date.year == ym.year,
-                        isToday = date == today,
-                        isSelected = date == selDate,
-                        isFuture = date.isAfter(today),
-                        entries = dayEntries,
-                        categories = categories
-                    )
-                }
+                val gridDays = CalendarUtils.buildGridDays(
+                    yearMonth = ym,
+                    selectedDate = selDate,
+                    startOfWeek = startOfWeekSetting,
+                    entriesByDate = entriesByLocalDate
+                )
 
                 val selectedEntries = entriesByLocalDate[selDate] ?: emptyList()
 
@@ -278,6 +260,7 @@ class CalendarViewModel @Inject constructor(
                     currentYearMonth = ym,
                     selectedDate = selDate,
                     gridDays = gridDays,
+                    entriesByDate = entriesByLocalDate,
                     selectedDateEntries = selectedEntries,
                     monthEntries = filteredEntries.filter { entry ->
                         val entryDate = java.time.Instant.ofEpochMilli(entry.createdAt)
@@ -295,7 +278,7 @@ class CalendarViewModel @Inject constructor(
                     isMoodEnabled = prefs.isMoodEnabled,
                     errorMessage = null
                 )
-            }.distinctUntilChanged().flowOn(Dispatchers.Default)
+            }.distinctUntilChanged().flowOn(defaultDispatcher)
 
             combine(
                 filteredDataFlow,
@@ -312,22 +295,40 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    fun nextMonth() {
-        val current = _yearMonth.value
+    fun setYearMonth(yearMonth: YearMonth) {
         val todayYM = YearMonth.now()
-        if (current.isBefore(todayYM)) {
-            _yearMonth.value = current.plusMonths(1)
+        if (!yearMonth.isAfter(todayYM)) {
+            _yearMonth.value = yearMonth
+            val currentSel = _selectedDate.value
+            if (currentSel.year != yearMonth.year || currentSel.monthValue != yearMonth.monthValue) {
+                val newDate = if (yearMonth == todayYM) {
+                    LocalDate.now()
+                } else {
+                    val day = currentSel.dayOfMonth.coerceAtMost(yearMonth.lengthOfMonth())
+                    yearMonth.atDay(day)
+                }
+                _selectedDate.value = newDate
+            }
         }
     }
 
+    fun nextMonth() {
+        setYearMonth(_yearMonth.value.plusMonths(1))
+    }
+
     fun previousMonth() {
-        _yearMonth.value = _yearMonth.value.minusMonths(1)
+        setYearMonth(_yearMonth.value.minusMonths(1))
     }
 
     fun selectDate(date: LocalDate) {
+        val todayYM = YearMonth.now()
+        val targetYM = YearMonth.of(date.year, date.month)
+        if (targetYM.isAfter(todayYM)) {
+            return
+        }
         _selectedDate.value = date
-        if (date.month != _yearMonth.value.month || date.year != _yearMonth.value.year) {
-            _yearMonth.value = YearMonth.of(date.year, date.month)
+        if (targetYM != _yearMonth.value) {
+            setYearMonth(targetYM)
         }
     }
 

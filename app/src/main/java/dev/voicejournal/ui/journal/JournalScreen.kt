@@ -227,6 +227,9 @@ fun JournalScreen(
                 if (selectionState.isSelectionMode) {
                     viewModel.clearSelection()
                 }
+                activeSheet = ActiveSheet.NONE
+                showCategorizeSheet = false
+                selectedLightboxImage = null
             }
         }
     }
@@ -247,11 +250,26 @@ fun JournalScreen(
         drawerContent = {
             JournalDrawerContent(
                 isFolderEnabled = uiState.isFolderEnabled,
-                onNavigateToArchive = { navController.navigate(Screen.Archive.route) },
-                onNavigateToDraft = { navController.navigate(Screen.Draft.route) },
-                onNavigateToFolders = { navController.navigate(Screen.Folders.route) },
-                onNavigateToTags = { navController.navigate(Screen.Tags.route) },
-                onNavigateToTrash = { navController.navigate(Screen.Trash.route) },
+                onNavigateToArchive = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(Screen.Archive.route)
+                },
+                onNavigateToDraft = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(Screen.Draft.route)
+                },
+                onNavigateToFolders = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(Screen.Folders.route)
+                },
+                onNavigateToTags = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(Screen.Tags.route)
+                },
+                onNavigateToTrash = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(Screen.Trash.route)
+                },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
         }
@@ -346,15 +364,11 @@ fun JournalScreen(
             // Render State Matrix
             when (val state = uiState.feedState) {
                 is FeedState.Loading -> {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        repeat(3) {
-                            ShimmerSkeletonCard()
-                        }
-                    }
+                            .background(AppTheme.colors.background)
+                    )
                 }
                 is FeedState.Error -> {
                     Column(

@@ -77,4 +77,26 @@ object NavigationMotion {
         targetOffsetX = { fullWidth -> (-fullWidth * 0.10f).toInt() },
         animationSpec = MotionSpecs.tweenExit()
     ) + fadeOut(animationSpec = MotionSpecs.tweenExit())
+
+    /**
+     * Check whether system reduced motion or animation disable setting is active
+     */
+    fun isReducedMotion(context: android.content.Context): Boolean {
+        return try {
+            val resolver = context.contentResolver
+            val durationScale = android.provider.Settings.Global.getFloat(
+                resolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+            val transitionScale = android.provider.Settings.Global.getFloat(
+                resolver,
+                android.provider.Settings.Global.TRANSITION_ANIMATION_SCALE,
+                1f
+            )
+            durationScale == 0f || transitionScale == 0f
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

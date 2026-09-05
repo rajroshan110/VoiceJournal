@@ -22,28 +22,35 @@ import dev.voicejournal.ui.designsystem.theme.AppTheme
 @Composable
 fun ShimmerSkeletonCard(modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerTranslate"
-    )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isReducedMotion = androidx.compose.runtime.remember(context) {
+        dev.voicejournal.ui.designsystem.motion.NavigationMotion.isReducedMotion(context)
+    }
 
-    val shimmerColors = listOf(
-        colors.surfaceVariant.copy(alpha = 0.6f),
-        colors.divider.copy(alpha = 0.8f),
-        colors.surfaceVariant.copy(alpha = 0.6f)
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(translateAnim - 200f, translateAnim - 200f),
-        end = Offset(translateAnim, translateAnim)
-    )
+    val brush = if (isReducedMotion) {
+        androidx.compose.ui.graphics.SolidColor(colors.surfaceVariant.copy(alpha = 0.6f))
+    } else {
+        val transition = rememberInfiniteTransition(label = "shimmer")
+        val translateAnim by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "shimmerTranslate"
+        )
+        val shimmerColors = listOf(
+            colors.surfaceVariant.copy(alpha = 0.6f),
+            colors.divider.copy(alpha = 0.8f),
+            colors.surfaceVariant.copy(alpha = 0.6f)
+        )
+        Brush.linearGradient(
+            colors = shimmerColors,
+            start = Offset(translateAnim - 200f, translateAnim - 200f),
+            end = Offset(translateAnim, translateAnim)
+        )
+    }
 
     Card(
         modifier = modifier

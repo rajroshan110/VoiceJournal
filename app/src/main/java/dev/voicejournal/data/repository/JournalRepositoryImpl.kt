@@ -22,6 +22,9 @@ import kotlinx.coroutines.withContext
 import androidx.room.withTransaction
 import dev.voicejournal.data.local.db.AppDatabase
 import dev.voicejournal.data.storage.MediaStorageManager
+import dev.voicejournal.audio.AudioFileRepair
+import dev.voicejournal.data.mapper.toAudioTracks
+import dev.voicejournal.data.mapper.toTracksJson
 import java.io.File
 import javax.inject.Inject
 
@@ -380,5 +383,163 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun setDailyReminder(enabled: Boolean) {
         prefs.setDailyReminder(enabled)
+    }
+
+    private fun extractAudioDuration(file: File): Long {
+        if (!file.exists() || file.length() < 44) return 0L
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            val timeStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val parsed = timeStr?.toLongOrNull() ?: 0L
+            if (parsed > 0L) {
+                parsed
+            } else if (file.extension.equals("wav", ignoreCase = true)) {
+                // Fallback for standard 16kHz 16-bit mono WAV: 32000 bytes/sec
+                val dataSize = (file.length() - 44).coerceAtLeast(0)
+                (dataSize * 1000L) / 32000L
+            } else {
+                0L
+            }
+        } catch (_: Exception) {
+            if (file.extension.equals("wav", ignoreCase = true)) {
+                val dataSize = (file.length() - 44).coerceAtLeast(0)
+                (dataSize * 1000L) / 32000L
+            } else {
+                0L
+            }
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
+        }
+    }
+
+    override suspend fun refreshAndHealData() = withContext(Dispatchers.IO) {
+        // 1. Repair WAV file headers with corrupt/zero sizes
+        AudioFileRepair.forceRepair(context)
+
+        // 2. Clean up stale transcribe cache files (> 1 hour old)
+        try {
+            val cacheDir = MediaStorageManager.getTranscribeCacheDir(context)
+            if (cacheDir.exists()) {
+                val oneHourAgo = System.currentTimeMillis() - 3600_000L
+                cacheDir.listFiles()?.forEach { file ->
+                    if (file.lastModified() < oneHourAgo) {
+                        file.delete()
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 3. Purge expired trash entries (> 7 days retention)
+        try {
+            val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000L)
+            journalEntryDao.deleteExpiredTrashEntries(sevenDaysAgo)
+        } catch (_: Exception) {}
+
+        // 4. Database & Media reconciliation
+        try {
+            // Verify SQLite integrity
+            val db = appDatabase.openHelper.writableDatabase
+            db.query("PRAGMA quick_check").use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getString(0)
+                }
+            }
+
+            // Scan all raw entries to reconcile audio paths, durations, tracks, and UUIDs
+            val allEntries = journalEntryDao.getAllRawEntriesSync()
+            for (entity in allEntries) {
+                var needsUpdate = false
+                var updatedEntity = entity
+
+                // Ensure UUID is present
+                if (updatedEntity.uuid.isBlank()) {
+                    updatedEntity = updatedEntity.copy(uuid = java.util.UUID.randomUUID().toString())
+                    needsUpdate = true
+                }
+
+                // Reconcile primary audio
+                if (entity.audioPath.isNotBlank()) {
+                    val audioFile = MediaStorageManager.getAudioFile(context, entity.audioPath)
+                    if (audioFile.exists() && audioFile.length() > 0) {
+                        if (entity.audioPath != audioFile.absolutePath) {
+                            updatedEntity = updatedEntity.copy(audioPath = audioFile.absolutePath)
+                            needsUpdate = true
+                        }
+                        if (updatedEntity.duration <= 0L) {
+                            val duration = extractAudioDuration(audioFile)
+                            if (duration > 0L) {
+                                updatedEntity = updatedEntity.copy(duration = duration)
+                                needsUpdate = true
+                            }
+                        }
+                    }
+                }
+
+                // Reconcile audio tracks
+                if (entity.audioTracksJson.isNotBlank()) {
+                    try {
+                        val tracks = entity.audioTracksJson.toAudioTracks()
+                        var tracksChanged = false
+                        val reconciledTracks = tracks.map { track ->
+                            var modTrack = track
+                            if (track.path.isNotBlank()) {
+                                val trackFile = MediaStorageManager.getAudioFile(context, track.path)
+                                if (trackFile.exists()) {
+                                    if (track.path != trackFile.absolutePath) {
+                                        modTrack = modTrack.copy(path = trackFile.absolutePath)
+                                        tracksChanged = true
+                                    }
+                                    if (modTrack.durationMs <= 0L) {
+                                        val dur = extractAudioDuration(trackFile)
+                                        if (dur > 0L) {
+                                            modTrack = modTrack.copy(durationMs = dur)
+                                            tracksChanged = true
+                                        }
+                                    }
+                                }
+                            }
+                            modTrack
+                        }
+                        if (tracksChanged) {
+                            updatedEntity = updatedEntity.copy(
+                                audioTracksJson = reconciledTracks.toTracksJson()
+                            )
+                            needsUpdate = true
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                // If primary audio is blank but tracks exist, heal primary audio path and duration
+                if (updatedEntity.audioPath.isBlank() && updatedEntity.audioTracksJson.isNotBlank()) {
+                    try {
+                        val tracks = updatedEntity.audioTracksJson.toAudioTracks()
+                        val firstValid = tracks.firstOrNull { it.path.isNotBlank() }
+                        if (firstValid != null) {
+                            updatedEntity = updatedEntity.copy(
+                                audioPath = firstValid.path,
+                                duration = if (updatedEntity.duration <= 0L) firstValid.durationMs else updatedEntity.duration
+                            )
+                            needsUpdate = true
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (needsUpdate) {
+                    journalEntryDao.updateEntry(updatedEntity)
+                }
+            }
+        } finally {
+            // 5. Force Room invalidation tracker to re-query and re-emit latest data to all active flows
+            try {
+                val db = appDatabase.openHelper.writableDatabase
+                db.execSQL("UPDATE room_table_modification_tracker SET invalidated = 1")
+            } catch (_: Exception) {}
+            try {
+                appDatabase.invalidationTracker.refreshVersionsSync()
+            } catch (_: Exception) {}
+        }
     }
 }

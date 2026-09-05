@@ -69,7 +69,8 @@ fun MonthHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val isNextDisabled = yearMonth == YearMonth.now()
+    val isNextDisabled = yearMonth >= YearMonth.now()
+    val isPreviousDisabled = yearMonth <= YearMonth.of(1970, 1)
     val formattedTitle = yearMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))
 
     Surface(
@@ -109,12 +110,13 @@ fun MonthHeader(
             ) {
                 IconButton(
                     onClick = onPrevious,
+                    enabled = !isPreviousDisabled,
                     modifier = Modifier.minimumInteractiveComponentSize()
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Previous month",
-                        tint = colors.textSecondary
+                        tint = if (isPreviousDisabled) colors.textSecondary.copy(alpha = 0.4f) else colors.textPrimary
                     )
                 }
 

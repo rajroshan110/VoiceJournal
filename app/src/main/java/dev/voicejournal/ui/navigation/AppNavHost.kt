@@ -21,13 +21,15 @@ import dev.voicejournal.ui.trash.TrashScreen
 private fun getTabIndex(route: String?): Int {
     if (route == null) return -1
     return when {
-        route.startsWith(Screen.Journal.route) -> 0
+        route == "Journal" || route.startsWith("Journal?") || route.startsWith(Screen.Journal.route) -> 0
         route.startsWith(Screen.Calendar.route) -> 1
         route.startsWith(Screen.Insight.route) -> 2
         route.startsWith(Screen.Folders.route) -> 3
         route.startsWith(Screen.Tags.route) -> 4
-        route.startsWith(Screen.Settings.route) -> 5
-        route.startsWith(Screen.Trash.route) -> 6
+        route.startsWith(Screen.Archive.route) -> 5
+        route.startsWith(Screen.Draft.route) -> 6
+        route.startsWith(Screen.Trash.route) -> 7
+        route.startsWith(Screen.Settings.route) -> 8
         else -> -1
     }
 }
@@ -39,6 +41,11 @@ fun AppNavHost(
     onEntryNavigated: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isReducedMotion = androidx.compose.runtime.remember(context) {
+        NavigationMotion.isReducedMotion(context)
+    }
+
     val currentTargetId by androidx.compose.runtime.rememberUpdatedState(openEntryId)
     androidx.compose.runtime.LaunchedEffect(currentTargetId) {
         val targetId = currentTargetId
@@ -46,9 +53,11 @@ fun AppNavHost(
             while (navController.currentDestination == null) {
                 kotlinx.coroutines.delay(50L)
             }
-            val targetRoute = Screen.NoteDetail.createRoute(targetId)
             val currentRoute = navController.currentDestination?.route
-            if (currentRoute != targetRoute) {
+            val isAlreadyOnTargetNote = currentRoute?.startsWith("NoteDetail") == true &&
+                    navController.currentBackStackEntry?.arguments?.getLong("entryId") == targetId
+            if (!isAlreadyOnTargetNote) {
+                val targetRoute = Screen.NoteDetail.createRoute(targetId)
                 navController.navigate(targetRoute) {
                     launchSingleTop = true
                 }
@@ -62,55 +71,71 @@ fun AppNavHost(
         startDestination = Screen.Journal.route,
         modifier = modifier,
         enterTransition = {
-            val initialIndex = getTabIndex(initialState.destination.route)
-            val targetIndex = getTabIndex(targetState.destination.route)
-            if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
-                if (targetIndex > initialIndex) {
-                    NavigationMotion.TabSwitchForwardEnter
-                } else {
-                    NavigationMotion.TabSwitchBackwardEnter
-                }
+            if (isReducedMotion) {
+                androidx.compose.animation.EnterTransition.None
             } else {
-                NavigationMotion.DefaultEnter
+                val initialIndex = getTabIndex(initialState.destination.route)
+                val targetIndex = getTabIndex(targetState.destination.route)
+                if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+                    if (targetIndex > initialIndex) {
+                        NavigationMotion.TabSwitchForwardEnter
+                    } else {
+                        NavigationMotion.TabSwitchBackwardEnter
+                    }
+                } else {
+                    NavigationMotion.DefaultEnter
+                }
             }
         },
         exitTransition = {
-            val initialIndex = getTabIndex(initialState.destination.route)
-            val targetIndex = getTabIndex(targetState.destination.route)
-            if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
-                if (targetIndex > initialIndex) {
-                    NavigationMotion.TabSwitchForwardExit
-                } else {
-                    NavigationMotion.TabSwitchBackwardExit
-                }
+            if (isReducedMotion) {
+                androidx.compose.animation.ExitTransition.None
             } else {
-                NavigationMotion.DefaultExit
+                val initialIndex = getTabIndex(initialState.destination.route)
+                val targetIndex = getTabIndex(targetState.destination.route)
+                if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+                    if (targetIndex > initialIndex) {
+                        NavigationMotion.TabSwitchForwardExit
+                    } else {
+                        NavigationMotion.TabSwitchBackwardExit
+                    }
+                } else {
+                    NavigationMotion.DefaultExit
+                }
             }
         },
         popEnterTransition = {
-            val initialIndex = getTabIndex(initialState.destination.route)
-            val targetIndex = getTabIndex(targetState.destination.route)
-            if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
-                if (targetIndex > initialIndex) {
-                    NavigationMotion.TabSwitchForwardEnter
-                } else {
-                    NavigationMotion.TabSwitchBackwardEnter
-                }
+            if (isReducedMotion) {
+                androidx.compose.animation.EnterTransition.None
             } else {
-                NavigationMotion.ScreenPopEnter
+                val initialIndex = getTabIndex(initialState.destination.route)
+                val targetIndex = getTabIndex(targetState.destination.route)
+                if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+                    if (targetIndex > initialIndex) {
+                        NavigationMotion.TabSwitchForwardEnter
+                    } else {
+                        NavigationMotion.TabSwitchBackwardEnter
+                    }
+                } else {
+                    NavigationMotion.ScreenPopEnter
+                }
             }
         },
         popExitTransition = {
-            val initialIndex = getTabIndex(initialState.destination.route)
-            val targetIndex = getTabIndex(targetState.destination.route)
-            if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
-                if (targetIndex > initialIndex) {
-                    NavigationMotion.TabSwitchForwardExit
-                } else {
-                    NavigationMotion.TabSwitchBackwardExit
-                }
+            if (isReducedMotion) {
+                androidx.compose.animation.ExitTransition.None
             } else {
-                NavigationMotion.ScreenPopExit
+                val initialIndex = getTabIndex(initialState.destination.route)
+                val targetIndex = getTabIndex(targetState.destination.route)
+                if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+                    if (targetIndex > initialIndex) {
+                        NavigationMotion.TabSwitchForwardExit
+                    } else {
+                        NavigationMotion.TabSwitchBackwardExit
+                    }
+                } else {
+                    NavigationMotion.ScreenPopExit
+                }
             }
         }
     ) {
@@ -161,10 +186,10 @@ fun AppNavHost(
                     defaultValue = null
                 }
             ),
-            enterTransition = { NavigationMotion.ScreenPushEnter },
-            exitTransition = { NavigationMotion.ScreenPushExit },
-            popEnterTransition = { NavigationMotion.ScreenPopEnter },
-            popExitTransition = { NavigationMotion.ScreenPopExit }
+            enterTransition = { if (isReducedMotion) androidx.compose.animation.EnterTransition.None else NavigationMotion.ScreenPushEnter },
+            exitTransition = { if (isReducedMotion) androidx.compose.animation.ExitTransition.None else NavigationMotion.ScreenPushExit },
+            popEnterTransition = { if (isReducedMotion) androidx.compose.animation.EnterTransition.None else NavigationMotion.ScreenPopEnter },
+            popExitTransition = { if (isReducedMotion) androidx.compose.animation.ExitTransition.None else NavigationMotion.ScreenPopExit }
         ) { backStackEntry ->
             val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
             val initialFolder = backStackEntry.arguments?.getString("initialFolder")

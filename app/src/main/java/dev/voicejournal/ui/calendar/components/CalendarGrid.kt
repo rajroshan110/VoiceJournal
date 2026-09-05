@@ -25,6 +25,7 @@ fun CalendarGrid(
     startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
     onDateSelect: (CalendarDayItem) -> Unit,
     isCompact: Boolean = false,
+    showWeekHeader: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -43,25 +44,27 @@ fun CalendarGrid(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .then(if (showWeekHeader) Modifier.padding(horizontal = 12.dp, vertical = 2.dp) else Modifier)
     ) {
         // Header Row: Days of Week (Mon, Tue, Wed...)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            dayLabels.forEach { label ->
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.textSecondary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f)
-                )
+        if (showWeekHeader) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                dayLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.textSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 

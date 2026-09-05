@@ -100,7 +100,7 @@ fun UserTextInput(
         snapshotFlow { imeInsets.getBottom(density) }
             .distinctUntilChanged()
             .collectLatest { bottom ->
-                if (bottom > 0) {
+                if (bottom > 0 && currentSelection.collapsed) {
                     delay(50)
                     bringCursorIntoView("IME settled ($bottom px)")
                 }
@@ -108,9 +108,9 @@ fun UserTextInput(
     }
 
     // 2. When the selection changes, text layout is updated, or keyboard becomes open:
-    // bring the cursor into view immediately.
+    // bring the cursor into view immediately only when selection is collapsed (not dragging selection range).
     LaunchedEffect(richTextState.textFieldValue.selection, textLayoutResult, isKeyboardOpen) {
-        if (isTextFieldFocused && isKeyboardOpen) {
+        if (isTextFieldFocused && isKeyboardOpen && richTextState.textFieldValue.selection.collapsed) {
             bringCursorIntoView("selection/layout/imeOpen")
         }
     }

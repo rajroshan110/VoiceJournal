@@ -55,52 +55,83 @@ object AudioFileRepair {
         }
     }
 
+    /**
+     * Unconditionally scan and repair all WAV files with corrupted headers.
+     * Can be invoked on pull-to-refresh or user-initiated repair.
+     */
+    fun forceRepair(context: Context) {
+        try {
+            val audioDirs = MediaStorageManager.getAllAudioDirs(context)
+            audioDirs.filter { it.exists() }.forEach { dir ->
+                val wavFiles = dir.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
+                wavFiles?.forEach { file ->
+                    repairWavHeader(file)
+                }
+            }
+        } catch (_: Exception) {
+            // Don't crash
+        }
+    }
+
     private fun repairWavHeader(file: File) {
         if (file.length() < 44) return // Too small to be a valid WAV
 
         try {
-            val raf = RandomAccessFile(file, "rw")
+            RandomAccessFile(file, "rw").use { raf ->
+                // Read the first 4 bytes to verify it's RIFF
+                val magic = ByteArray(4)
+                raf.seek(0)
+                raf.readFully(magic)
+                if (String(magic) != "RIFF") {
+                    return
+                }
 
-            // Read the first 4 bytes to verify it's RIFF
-            val magic = ByteArray(4)
-            raf.seek(0)
-            raf.readFully(magic)
-            if (String(magic) != "RIFF") {
-                raf.close()
-                return
-            }
+                // Verify format is WAVE (bytes 8-11)
+                val format = ByteArray(4)
+                raf.seek(8)
+                raf.readFully(format)
+                if (String(format) != "WAVE") {
+                    return
+                }
 
-            // Read current ChunkSize (bytes 4-7)
-            raf.seek(4)
-            val chunkSizeBytes = ByteArray(4)
-            raf.readFully(chunkSizeBytes)
-            val currentChunkSize = ByteBuffer.wrap(chunkSizeBytes).order(ByteOrder.LITTLE_ENDIAN).int
+                // Verify data subchunk marker (bytes 36-39 for standard PCM)
+                val dataMarker = ByteArray(4)
+                raf.seek(36)
+                raf.readFully(dataMarker)
+                if (String(dataMarker) != "data") {
+                    return
+                }
 
-            // Read current DataSize (bytes 40-43)
-            raf.seek(40)
-            val dataSizeBytes = ByteArray(4)
-            raf.readFully(dataSizeBytes)
-            val currentDataSize = ByteBuffer.wrap(dataSizeBytes).order(ByteOrder.LITTLE_ENDIAN).int
-
-            // Calculate what the correct values should be
-            val actualDataSize = (file.length() - 44).toInt().coerceAtLeast(0)
-            val actualChunkSize = 36 + actualDataSize
-
-            // Only repair if the header values are wrong (typically 0 or 36)
-            if (currentDataSize != actualDataSize || currentChunkSize != actualChunkSize) {
-                // Write corrected ChunkSize at bytes 4-7
+                // Read current ChunkSize (bytes 4-7)
                 raf.seek(4)
-                val fixedChunkSize = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(actualChunkSize).array()
-                raf.write(fixedChunkSize)
+                val chunkSizeBytes = ByteArray(4)
+                raf.readFully(chunkSizeBytes)
+                val currentChunkSize = ByteBuffer.wrap(chunkSizeBytes).order(ByteOrder.LITTLE_ENDIAN).int
 
-                // Write corrected DataSize at bytes 40-43
+                // Read current DataSize (bytes 40-43)
                 raf.seek(40)
-                val fixedDataSize = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(actualDataSize).array()
-                raf.write(fixedDataSize)
-            }
+                val dataSizeBytes = ByteArray(4)
+                raf.readFully(dataSizeBytes)
+                val currentDataSize = ByteBuffer.wrap(dataSizeBytes).order(ByteOrder.LITTLE_ENDIAN).int
 
-            raf.close()
-        } catch (e: Exception) {
+                // Calculate what the correct values should be
+                val actualDataSize = (file.length() - 44).toInt().coerceAtLeast(0)
+                val actualChunkSize = 36 + actualDataSize
+
+                // Only repair if the header values are wrong (typically 0 or 36)
+                if (currentDataSize != actualDataSize || currentChunkSize != actualChunkSize) {
+                    // Write corrected ChunkSize at bytes 4-7
+                    raf.seek(4)
+                    val fixedChunkSize = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(actualChunkSize).array()
+                    raf.write(fixedChunkSize)
+
+                    // Write corrected DataSize at bytes 40-43
+                    raf.seek(40)
+                    val fixedDataSize = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(actualDataSize).array()
+                    raf.write(fixedDataSize)
+                }
+            }
+        } catch (_: Exception) {
             // Skip this file if repair fails
         }
     }

@@ -476,8 +476,22 @@ class JournalViewModel @Inject constructor(
     fun refreshFeed() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            kotlinx.coroutines.delay(400)
-            _isRefreshing.value = false
+            _loadError.value = null
+            val startTime = System.currentTimeMillis()
+            try {
+                journalRepository.refreshAndHealData()
+            } catch (e: Exception) {
+                if (_uiState.value.entries.isEmpty()) {
+                    _loadError.value = e.message ?: "Failed to refresh data"
+                }
+            } finally {
+                val elapsed = System.currentTimeMillis() - startTime
+                val remaining = 400L - elapsed
+                if (remaining > 0L) {
+                    kotlinx.coroutines.delay(remaining)
+                }
+                _isRefreshing.value = false
+            }
         }
     }
 

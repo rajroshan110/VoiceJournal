@@ -1,22 +1,20 @@
 package dev.voicejournal.ui.calendar
 
 import android.app.DatePickerDialog
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import dev.voicejournal.ui.calendar.components.*
 import dev.voicejournal.ui.journal.ActiveSheet
 import dev.voicejournal.ui.journal.components.FilterBar
@@ -38,9 +36,48 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cardPlaybackState by viewModel.cardPlaybackState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val isReducedMotion = remember(context) {
+        dev.voicejournal.ui.designsystem.motion.NavigationMotion.isReducedMotion(context)
+    }
 
     var activeSheet by rememberSaveable { mutableStateOf(ActiveSheet.NONE) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    val initialPage = remember {
+        CalendarUtils.yearMonthToPage(uiState.currentYearMonth)
+            .coerceIn(0, CalendarUtils.getMaxPage())
+    }
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { CalendarUtils.getPageCount() }
+    )
+
+    // Sync ViewModel when pager settles on a new month page
+    LaunchedEffect(pagerState.settledPage) {
+        val settledMonth = CalendarUtils.pageToYearMonth(pagerState.settledPage)
+        if (settledMonth != uiState.currentYearMonth) {
+            viewModel.setYearMonth(settledMonth)
+        }
+    }
+
+    // Sync pager when ViewModel currentYearMonth changes externally
+    LaunchedEffect(uiState.currentYearMonth) {
+        val targetPage = CalendarUtils.yearMonthToPage(uiState.currentYearMonth)
+            .coerceIn(0, CalendarUtils.getMaxPage())
+        if (pagerState.currentPage != targetPage && !pagerState.isScrollInProgress) {
+            val diff = kotlin.math.abs(pagerState.currentPage - targetPage)
+            if (isReducedMotion || diff > 1) {
+                pagerState.scrollToPage(targetPage)
+            } else {
+                pagerState.animateScrollToPage(targetPage)
+            }
+        }
+    }
+
+    val displayYearMonth = remember(pagerState.currentPage) {
+        CalendarUtils.pageToYearMonth(pagerState.currentPage)
+    }
 
     val listState = rememberLazyListState()
     var pendingNavEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -88,9 +125,32 @@ fun CalendarScreen(
                     .background(AppTheme.colors.background)
             ) {
                 MonthHeader(
-                    yearMonth = uiState.currentYearMonth,
-                    onPrevious = { viewModel.previousMonth() },
-                    onNext = { viewModel.nextMonth() },
+                    yearMonth = displayYearMonth,
+                    onPrevious = {
+                        val targetPage = (pagerState.targetPage - 1).coerceAtLeast(0)
+                        if (targetPage != pagerState.targetPage) {
+                            coroutineScope.launch {
+                                if (isReducedMotion) {
+                                    pagerState.scrollToPage(targetPage)
+                                } else {
+                                    pagerState.animateScrollToPage(targetPage)
+                                }
+                            }
+                        }
+                    },
+                    onNext = {
+                        val maxPage = CalendarUtils.getMaxPage()
+                        val targetPage = (pagerState.targetPage + 1).coerceAtMost(maxPage)
+                        if (targetPage != pagerState.targetPage) {
+                            coroutineScope.launch {
+                                if (isReducedMotion) {
+                                    pagerState.scrollToPage(targetPage)
+                                } else {
+                                    pagerState.animateScrollToPage(targetPage)
+                                }
+                            }
+                        }
+                    },
                     onDatePickerClick = { launchDatePicker() },
                     onTitleClick = {
                         val now = LocalDate.now()
@@ -141,52 +201,22 @@ fun CalendarScreen(
                 Row(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Left Pane: CalendarGrid
+                    // Left Pane: CalendarMonthPager
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                     ) {
-                        AnimatedContent(
-                            targetState = uiState.currentYearMonth,
-                            transitionSpec = {
-                                if (targetState.isAfter(initialState)) {
-                                    (slideInHorizontally { width -> width } + fadeIn(tween(220)))
-                                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut(tween(220)))
-                                } else {
-                                    (slideInHorizontally { width -> -width } + fadeIn(tween(220)))
-                                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut(tween(220)))
-                                }
-                            },
-                            label = "CalendarMonthTransitionWide"
-                        ) { _ ->
-                            CalendarGrid(
-                                gridDays = uiState.gridDays,
-                                startOfWeek = uiState.startOfWeek,
-                                onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
-                                isCompact = isCompactLandscape,
-                                modifier = Modifier.pointerInput(Unit) {
-                                    var hasScrolled = false
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { hasScrolled = false },
-                                        onDragEnd = { hasScrolled = false },
-                                        onDragCancel = { hasScrolled = false },
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            change.consume()
-                                            if (!hasScrolled) {
-                                                if (dragAmount > 30) {
-                                                    viewModel.previousMonth()
-                                                    hasScrolled = true
-                                                } else if (dragAmount < -30) {
-                                                    viewModel.nextMonth()
-                                                    hasScrolled = true
-                                                }
-                                            }
-                                        }
-                                    )
-                                }
-                            )
-                        }
+                        CalendarMonthPager(
+                            pagerState = pagerState,
+                            selectedDate = uiState.selectedDate,
+                            currentYearMonth = uiState.currentYearMonth,
+                            currentGridDays = uiState.gridDays,
+                            entriesByDate = uiState.entriesByDate,
+                            startOfWeek = uiState.startOfWeek,
+                            onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
+                            isCompact = isCompactLandscape
+                        )
                     }
 
                     VerticalDivider(color = AppTheme.colors.divider)
@@ -228,46 +258,16 @@ fun CalendarScreen(
                     onClearFiltersClick = { viewModel.clearAllFilters() },
                     timeFormat = uiState.timeFormat,
                     headerContent = {
-                        AnimatedContent(
-                            targetState = uiState.currentYearMonth,
-                            transitionSpec = {
-                                if (targetState.isAfter(initialState)) {
-                                    (slideInHorizontally { width -> width } + fadeIn(tween(220)))
-                                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut(tween(220)))
-                                } else {
-                                    (slideInHorizontally { width -> -width } + fadeIn(tween(220)))
-                                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut(tween(220)))
-                                }
-                            },
-                            label = "CalendarMonthTransition"
-                        ) { _ ->
-                            CalendarGrid(
-                                gridDays = uiState.gridDays,
-                                startOfWeek = uiState.startOfWeek,
-                                onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
-                                isCompact = isCompactLandscape,
-                                modifier = Modifier.pointerInput(Unit) {
-                                    var hasScrolled = false
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { hasScrolled = false },
-                                        onDragEnd = { hasScrolled = false },
-                                        onDragCancel = { hasScrolled = false },
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            change.consume()
-                                            if (!hasScrolled) {
-                                                if (dragAmount > 30) {
-                                                    viewModel.previousMonth()
-                                                    hasScrolled = true
-                                                } else if (dragAmount < -30) {
-                                                    viewModel.nextMonth()
-                                                    hasScrolled = true
-                                                }
-                                            }
-                                        }
-                                    )
-                                }
-                            )
-                        }
+                        CalendarMonthPager(
+                            pagerState = pagerState,
+                            selectedDate = uiState.selectedDate,
+                            currentYearMonth = uiState.currentYearMonth,
+                            currentGridDays = uiState.gridDays,
+                            entriesByDate = uiState.entriesByDate,
+                            startOfWeek = uiState.startOfWeek,
+                            onDateSelect = { dayItem -> viewModel.selectDate(dayItem.date) },
+                            isCompact = isCompactLandscape
+                        )
                     }
                 )
             }

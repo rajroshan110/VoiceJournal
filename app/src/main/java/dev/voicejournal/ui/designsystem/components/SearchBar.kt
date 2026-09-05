@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,11 +55,14 @@ fun SearchBar(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(requestFocusOnLaunch) {
         if (requestFocusOnLaunch) {
             try {
+                delay(150L)
                 focusRequester.requestFocus()
                 keyboardController?.show()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Focus requester might not be attached yet in some edge cases, ignore
             }

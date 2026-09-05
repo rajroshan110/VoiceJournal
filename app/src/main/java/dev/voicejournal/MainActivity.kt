@@ -59,6 +59,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastStopTimestamp = savedInstanceState?.getLong("last_stop_timestamp", 0L) ?: 0L
         handleIntent(intent)
         enableEdgeToEdge()
         setContent {
@@ -72,7 +73,7 @@ class MainActivity : FragmentActivity() {
 
             val appLockMode = appLockModeState.value
             var isAppUnlocked by rememberSaveable { mutableStateOf(false) }
-            var isInitialCheckDone by remember { mutableStateOf(false) }
+            var isInitialCheckDone by rememberSaveable { mutableStateOf(false) }
             val lifecycleOwner = LocalLifecycleOwner.current
 
             LaunchedEffect(isScreenPrivacyEnabled) {
@@ -87,11 +88,7 @@ class MainActivity : FragmentActivity() {
                 val currentMode = appLockMode ?: return@LaunchedEffect
                 if (!isInitialCheckDone) {
                     isInitialCheckDone = true
-                    if (currentMode != AppLockMode.NONE) {
-                        isAppUnlocked = false
-                    } else {
-                        isAppUnlocked = true
-                    }
+                    isAppUnlocked = (currentMode == AppLockMode.NONE)
                 } else if (currentMode == AppLockMode.NONE) {
                     isAppUnlocked = true
                 }
@@ -100,7 +97,9 @@ class MainActivity : FragmentActivity() {
             DisposableEffect(lifecycleOwner, appLockMode, appLockTimeout) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_PAUSE) {
-                        lastStopTimestamp = android.os.SystemClock.elapsedRealtime()
+                        if (!isChangingConfigurations) {
+                            lastStopTimestamp = android.os.SystemClock.elapsedRealtime()
+                        }
                     } else if (event == Lifecycle.Event.ON_RESUME) {
                         val currentMode = appLockMode ?: AppLockMode.NONE
                         val wasPicker = dev.voicejournal.ui.util.AppLockStateManager.consumeTransientPicker()
@@ -146,19 +145,25 @@ class MainActivity : FragmentActivity() {
 
                 val colors = AppTheme.colors
 
-                val activeMode = appLockMode ?: AppLockMode.NONE
-                if (activeMode != AppLockMode.NONE && !isAppUnlocked) {
+                if (appLockMode == null) {
+                    // Awaiting security & lock preferences on initial cold frame:
+                    // Render a clean background surface to prevent layout jumping or premature route mounting
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = colors.background
+                    ) {}
+                } else if (appLockMode != AppLockMode.NONE && !isAppUnlocked) {
                     // Lock Screen Overlay
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = colors.background
                     ) {
-                        if (activeMode == AppLockMode.BIOMETRIC) {
+                        if (appLockMode == AppLockMode.BIOMETRIC) {
                             BiometricLockScreen(
                                 onAuthenticateClick = { triggerBiometricAuth { isAppUnlocked = true } },
                                 onAutoAuthNeeded = { triggerBiometricAuth { isAppUnlocked = true } }
                             )
-                        } else if (activeMode == AppLockMode.CUSTOM_PIN) {
+                        } else if (appLockMode == AppLockMode.CUSTOM_PIN) {
                             val pinFailedAttempts by userPreferencesManager.pinFailedAttempts.collectAsState(initial = 0)
                             val pinLockoutEndTime by userPreferencesManager.pinLockoutEndTime.collectAsState(initial = 0L)
                             
@@ -199,6 +204,11 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLong("last_stop_timestamp", lastStopTimestamp)
     }
 
     private fun handleIntent(intent: Intent?) {

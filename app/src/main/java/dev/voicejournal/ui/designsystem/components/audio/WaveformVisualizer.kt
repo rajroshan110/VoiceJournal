@@ -1,7 +1,7 @@
 package dev.voicejournal.ui.designsystem.components.audio
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,30 +51,46 @@ fun WaveformVisualizer(
                 if (!isSeekable || onSeekFraction == null) return@pointerInput
 
                 detectTapGestures { offset ->
-                    val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    onSeekFraction(fraction)
+                    if (size.width > 0) {
+                        val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        if (!fraction.isNaN()) {
+                            onSeekFraction(fraction)
+                        }
+                    }
                 }
             }
             .pointerInput(isSeekable, onSeekFraction) {
                 if (!isSeekable || onSeekFraction == null) return@pointerInput
 
-                detectDragGestures(
+                detectHorizontalDragGestures(
                     onDragStart = { offset ->
-                        isDragging = true
-                        dragFraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        if (size.width > 0) {
+                            isDragging = true
+                            val frac = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                            if (!frac.isNaN()) {
+                                dragFraction = frac
+                            }
+                        }
                     },
                     onDragEnd = {
                         if (isDragging) {
-                            onSeekFraction(dragFraction)
+                            if (!dragFraction.isNaN()) {
+                                onSeekFraction(dragFraction)
+                            }
                             isDragging = false
                         }
                     },
                     onDragCancel = {
                         isDragging = false
                     },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        dragFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                    onHorizontalDrag = { change, _ ->
+                        if (size.width > 0) {
+                            change.consume()
+                            val frac = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                            if (!frac.isNaN()) {
+                                dragFraction = frac
+                            }
+                        }
                     }
                 )
             },
