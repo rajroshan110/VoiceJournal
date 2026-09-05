@@ -41,10 +41,14 @@ fun VoiceTheme(
         lightColorScheme(
             background = appColors.background,
             surface = appColors.surface,
+            surfaceVariant = appColors.surfaceVariant,
             primary = appColors.primary,
+            primaryContainer = appColors.primaryContainer,
             onBackground = appColors.textPrimary,
             onSurface = appColors.textPrimary,
             onPrimary = appColors.onPrimary,
+            onPrimaryContainer = appColors.primary,
+            onSurfaceVariant = appColors.textSecondary,
             outline = appColors.divider,
             error = appColors.error
         )
@@ -52,10 +56,14 @@ fun VoiceTheme(
         darkColorScheme(
             background = appColors.background,
             surface = appColors.surface,
+            surfaceVariant = appColors.surfaceVariant,
             primary = appColors.primary,
+            primaryContainer = appColors.primaryContainer,
             onBackground = appColors.textPrimary,
             onSurface = appColors.textPrimary,
             onPrimary = appColors.onPrimary,
+            onPrimaryContainer = appColors.primary,
+            onSurfaceVariant = appColors.textSecondary,
             outline = appColors.divider,
             error = appColors.error
         )

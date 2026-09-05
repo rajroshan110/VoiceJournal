@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.DailyActivityCount
@@ -80,17 +81,24 @@ fun RecordingActivityCard(
 
         // Chart Area: Custom Canvas Graph without Gridlines
         if (dailyCounts.isEmpty() || totalEntries == 0) {
+            val emptyMessage = if (period == TimePeriod.WEEK) {
+                "No entries has been recorded for this week"
+            } else {
+                "No entries has been recorded for this month"
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp)),
+                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Record entries $periodLabel to generate insights",
+                    text = emptyMessage,
                     color = colors.textSecondary,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
                 )
             }
         } else {

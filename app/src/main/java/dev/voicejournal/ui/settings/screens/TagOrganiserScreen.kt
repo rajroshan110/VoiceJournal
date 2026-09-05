@@ -83,9 +83,9 @@ fun TagOrganiserScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getTagIcon(colors.textPrimary),
+                            imageVector = getTagIcon(colors.primary),
                             contentDescription = null,
-                            tint = colors.textPrimary,
+                            tint = colors.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }

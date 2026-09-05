@@ -628,30 +628,16 @@ fun JournalScreen(
                 )
             }
 
-            // Confirmation Delete Dialog
+            // Confirmation Move to Trash Dialog
             if (showDeleteDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteDialog = false },
-                    title = { Text(text = "Delete ${selectionState.selectedEntryIds.size} notes?") },
-                    text = { Text(text = "Are you sure you want to delete the selected notes? This action cannot be undone and will permanently free up storage space.") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                viewModel.deleteSelectedEntries()
-                                showDeleteDialog = false
-                            }
-                        ) {
-                            Text(text = "Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
-                        }
+                val count = selectionState.selectedEntryIds.size
+                dev.voicejournal.ui.components.MoveToTrashDialog(
+                    message = "Are you sure you want to move $count selected note(s) to Trash?",
+                    onConfirm = {
+                        viewModel.deleteSelectedEntries()
+                        showDeleteDialog = false
                     },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteDialog = false }) {
-                            Text(text = "Cancel", color = AppTheme.colors.textSecondary)
-                        }
-                    },
-                    containerColor = AppTheme.colors.surface,
-                    titleContentColor = AppTheme.colors.textPrimary,
-                    textContentColor = AppTheme.colors.textSecondary
+                    onDismiss = { showDeleteDialog = false }
                 )
             }
 

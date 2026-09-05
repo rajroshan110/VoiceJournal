@@ -30,7 +30,6 @@ import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.settings.components.SettingDayPickerRow
 import dev.voicejournal.ui.settings.components.SettingSegmentedRow
 import dev.voicejournal.ui.settings.components.SettingToggleRow
 import dev.voicejournal.ui.settings.components.settingHighlight
@@ -103,12 +102,20 @@ fun GeneralSettingsScreen(
             StartOfWeek.MONDAY -> "Monday"
             StartOfWeek.SUNDAY -> "Sunday"
         }
-        SettingDayPickerRow(
+        SettingSegmentedRow(
             title = "Start of the week",
             subtitle = startOfWeekSubtitle,
             icon = Icons.Default.DateRange,
-            selectedDay = uiState.startOfWeek,
-            onDaySelected = { viewModel.setStartOfWeek(it) },
+            options = listOf(StartOfWeek.SYSTEM_DEFAULT, StartOfWeek.MONDAY, StartOfWeek.SUNDAY),
+            selectedOption = uiState.startOfWeek,
+            onOptionSelected = { viewModel.setStartOfWeek(it) },
+            optionLabel = { day ->
+                when (day) {
+                    StartOfWeek.SYSTEM_DEFAULT -> "System"
+                    StartOfWeek.MONDAY -> "Mon"
+                    StartOfWeek.SUNDAY -> "Sun"
+                }
+            },
             modifier = Modifier.settingHighlight(uiState.highlightedSettingKey == "start_of_week")
         )
 
@@ -186,7 +193,7 @@ fun GeneralSettingsScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = colors.textPrimary,
+                            tint = colors.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }

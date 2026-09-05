@@ -81,7 +81,7 @@ fun PrivacySecurityScreen(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = colors.textPrimary,
+                                tint = colors.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -131,7 +131,7 @@ fun PrivacySecurityScreen(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = colors.textPrimary,
+                                tint = colors.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

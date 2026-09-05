@@ -152,20 +152,19 @@ fun SettingsHomeScreen(
                         }
                     }
                 } else {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = when {
-                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.GENERAL -> "General Settings"
-                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.PRIVACY_SECURITY -> "Privacy & Security"
-                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.SYNC_BACKUP -> "Sync & Backup"
-                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.TAG_ORGANISER -> "Tag Organiser"
-                                    else -> "Settings"
-                                },
-                                color = colors.textPrimary
-                            )
-                        },
-                        navigationIcon = {
+                    Surface(
+                        color = colors.background,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             IconButton(onClick = {
                                 if (!isExpanded && selectedCompactSubScreen != null) {
                                     selectedCompactSubScreen = null
@@ -179,8 +178,23 @@ fun SettingsHomeScreen(
                                     tint = colors.textPrimary
                                 )
                             }
-                        },
-                        actions = {
+
+                            Text(
+                                text = when {
+                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.GENERAL -> "General Settings"
+                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.PRIVACY_SECURITY -> "Privacy & Security"
+                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.SYNC_BACKUP -> "Sync & Backup"
+                                    !isExpanded && selectedCompactSubScreen == SettingsSubScreen.TAG_ORGANISER -> "Tag Organiser"
+                                    else -> "Settings"
+                                },
+                                color = colors.textPrimary,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 12.dp)
+                            )
+
                             if (selectedCompactSubScreen == null || isExpanded) {
                                 IconButton(
                                     onClick = { isSearchFocused = true },
@@ -193,9 +207,8 @@ fun SettingsHomeScreen(
                                     )
                                 }
                             }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background)
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -291,7 +304,7 @@ fun SettingsHomeScreen(
                             CategoryNavCard(
                                 title = "Tag Organiser",
                                 subtitle = "Choose tags, folders, organise notes",
-                                icon = getTagIcon(colors.textPrimary),
+                                icon = getTagIcon(colors.primary),
                                 isSelected = uiState.activeSubScreen == SettingsSubScreen.TAG_ORGANISER,
                                 onClick = {
                                     viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)
@@ -375,7 +388,7 @@ fun SettingsHomeScreen(
                             CategoryNavCard(
                                 title = "Tag Organiser",
                                 subtitle = "Choose tags, folders, organise notes",
-                                icon = getTagIcon(colors.textPrimary),
+                                icon = getTagIcon(colors.primary),
                                 onClick = {
                                     selectedCompactSubScreen = SettingsSubScreen.TAG_ORGANISER
                                     viewModel.setActiveSubScreen(SettingsSubScreen.TAG_ORGANISER)

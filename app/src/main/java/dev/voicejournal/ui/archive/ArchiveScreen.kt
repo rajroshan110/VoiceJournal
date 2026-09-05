@@ -287,25 +287,13 @@ fun ArchiveScreen(
     // Delete Confirmation Dialog (Move to Trash)
     if (showDeleteConfirmDialog) {
         val count = selectionState.selectedCount
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Move to Trash?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to move $count selected note(s) to Trash?", color = colors.textSecondary) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        viewModel.deleteSelectedEntries()
-                    }
-                ) {
-                    Text("Move to Trash", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
+        dev.voicejournal.ui.components.MoveToTrashDialog(
+            message = "Are you sure you want to move $count selected note(s) to Trash?",
+            onConfirm = {
+                showDeleteConfirmDialog = false
+                viewModel.deleteSelectedEntries()
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
-                }
-            }
+            onDismiss = { showDeleteConfirmDialog = false }
         )
     }
 }

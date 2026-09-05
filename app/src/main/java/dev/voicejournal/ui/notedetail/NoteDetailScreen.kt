@@ -125,7 +125,7 @@ fun NoteDetailScreen(
                 navController.popBackStack()
             }
         } else {
-            if (uiState.hasUnsavedChanges) {
+            if (!viewModel.isEntryEmpty() && uiState.hasUnsavedChanges) {
                 showUnsavedPromptDialog = true
             } else {
                 navController.popBackStack()
@@ -299,16 +299,16 @@ fun NoteDetailScreen(
                 onAddPhoto = { showAddItemSheet = true },
                 createdAt = uiState.createdAt,
                 updatedAt = uiState.updatedAt,
-                onDeleteNote = if (entryId > 0) { { showDeleteConfirmDialog = true } } else null,
+                onDeleteNote = if (uiState.entryId > 0 && !viewModel.isEntryEmpty()) { { showDeleteConfirmDialog = true } } else null,
                 isSelectionMode = trackSelectionState.isSelectionMode,
                 selectedCount = trackSelectionState.totalSelectedCount,
-                showSaveButton = uiState.hasUnsavedChanges,
+                showSaveButton = !viewModel.isEntryEmpty() && uiState.hasUnsavedChanges,
                 onClearSelection = { viewModel.clearTrackSelection() },
                 onDeleteSelectedTracks = { showDeleteSelectedTracksDialog = true },
                 onArchiveClick = {
                     if (viewModel.isEntryEmpty()) {
                         Toast.makeText(context, "Cannot archive an empty note!", Toast.LENGTH_SHORT).show()
-                    } else if (uiState.isDraft || entryId <= 0) {
+                    } else if (uiState.isDraft || uiState.entryId <= 0) {
                         Toast.makeText(context, "Please save the draft before archiving!", Toast.LENGTH_SHORT).show()
                     } else {
                         showArchiveConfirmDialog = true
@@ -713,33 +713,20 @@ fun NoteDetailScreen(
             isFolderEnabled = uiState.isFolderEnabled,
             isTopicsEnabled = uiState.isTopicsEnabled,
             isPeopleEnabled = uiState.isPeopleEnabled,
-            onSaveTags = { newTags -> viewModel.setTags(newTags) },
+            onTagsChanged = { newTags -> viewModel.setTags(newTags) },
             onDismiss = { showTagsDialog = false }
         )
     }
 
     // Delete Entire Note Confirmation Dialog
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete note?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete this note? This action cannot be undone.", color = colors.textSecondary) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        viewModel.deleteEntry { navController.popBackStack() }
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
+        dev.voicejournal.ui.components.MoveToTrashDialog(
+            message = "Are you sure you want to move this note to Trash?",
+            onConfirm = {
+                showDeleteConfirmDialog = false
+                viewModel.deleteEntry { navController.popBackStack() }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
-                }
-            },
-            containerColor = colors.surface
+            onDismiss = { showDeleteConfirmDialog = false }
         )
     }
 
@@ -765,7 +752,8 @@ fun NoteDetailScreen(
                     Text("Cancel", color = colors.textSecondary)
                 }
             },
-            containerColor = colors.surface
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 

@@ -37,7 +37,7 @@ private val FingerprintIcon: ImageVector by lazy {
         viewportHeight = 24f
     ).apply {
         path(
-            fill = SolidColor(Color.Black),
+            fill = SolidColor(Color.White),
             pathFillType = PathFillType.NonZero
         ) {
             moveTo(17.81f, 4.47f)
@@ -88,7 +88,7 @@ private val NoLockIcon: ImageVector by lazy {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).apply {
-        path(fill = SolidColor(Color.Black)) {
+        path(fill = SolidColor(Color.White)) {
             moveTo(12f, 17f)
             curveTo(13.1f, 17f, 14f, 16.1f, 14f, 15f)
             curveTo(14f, 13.9f, 13.1f, 13f, 12f, 13f)

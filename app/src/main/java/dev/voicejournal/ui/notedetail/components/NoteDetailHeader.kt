@@ -359,7 +359,7 @@ fun NoteDetailHeader(
                                         color = colors.surface,
                                     shape = RoundedCornerShape(18.dp),
                                     shadowElevation = 12.dp,
-                                    tonalElevation = 6.dp,
+                                    tonalElevation = 0.dp,
                                     border = BorderStroke(1.dp, colors.textSecondary.copy(alpha = 0.15f)),
                                     modifier = Modifier
                                         .widthIn(min = 220.dp, max = 260.dp)

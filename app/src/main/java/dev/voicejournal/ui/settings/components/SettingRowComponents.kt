@@ -1,6 +1,5 @@
 package dev.voicejournal.ui.settings.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,7 +26,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.ui.settings.model.SearchResultItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
@@ -146,16 +144,8 @@ fun <T> SettingSegmentedRow(
                 ) {
                     options.forEach { option ->
                         val isSelected = option == selectedOption
-                        val pillBgColor by animateColorAsState(
-                            targetValue = if (isSelected) colors.primary.copy(alpha = 0.25f) else Color.Transparent,
-                            animationSpec = tween(200),
-                            label = "pillBgColor"
-                        )
-                        val pillTextColor by animateColorAsState(
-                            targetValue = if (isSelected) colors.primary else colors.textSecondary,
-                            animationSpec = tween(200),
-                            label = "pillTextColor"
-                        )
+                        val pillBgColor = if (isSelected) colors.primary.copy(alpha = 0.25f) else Color.Transparent
+                        val pillTextColor = if (isSelected) colors.primary else colors.textSecondary
 
                         Surface(
                             onClick = { onOptionSelected(option) },
@@ -191,126 +181,6 @@ fun <T> SettingSegmentedRow(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
                             }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingDayPickerRow(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    selectedDay: StartOfWeek,
-    onDaySelected: (StartOfWeek) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = AppTheme.colors
-
-    val days = listOf(
-        Pair("M", StartOfWeek.MONDAY),
-        Pair("T", StartOfWeek.MONDAY), // Tue
-        Pair("W", StartOfWeek.MONDAY), // Wed
-        Pair("T", StartOfWeek.MONDAY), // Thu
-        Pair("F", StartOfWeek.MONDAY), // Fri
-        Pair("S", StartOfWeek.MONDAY), // Sat
-        Pair("S", StartOfWeek.SUNDAY)
-    )
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-        shape = RoundedCornerShape(16.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(colors.secondaryBackground, shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = colors.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        color = colors.textPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        color = colors.textSecondary,
-                        fontSize = 13.sp,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Inline Day Pills Row matching reference.jpg exactly
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf(
-                    Triple("Sys", StartOfWeek.SYSTEM_DEFAULT, "System Default"),
-                    Triple("Mon", StartOfWeek.MONDAY, "Monday"),
-                    Triple("Sun", StartOfWeek.SUNDAY, "Sunday")
-                ).forEach { (label, option, desc) ->
-                    val isSelected = option == selectedDay
-                    val pillBgColor by animateColorAsState(
-                        targetValue = if (isSelected) colors.primary.copy(alpha = 0.25f) else colors.secondaryBackground,
-                        animationSpec = tween(200),
-                        label = "dayPillBg"
-                    )
-                    val pillTextColor by animateColorAsState(
-                        targetValue = if (isSelected) colors.primary else colors.textSecondary,
-                        animationSpec = tween(200),
-                        label = "dayPillText"
-                    )
-
-                    Surface(
-                        onClick = { onDaySelected(option) },
-                        shape = RoundedCornerShape(16.dp),
-                        color = pillBgColor,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .semantics {
-                                role = Role.RadioButton
-                                contentDescription = "$desc, ${if (isSelected) "selected" else "not selected"}"
-                            }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = label,
-                                color = pillTextColor,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
                         }
                     }
                 }
