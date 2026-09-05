@@ -21,13 +21,13 @@ jobs:
 
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag && 'main' || github.ref }}
           fetch-depth: 0
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -146,33 +146,19 @@ jobs:
               for (const commit of commits) {
                 const message = (commit.commit?.message || '').split('\n')[0].trim();
                 if (!message) continue;
-                const login = commit.author?.login || commit.commit?.author?.name || 'unknown';
-                let pullRequest = null;
-                try {
-                  const prs = await github.paginate(
-                    github.rest.repos.listPullRequestsAssociatedWithCommit,
-                    { owner, repo, commit_sha: commit.sha, per_page: 100 }
-                  );
-                  pullRequest = prs.find(pr => pr.merged_at) || prs[0] || null;
-                } catch (error) {
-                  core.warning(`Could not find PR for ${commit.sha}: ${error.message}`);
-                }
-
-                const authorText = login.startsWith('@') ? login : `@${login}`;
-                const suffix = pullRequest
-                  ? ` by ${authorText} in [#${pullRequest.number}](${pullRequest.html_url})`
-                  : ` by ${authorText} ([${commit.sha.slice(0, 7)}](${commit.html_url}))`;
-                lines.push(`- ${message}${suffix}`);
+                const author = commit.author?.login || commit.commit?.author?.name || 'unknown';
+                const authorText = author.startsWith('@') ? author : `@${author}`;
+                lines.push(`- ${message} by ${authorText} ([${commit.sha.slice(0, 7)}](${commit.html_url}))`);
               }
 
               const compareUrl = previousTag
                 ? `https://github.com/${owner}/${repo}/compare/${previousTag}...${currentTag}`
                 : `https://github.com/${owner}/${repo}/commits/${currentTag}`;
-              const heading = current.dev !== null ? '## Development changes' : '## Changes';
+              const heading = current.dev !== null ? '## Development improvements' : '## Improvements';
               const previousText = previousTag ? ` since ${previousTag}` : '';
               const body = [
                 heading,
-                `Every commit${previousText}:`,
+                `Improvements in this release${previousText}:`,
                 '',
                 ...(lines.length ? lines : ['- No commits found in this comparison.']),
                 '',
