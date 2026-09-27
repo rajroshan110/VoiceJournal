@@ -11,9 +11,6 @@ import dev.voicejournal.data.local.db.entity.JournalEntryEntity
 import dev.voicejournal.data.local.db.relation.EntryWithTagsAndImages
 import kotlinx.coroutines.flow.Flow
 
-data class DateCount(val date: String, val count: Int)
-data class MoodCount(val moodEmoji: String, val count: Int)
-
 @Dao
 interface JournalEntryDao {
     @Transaction
@@ -40,9 +37,6 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries ORDER BY createdAt DESC")
     suspend fun getAllEntriesForBackup(): List<EntryWithTagsAndImages>
 
-    @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isDraft = 0 ORDER BY createdAt DESC")
-    suspend fun getAllEntriesSync(): List<JournalEntryEntity>
-
     @Query("SELECT * FROM journal_entries ORDER BY createdAt DESC")
     suspend fun getAllRawEntriesSync(): List<JournalEntryEntity>
 
@@ -51,37 +45,12 @@ interface JournalEntryDao {
     fun getTrashEntriesWithTagsAndImages(): Flow<List<EntryWithTagsAndImages>>
 
     @Transaction
-    @Query("SELECT * FROM journal_entries WHERE deletedAt IS NOT NULL AND deletedAt <= :thresholdTime")
-    suspend fun getExpiredTrashEntries(thresholdTime: Long): List<EntryWithTagsAndImages>
-
-    @Transaction
     @Query("SELECT * FROM journal_entries WHERE id = :id")
     fun getEntryById(id: Long): Flow<EntryWithTagsAndImages?>
 
     @Transaction
     @Query("SELECT * FROM journal_entries WHERE id = :id")
     suspend fun getEntryByIdSync(id: Long): EntryWithTagsAndImages?
-
-    @Transaction
-    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid")
-    fun getEntryByUuid(uuid: String): Flow<EntryWithTagsAndImages?>
-
-    @Transaction
-    @Query("SELECT * FROM journal_entries WHERE uuid = :uuid LIMIT 1")
-    suspend fun getEntryByUuidSync(uuid: String): EntryWithTagsAndImages?
-
-    @Transaction
-    @Query("SELECT * FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 AND isDraft = 0 AND date(createdAt / 1000, 'unixepoch') = :dateStr ORDER BY createdAt DESC")
-    fun getEntriesByDate(dateStr: String): Flow<List<EntryWithTagsAndImages>>
-
-    @Query("SELECT date(createdAt / 1000, 'unixepoch') as date, COUNT(id) as count FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 GROUP BY date(createdAt / 1000, 'unixepoch')")
-    fun getEntryCountsByDate(): Flow<List<DateCount>>
-
-    @Query("SELECT moodEmoji, COUNT(id) as count FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 AND createdAt BETWEEN :start AND :end AND moodEmoji IS NOT NULL GROUP BY moodEmoji")
-    fun getMoodDistribution(start: Long, end: Long): Flow<List<MoodCount>>
-
-    @Query("SELECT AVG(duration) FROM journal_entries WHERE deletedAt IS NULL AND isArchived = 0 AND createdAt BETWEEN :start AND :end")
-    fun getAverageDuration(start: Long, end: Long): Flow<Float?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: JournalEntryEntity): Long

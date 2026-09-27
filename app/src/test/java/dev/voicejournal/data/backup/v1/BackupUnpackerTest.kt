@@ -61,6 +61,32 @@ class BackupUnpackerTest {
     }
 
     @Test
+    fun `test zip slip protection blocks sibling directory with matching prefix`() {
+        val zipBytes = createZip { zos ->
+            zos.putNextEntry(ZipEntry("../${tempCacheDir.name}_sibling/malicious.txt"))
+            zos.write("sibling escape".toByteArray())
+            zos.closeEntry()
+        }
+
+        assertThrows(SecurityException::class.java) {
+            unpacker.unpack(ByteArrayInputStream(zipBytes))
+        }
+    }
+
+    @Test
+    fun `test zip slip protection blocks nested directory traversal`() {
+        val zipBytes = createZip { zos ->
+            zos.putNextEntry(ZipEntry("media/../../malicious.txt"))
+            zos.write("nested escape".toByteArray())
+            zos.closeEntry()
+        }
+
+        assertThrows(SecurityException::class.java) {
+            unpacker.unpack(ByteArrayInputStream(zipBytes))
+        }
+    }
+
+    @Test
     fun `test zip bomb extraction limits`() {
         val zipBytes = createZip { zos ->
             for (i in 1..50005) {

@@ -35,7 +35,7 @@ class BackupUnpacker(
                 val outFile = File(stagingDir, entry.name)
 
                 // Zip Slip Protection
-                if (!outFile.canonicalPath.startsWith(canonicalStagingPath)) {
+                if (!outFile.canonicalPath.startsWith(canonicalStagingPath + File.separator) && outFile.canonicalPath != canonicalStagingPath) {
                     throw SecurityException("Zip entry is trying to break out of target directory: ${entry.name}")
                 }
 

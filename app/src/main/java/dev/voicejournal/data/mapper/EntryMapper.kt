@@ -33,33 +33,6 @@ fun List<AudioTrack>.toTracksJson(): String {
 
 fun String.toAudioTracks(): List<AudioTrack> {
     if (isBlank()) return emptyList()
-    
-    if (!trimStart().startsWith("[")) {
-        // Legacy delimiter format
-        return split("||").mapNotNull { str ->
-            val parts = str.split("::")
-            if (parts.size >= 3) {
-                val id = parts[0]
-                val path = parts[1]
-                val durationMs = parts[2].toLongOrNull() ?: 0L
-                val transcript = if (parts.size >= 4 && parts[3].isNotBlank()) parts[3] else null
-                val createdAt = if (parts.size >= 5 && parts[4].toLongOrNull() ?: 0L > 0L) parts[4].toLong() else null
-                val model = if (parts.size >= 6 && parts[5].isNotBlank()) parts[5] else null
-                val language = if (parts.size >= 7 && parts[6].isNotBlank()) parts[6] else null
-                val version = if (parts.size >= 8 && parts[7].isNotBlank()) parts[7] else null
-                AudioTrack(
-                    id = id,
-                    path = path,
-                    durationMs = durationMs,
-                    transcript = transcript,
-                    transcriptCreatedAt = createdAt,
-                    transcriptModel = model,
-                    transcriptLanguage = language,
-                    transcriptVersion = version
-                )
-            } else null
-        }
-    }
 
     return try {
         val array = JSONArray(this)

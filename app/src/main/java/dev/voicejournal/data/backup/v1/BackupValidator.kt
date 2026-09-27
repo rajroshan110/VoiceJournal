@@ -18,9 +18,20 @@ data class ValidationReport(
     val preferences: BackupPreferences? = null
 )
 
-class BackupValidator {
+class BackupValidator(
+    private val deserializer: BackupDeserializer = BackupDeserializer()
+) {
 
-    private val deserializer = BackupDeserializer()
+    companion object {
+        val UUID_REGEX = Regex("^[0-9a-fA-F-]{36}$")
+
+        fun isValidUuid(uuid: String): Boolean = uuid.matches(UUID_REGEX)
+
+        fun isValidArchivePath(archivePath: String): Boolean =
+            archivePath.startsWith("media/") &&
+            !archivePath.contains("..") &&
+            !archivePath.startsWith("/")
+    }
 
     fun validate(stagingDir: File): ValidationReport {
         val errors = mutableListOf<String>()
@@ -146,22 +157,33 @@ class BackupValidator {
         }
 
         attachments.forEach { att ->
+            if (!isValidUuid(att.uuid)) {
+                errors.add("Attachment UUID '${att.uuid}' is invalid (does not match strict UUID format)")
+            }
+
+            val isArchivePathValid = isValidArchivePath(att.archivePath)
+            if (!isArchivePathValid) {
+                errors.add("Attachment '${att.uuid}' has invalid archivePath '${att.archivePath}': must start with 'media/' and not contain '..' or leading slashes")
+            }
+
             if (att.entryUuid !in entryUuidSet) {
                 errors.add("Attachment '${att.uuid}' references missing entry UUID: '${att.entryUuid}'")
             }
 
             // 7. Media File Existence, SHA-256 and Size Check
-            val mediaFile = File(stagingDir, att.archivePath)
-            if (!mediaFile.exists() || !mediaFile.isFile) {
-                errors.add("Media file missing from archive: '${att.archivePath}' for attachment '${att.uuid}'")
-            } else {
-                val actualSize = mediaFile.length()
-                if (actualSize != att.fileSizeBytes) {
-                    errors.add("Media file size mismatch for '${att.archivePath}': metadata size is ${att.fileSizeBytes}, actual file size is $actualSize")
-                }
-                val actualSha = computeFileSha256(mediaFile)
-                if (!actualSha.equals(att.sha256, ignoreCase = true)) {
-                    errors.add("Media file SHA-256 mismatch for '${att.archivePath}': metadata SHA is ${att.sha256}, actual SHA is $actualSha")
+            if (isArchivePathValid) {
+                val mediaFile = File(stagingDir, att.archivePath)
+                if (!mediaFile.exists() || !mediaFile.isFile) {
+                    errors.add("Media file missing from archive: '${att.archivePath}' for attachment '${att.uuid}'")
+                } else {
+                    val actualSize = mediaFile.length()
+                    if (actualSize != att.fileSizeBytes) {
+                        errors.add("Media file size mismatch for '${att.archivePath}': metadata size is ${att.fileSizeBytes}, actual file size is $actualSize")
+                    }
+                    val actualSha = computeFileSha256(mediaFile)
+                    if (!actualSha.equals(att.sha256, ignoreCase = true)) {
+                        errors.add("Media file SHA-256 mismatch for '${att.archivePath}': metadata SHA is ${att.sha256}, actual SHA is $actualSha")
+                    }
                 }
             }
         }

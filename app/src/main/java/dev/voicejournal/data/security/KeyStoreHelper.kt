@@ -9,7 +9,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
-import dev.voicejournal.BuildConfig
 import java.security.InvalidKeyException
 import java.security.UnrecoverableKeyException
 import java.security.GeneralSecurityException
@@ -23,9 +22,6 @@ object KeyStoreHelper {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val IV_LENGTH = 12
     private const val TAG_LENGTH = 128
-
-    // Debug Simulation Hook
-    var simulateKeystoreInvalidation = false
 
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
@@ -72,10 +68,6 @@ object KeyStoreHelper {
     }
 
     fun decrypt(encryptedBase64: String): String? {
-        if (BuildConfig.DEBUG && simulateKeystoreInvalidation) {
-            deleteKey()
-            throw KeystoreInvalidatedException("Simulated Keystore Invalidation")
-        }
         return try {
             val combined = Base64.decode(encryptedBase64, Base64.DEFAULT)
             if (combined.size <= IV_LENGTH) return null

@@ -79,7 +79,7 @@ VoiceJournal follows **Clean Architecture** combined with **MVVM (Model-View-Vie
 1. **Presentation Layer**: Built with Jetpack Compose. ViewModels expose immutable `StateFlow` states and consume `UserIntent` / actions. Composable functions render state and emit events.
 2. **Domain Layer**: The core business logic containing domain models (`JournalEntry`, `AudioTrack`, `Tag`), repository interfaces, and specific single-responsibility Use Cases (`SaveEntryUseCase`, `GenerateTranscriptUseCase`, `GetInsightsSummaryUseCase`).
 3. **Data Layer**: Implements repository interfaces (`JournalRepositoryImpl`, `UserPreferencesRepositoryImpl`). Manages SQLite persistence via Room DB (`AppDatabase`), user settings via DataStore (`UserPreferencesManager`), and structured media file storage (`MediaStorageManager`).
-4. **Infrastructure & Native Layer**: Android system framework integration including `AudioRecord`, `MediaPlayer`, `AudioPlaybackService`, `TranscriptionService`, and the `WhisperEngine` C++ JNI bindings for local AI inference.
+4. **Infrastructure & Native Layer**: Android system framework integration including `AudioRecord`, `MediaPlayer`, `AudioPlaybackService`, and the `WhisperEngine` C++ JNI bindings for local AI inference.
 
 ---
 
@@ -229,8 +229,6 @@ app/src/main/java/dev/voicejournal/
 │       ├── GetInsightsSummaryUseCase.kt
 │       ├── SaveEntryUseCase.kt
 │       └── TrashUseCases.kt
-├── service/                             # Android Application Services
-│   └── TranscriptionService.kt          # Foreground service for background transcription
 ├── transcription/                       # Local AI Speech-to-Text via Whisper.cpp JNI
 │   ├── AudioFileResolver.kt             # Resolves audio file Uri/Path for processing
 │   ├── AudioResampler.kt                # Resamples audio signals to 16kHz mono PCM
@@ -276,12 +274,11 @@ app/src/main/java/dev/voicejournal/
 
 ### Major Package Descriptions
 
-* **`audio/`**: Encapulates Android `AudioRecord` and `MediaPlayer` APIs. Provides PCM amplitude extraction for live visualizers, header repair for unclosed WAV files, and MediaCodec AAC encoding.
+* **`audio/`**: Encapsulates Android `AudioRecord` and media playback APIs. Contains `AudioPlaybackService` (Media3/MediaSessionCompat foreground service), PCM amplitude extraction for live visualizers, header repair for unclosed WAV files, and MediaCodec AAC encoding.
 * **`data/`**: Manages data persistence. Contains Room entities/DAOs, DataStore configuration, centralized `MediaStorageManager`, and the robust `backup/v1` exporter/importer.
 * **`di/`**: Configures Hilt dependency injection bindings for database instances, audio engines, repository singletons, and transcription engines.
 * **`domain/`**: Pure Kotlin layer devoid of Android framework dependencies. Holds business logic via Use Cases and defines Repository contracts.
-* **`service/`**: Foreground service management ensuring background execution during lengthy audio playback or speech-to-text processing.
-* **`transcription/`**: On-device AI engine leveraging `Whisper.cpp` compiled via NDK into native JNI libraries (`libwhisper.so`). Decodes M4A/WAV into normalized 16kHz float buffers.
+* **`transcription/`**: On-device AI engine leveraging `Whisper.cpp` compiled via NDK into native JNI libraries (`libwhisper_jni.so`). Decodes M4A/WAV into normalized 16kHz float buffers.
 * **`ui/`**: 100% Jetpack Compose presentation layer structured cleanly by screen features, governed by a unified Design System.
 
 ---
@@ -386,7 +383,7 @@ app/src/main/java/dev/voicejournal/
 [User Taps Transcribe (Aa)]
        │
        ▼
-[GenerateTranscriptUseCase] ──► Launches [TranscriptionService] (Foreground)
+[GenerateTranscriptUseCase] ──► Dispatches to Coroutine (Dispatchers.Default)
                                         │
                                         ▼
                                  [WhisperEngine]

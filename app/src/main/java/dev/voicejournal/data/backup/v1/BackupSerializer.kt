@@ -92,7 +92,6 @@ class BackupSerializer {
     fun serializePreferences(
         audioFormat: String,
         whisperModel: String,
-        dailyReminder: Boolean,
         themeMode: String,
         colorTheme: String,
         timeFormat: String,
@@ -145,8 +144,7 @@ class BackupSerializer {
                 screenPrivacyEnabled = screenPrivacyEnabled
             ),
             dataManagement = DataManagementPreferences(
-                trashRetentionDays = trashRetentionDays,
-                dailyReminder = dailyReminder
+                trashRetentionDays = trashRetentionDays
             ),
             tagOrganiser = TagOrganiserPreferences(
                 isFolderEnabled = isFolderEnabled,

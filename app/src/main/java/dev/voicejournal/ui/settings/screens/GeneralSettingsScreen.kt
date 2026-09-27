@@ -18,8 +18,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +45,7 @@ fun GeneralSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    var showDeleteModelDialog by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -254,7 +257,7 @@ fun GeneralSettingsScreen(
                                 }
 
                                 TextButton(
-                                    onClick = { viewModel.deleteWhisperModel() },
+                                    onClick = { showDeleteModelDialog = true },
                                     colors = ButtonDefaults.textButtonColors(contentColor = colors.error)
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Model", modifier = Modifier.size(16.dp))
@@ -311,5 +314,43 @@ fun GeneralSettingsScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteModelDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteModelDialog = false },
+            containerColor = colors.surface,
+            title = {
+                Text(
+                    text = "Delete Speech-to-Text Model?",
+                    color = colors.textPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This will remove the downloaded Whisper model (59 MB) from your device. You will need an internet connection to download it again for offline transcription.",
+                    color = colors.textSecondary,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteModelDialog = false
+                        viewModel.deleteWhisperModel()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
+                ) {
+                    Text("Delete", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteModelDialog = false }) {
+                    Text("Cancel", color = colors.textSecondary)
+                }
+            }
+        )
     }
 }

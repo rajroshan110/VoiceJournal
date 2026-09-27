@@ -61,7 +61,6 @@ class BackupExporter @Inject constructor(
             // 3. Collect DataStore preferences
             val audioFormat = prefsManager.audioFormat.first().name
             val whisperModel = prefsManager.whisperModel.first()
-            val dailyReminder = prefsManager.dailyReminder.first()
             val themeMode = prefsManager.appThemeMode.first().name
             val timeFormat = prefsManager.timeFormat.first().name
             val startOfWeek = prefsManager.startOfWeek.first().name
@@ -91,7 +90,6 @@ class BackupExporter @Inject constructor(
             val preferencesJsonStr = serializer.serializePreferences(
                 audioFormat = audioFormat,
                 whisperModel = whisperModel,
-                dailyReminder = dailyReminder,
                 themeMode = themeMode,
                 colorTheme = colorTheme,
                 timeFormat = timeFormat,

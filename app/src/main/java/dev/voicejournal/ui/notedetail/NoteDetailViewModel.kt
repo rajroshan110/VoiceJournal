@@ -25,7 +25,6 @@ import dev.voicejournal.domain.usecase.DeleteEntryUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
 import dev.voicejournal.domain.usecase.GetEntryByIdUseCase
 import dev.voicejournal.domain.usecase.SaveEntryUseCase
-import dev.voicejournal.transcription.WhisperManager
 import dev.voicejournal.domain.usecase.GenerateTranscriptUseCase
 import dev.voicejournal.transcription.AudioFileResolver
 import dev.voicejournal.transcription.engine.SpeechToTextEngine
@@ -112,7 +111,6 @@ class NoteDetailViewModel @Inject constructor(
     private val audioRecorderManager: AudioRecorderManager,
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
-    private val whisperManager: WhisperManager,
     private val speechToTextEngine: SpeechToTextEngine,
     private val generateTranscriptUseCase: GenerateTranscriptUseCase
 ) : ViewModel() {
@@ -469,8 +467,16 @@ class NoteDetailViewModel @Inject constructor(
     private fun findMatchingTrack(path: String?, entryId: Long?, tracks: List<AudioTrack>): AudioTrack? {
         if (tracks.isEmpty()) return null
         if (!path.isNullOrEmpty()) {
-            val foundByPath = tracks.find { it.path == path }
+            val fileName = File(path).name
+            val foundByPath = tracks.find {
+                it.path == path || (it.path.isNotBlank() && File(it.path).name == fileName)
+            }
             if (foundByPath != null) return foundByPath
+        }
+        val currentActiveId = _uiState.value.playingTrackId
+        if (currentActiveId != null) {
+            val foundActive = tracks.find { it.id == currentActiveId }
+            if (foundActive != null) return foundActive
         }
         return tracks.firstOrNull()
     }
@@ -671,13 +677,23 @@ class NoteDetailViewModel @Inject constructor(
                     audioPlayerManager.resume()
                 }
                 else -> {
+                    _uiState.value = _uiState.value.copy(
+                        playingTrackId = track.id,
+                        currentPositionMs = 0L,
+                        isPlaying = true
+                    )
                     audioPlayerManager.play(path, "Voice Note", _uiState.value.entryId)
-                    _uiState.value = _uiState.value.copy(playingTrackId = track.id)
                 }
             }
         } else {
+            // Switching tracks or starting a different track:
+            // Immediately reset currentPositionMs to 0L and update playingTrackId so UI has zero stale state
+            _uiState.value = _uiState.value.copy(
+                playingTrackId = track.id,
+                currentPositionMs = 0L,
+                isPlaying = true
+            )
             audioPlayerManager.play(path, "Voice Note", _uiState.value.entryId)
-            _uiState.value = _uiState.value.copy(playingTrackId = track.id)
         }
     }
 

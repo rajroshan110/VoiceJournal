@@ -11,7 +11,6 @@ import dev.voicejournal.domain.model.AudioTrack
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.*
-import dev.voicejournal.transcription.WhisperManager
 import dev.voicejournal.transcription.engine.SpeechToTextEngine
 import dev.voicejournal.ui.notedetail.NoteDetailViewModel
 import io.mockk.every
@@ -106,7 +105,6 @@ class PlaybackErrorHandlingTest {
             audioRecorderManager = mockk(relaxed = true),
             audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,
-            whisperManager = mockk(relaxed = true),
             speechToTextEngine = mockk(relaxed = true),
             generateTranscriptUseCase = mockk(relaxed = true)
         )
@@ -121,5 +119,67 @@ class PlaybackErrorHandlingTest {
         // Clear error message (simulating dialog dismissal)
         noteDetailViewModel.clearErrorMessage()
         assertNull(noteDetailViewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun testSwitchingAudioTracksImmediatelyResetsPlaybackPosition() {
+        val tempFile1 = File.createTempFile("track1_", ".m4a").apply { writeBytes(ByteArray(100)) }
+        val tempFile2 = File.createTempFile("track2_", ".m4a").apply { writeBytes(ByteArray(100)) }
+
+        try {
+            val playbackFlow = MutableStateFlow<PlayerState>(PlayerState.Idle)
+            val mockPlayerManager = mockk<AudioPlayerManager>(relaxed = true) {
+                every { playbackState } returns playbackFlow
+            }
+
+            val track1 = AudioTrack(id = "track_1", path = tempFile1.absolutePath, durationMs = 10000L)
+            val track2 = AudioTrack(id = "track_2", path = tempFile2.absolutePath, durationMs = 15000L)
+
+            val mockGetEntryByIdUseCase = mockk<GetEntryByIdUseCase>()
+            every { mockGetEntryByIdUseCase(1L) } returns flowOf(
+                JournalEntry(
+                    id = 1L,
+                    title = "Test Note",
+                    userText = "",
+                    audioTracks = listOf(track1, track2)
+                )
+            )
+
+            val noteDetailViewModel = NoteDetailViewModel(
+                context = mockContext,
+                getEntryByIdUseCase = mockGetEntryByIdUseCase,
+                saveEntryUseCase = mockk(relaxed = true),
+                deleteEntryUseCase = mockk(relaxed = true),
+                getAllTagsUseCase = mockk(relaxed = true),
+                audioRecorderManager = mockk(relaxed = true),
+                audioPlayerManager = mockPlayerManager,
+                userPreferencesManager = userPreferencesManager,
+                speechToTextEngine = mockk(relaxed = true),
+                generateTranscriptUseCase = mockk(relaxed = true)
+            )
+
+            noteDetailViewModel.loadEntry(1L)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Start track 1 and simulate it being played/paused at 5000ms
+            noteDetailViewModel.togglePlaybackForTrack(track1)
+            playbackFlow.value = PlayerState.Paused(1L, 5000L, 10000L, tempFile1.absolutePath)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals("track_1", noteDetailViewModel.uiState.value.playingTrackId)
+            assertEquals(5000L, noteDetailViewModel.uiState.value.currentPositionMs)
+
+            // Now switch to track 2
+            noteDetailViewModel.togglePlaybackForTrack(track2)
+
+            // Verify track 2 immediately starts at 0ms with zero residual "shadow" from track 1
+            val stateAfterSwitch = noteDetailViewModel.uiState.value
+            assertEquals("track_2", stateAfterSwitch.playingTrackId)
+            assertEquals(0L, stateAfterSwitch.currentPositionMs)
+            assertTrue(stateAfterSwitch.isPlaying)
+        } finally {
+            tempFile1.delete()
+            tempFile2.delete()
+        }
     }
 }

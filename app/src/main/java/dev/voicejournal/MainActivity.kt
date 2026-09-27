@@ -171,10 +171,9 @@ class MainActivity : FragmentActivity() {
                                 correctPin = customPin ?: "",
                                 failedAttempts = pinFailedAttempts,
                                 lockoutEndTime = pinLockoutEndTime,
-                                onUnlocked = { verifiedPin ->
+                                onUnlocked = { _ ->
                                     lifecycleScope.launch {
                                         userPreferencesManager.clearFailedPinAttempts()
-                                        userPreferencesManager.migratePinIfNeeded(verifiedPin)
                                     }
                                     isAppUnlocked = true 
                                 },

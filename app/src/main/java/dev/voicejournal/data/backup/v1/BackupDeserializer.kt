@@ -211,8 +211,7 @@ class BackupDeserializer {
                 screenPrivacyEnabled = secObj.optBoolean("screen_privacy_enabled", false)
             ),
             dataManagement = DataManagementPreferences(
-                trashRetentionDays = dmObj.optInt("trash_retention_days", 7),
-                dailyReminder = dmObj.optBoolean("daily_reminder", false)
+                trashRetentionDays = dmObj.optInt("trash_retention_days", 7)
             ),
             tagOrganiser = TagOrganiserPreferences(
                 isFolderEnabled = toObj.optBoolean("is_folder_enabled", false),

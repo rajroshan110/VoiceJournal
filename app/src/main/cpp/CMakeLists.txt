@@ -7,11 +7,11 @@ add_compile_options(-O3 -ffast-math -DNDEBUG)
 
 # Target ABI specific hardware acceleration flags
 if(ANDROID_ABI STREQUAL "arm64-v8a")
-    add_compile_options(-march=armv8.2-a+fp16+dotprod -flto)
+    add_compile_options(-march=armv8-a -flto)
     add_link_options(-flto)
-    add_definitions(-D__ARM_NEON -D__ARM_FEATURE_FP16_VECTOR_ARITHMETIC -D__ARM_FEATURE_DOTPROD)
+    add_definitions(-D__ARM_NEON)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
-    add_compile_options(-mfpu=neon -mfloat-abi=softfp)
+    add_compile_options(-mfpu=neon)
     add_definitions(-D__ARM_NEON)
 endif()
 

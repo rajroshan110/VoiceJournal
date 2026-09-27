@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -85,9 +84,7 @@ class AudioPlaybackService : Service() {
                 try {
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     manager.notify(NOTIFICATION_ID, notification)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        stopForeground(STOP_FOREGROUND_DETACH)
-                    }
+                    stopForeground(STOP_FOREGROUND_DETACH)
                 } catch (e: Throwable) {
                     try {
                         startForegroundCompat(NOTIFICATION_ID, notification)
@@ -120,19 +117,11 @@ class AudioPlaybackService : Service() {
 
     private fun startForegroundCompat(id: Int, notification: android.app.Notification) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    id,
-                    notification,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                    } else {
-                        0
-                    }
-                )
-            } else {
-                startForeground(id, notification)
-            }
+            startForeground(
+                id,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
         } catch (e: Throwable) {
             try {
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -142,18 +131,16 @@ class AudioPlaybackService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Audio Playback Controls",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Media controls for voice note playback"
-                setSound(null, null)
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Audio Playback Controls",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Media controls for voice note playback"
+            setSound(null, null)
         }
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(title: String, isPlaying: Boolean): android.app.Notification {
@@ -171,7 +158,7 @@ class AudioPlaybackService : Service() {
             this,
             0,
             openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val toggleIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_TOGGLE }
@@ -179,7 +166,7 @@ class AudioPlaybackService : Service() {
             this,
             1,
             toggleIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val rewindIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_SKIP_BACKWARD }
@@ -187,7 +174,7 @@ class AudioPlaybackService : Service() {
             this,
             2,
             rewindIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val ffIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_SKIP_FORWARD }
@@ -195,7 +182,7 @@ class AudioPlaybackService : Service() {
             this,
             3,
             ffIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val stopIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_STOP }
@@ -203,7 +190,7 @@ class AudioPlaybackService : Service() {
             this,
             4,
             stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
@@ -280,13 +267,9 @@ class AudioPlaybackService : Service() {
                 entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                context.startForegroundService(intent)
             } catch (e: Throwable) {
-                try { context.startService(intent) } catch (ignored: Throwable) {}
+                // Safely handle background service start restrictions
             }
         }
 
@@ -297,7 +280,7 @@ class AudioPlaybackService : Service() {
                 entryId?.let { putExtra(EXTRA_ENTRY_ID, it) }
             }
             try {
-                if (isPlaying && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (isPlaying) {
                     context.startForegroundService(intent)
                 } else {
                     context.startService(intent)

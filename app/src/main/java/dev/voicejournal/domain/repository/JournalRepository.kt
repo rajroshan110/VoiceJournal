@@ -12,10 +12,6 @@ interface JournalRepository {
     fun getArchiveEntries(): Flow<List<JournalEntry>>
     fun getDraftEntries(): Flow<List<JournalEntry>>
     fun getEntryById(id: Long): Flow<JournalEntry?>
-    fun getEntriesByDate(dateStr: String): Flow<List<JournalEntry>>
-    fun getEntryCountsByDate(): Flow<List<Pair<String, Int>>>
-    fun getMoodDistribution(start: Long, end: Long): Flow<List<Pair<String, Int>>>
-    fun getAverageDuration(start: Long, end: Long): Flow<Float?>
     
     fun getTrashEntries(): Flow<List<JournalEntry>>
     
@@ -29,8 +25,6 @@ interface JournalRepository {
     suspend fun saveEntry(entry: JournalEntry): Long
     suspend fun deleteEntry(id: Long)
     suspend fun archiveEntry(id: Long)
-    suspend fun archiveEntries(ids: List<Long>)
-    suspend fun unarchiveEntry(id: Long)
     suspend fun unarchiveEntries(ids: List<Long>)
     suspend fun moveToTrash(id: Long)
     suspend fun moveAllToTrash(ids: List<Long>)
@@ -43,19 +37,15 @@ interface JournalRepository {
     suspend fun wipeAllData()
     
     fun getAllTags(): Flow<List<Tag>>
-    fun getTagsByType(type: TagType): Flow<List<Tag>>
     suspend fun getOrCreateTag(name: String, type: TagType): Tag
     suspend fun renameTag(tagId: Long, newName: String, type: TagType)
     suspend fun mergeTags(sourceTagId: Long, targetTagId: Long)
-    suspend fun deleteTag(id: Long)
     
     val audioFormat: Flow<AudioFormat>
     val whisperModel: Flow<String>
-    val dailyReminder: Flow<Boolean>
     
     suspend fun setAudioFormat(format: AudioFormat)
     suspend fun setWhisperModel(model: String)
-    suspend fun setDailyReminder(enabled: Boolean)
 
     suspend fun refreshAndHealData()
 }

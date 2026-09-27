@@ -1,5 +1,6 @@
 package dev.voicejournal.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
@@ -63,28 +64,6 @@ class JournalRepositoryImpl @Inject constructor(
 
     override fun getEntryById(id: Long): Flow<JournalEntry?> {
         return journalEntryDao.getEntryById(id).map { it?.toDomain() }
-    }
-
-    override fun getEntriesByDate(dateStr: String): Flow<List<JournalEntry>> {
-        return journalEntryDao.getEntriesByDate(dateStr).map { list ->
-            list.map { it.toDomain() }.filter { !it.isEmpty }
-        }
-    }
-
-    override fun getEntryCountsByDate(): Flow<List<Pair<String, Int>>> {
-        return journalEntryDao.getEntryCountsByDate().map { list ->
-            list.map { it.date to it.count }
-        }
-    }
-
-    override fun getMoodDistribution(start: Long, end: Long): Flow<List<Pair<String, Int>>> {
-        return journalEntryDao.getMoodDistribution(start, end).map { list ->
-            list.map { it.moodEmoji to it.count }
-        }
-    }
-
-    override fun getAverageDuration(start: Long, end: Long): Flow<Float?> {
-        return journalEntryDao.getAverageDuration(start, end)
     }
 
     override suspend fun batchCategorizeEntries(
@@ -184,16 +163,6 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun archiveEntry(id: Long) {
         journalEntryDao.setArchived(id, true)
-    }
-
-    override suspend fun archiveEntries(ids: List<Long>) {
-        if (ids.isNotEmpty()) {
-            journalEntryDao.setArchivedEntries(ids, true)
-        }
-    }
-
-    override suspend fun unarchiveEntry(id: Long) {
-        journalEntryDao.setArchived(id, false)
     }
 
     override suspend fun unarchiveEntries(ids: List<Long>) {
@@ -307,10 +276,6 @@ class JournalRepositoryImpl @Inject constructor(
         return tagDao.getAllTags().map { list -> list.map { it.toDomain() } }
     }
 
-    override fun getTagsByType(type: TagType): Flow<List<Tag>> {
-        return tagDao.getTagsByType(type.name).map { list -> list.map { it.toDomain() } }
-    }
-
     override suspend fun getOrCreateTag(name: String, type: TagType): Tag {
         return appDatabase.withTransaction {
             val cleanName = name.trim().removePrefix("#").removePrefix("@")
@@ -365,13 +330,8 @@ class JournalRepositoryImpl @Inject constructor(
         tagDao.mergeTags(sourceTagId, targetTagId)
     }
 
-    override suspend fun deleteTag(id: Long) {
-        tagDao.deleteTag(id)
-    }
-
     override val audioFormat: Flow<AudioFormat> = prefs.audioFormat
     override val whisperModel: Flow<String> = prefs.whisperModel
-    override val dailyReminder: Flow<Boolean> = prefs.dailyReminder
 
     override suspend fun setAudioFormat(format: AudioFormat) {
         prefs.setAudioFormat(format)
@@ -379,10 +339,6 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun setWhisperModel(model: String) {
         prefs.setWhisperModel(model)
-    }
-
-    override suspend fun setDailyReminder(enabled: Boolean) {
-        prefs.setDailyReminder(enabled)
     }
 
     private fun extractAudioDuration(file: File): Long {
@@ -415,6 +371,7 @@ class JournalRepositoryImpl @Inject constructor(
         }
     }
 
+    @SuppressLint("RestrictedApi")
     override suspend fun refreshAndHealData() = withContext(Dispatchers.IO) {
         // 1. Repair WAV file headers with corrupt/zero sizes
         AudioFileRepair.forceRepair(context)

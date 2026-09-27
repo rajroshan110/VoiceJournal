@@ -19,23 +19,11 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name ASC")
     suspend fun getAllTagsSync(): List<TagEntity>
 
-    @Query("SELECT * FROM tags WHERE type = :type ORDER BY name ASC")
-    fun getTagsByType(type: String): Flow<List<TagEntity>>
-
     @Query("SELECT * FROM tags WHERE name = :name AND type = :type LIMIT 1")
     suspend fun getTagByNameAndType(name: String, type: String): TagEntity?
 
-    @Query("SELECT * FROM tags WHERE uuid = :uuid LIMIT 1")
-    suspend fun getTagByUuid(uuid: String): TagEntity?
-
     @Query("DELETE FROM tags WHERE id = :id")
     suspend fun deleteTagInternal(id: Long)
-
-    @Transaction
-    suspend fun deleteTag(id: Long) {
-        deleteTagCrossRefsByTagId(id)
-        deleteTagInternal(id)
-    }
 
     @Query("DELETE FROM tags")
     suspend fun deleteAllTags()

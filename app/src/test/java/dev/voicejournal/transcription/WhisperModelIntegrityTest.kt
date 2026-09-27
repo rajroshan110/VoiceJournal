@@ -3,6 +3,7 @@ package dev.voicejournal.transcription
 import dev.voicejournal.transcription.engine.WhisperEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -99,5 +100,53 @@ class WhisperModelIntegrityTest {
         assertTrue(prodModel.exists())
         assertFalse(tempDownload.exists())
         assertEquals(validBytes.size.toLong(), prodModel.length())
+    }
+
+    @Test
+    fun testRedirectUrlResolutionAndHttpsVerification() {
+        val currentUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"
+
+        // 1. Relative redirect resolution
+        val relativeRedirect = "/cdn-lfs/ggml-base-q5_1.bin"
+        val resolved = WhisperEngine.resolveRedirectUrl(currentUrl, relativeRedirect)
+        assertEquals("https://huggingface.co/cdn-lfs/ggml-base-q5_1.bin", resolved)
+        assertTrue(resolved.startsWith("https://"))
+
+        // 2. Sibling relative redirect resolution
+        val siblingRedirect = "ggml-base-q5_1-mirror.bin"
+        val resolvedSibling = WhisperEngine.resolveRedirectUrl(currentUrl, siblingRedirect)
+        assertEquals("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1-mirror.bin", resolvedSibling)
+        assertTrue(resolvedSibling.startsWith("https://"))
+
+        // 3. Absolute HTTPS redirect resolution
+        val absoluteHttpsRedirect = "https://cdn.huggingface.co/model.bin"
+        val resolvedAbsolute = WhisperEngine.resolveRedirectUrl(currentUrl, absoluteHttpsRedirect)
+        assertEquals("https://cdn.huggingface.co/model.bin", resolvedAbsolute)
+        assertTrue(resolvedAbsolute.startsWith("https://"))
+
+        // 4. Insecure HTTP redirect must throw SecurityException
+        val insecureRedirect = "http://insecure-cdn.com/model.bin"
+        assertThrows(SecurityException::class.java) {
+            WhisperEngine.resolveRedirectUrl(currentUrl, insecureRedirect)
+        }
+
+        // 5. Insecure non-HTTPS schemes (e.g. file:, ftp:) must throw SecurityException
+        assertThrows(SecurityException::class.java) {
+            WhisperEngine.resolveRedirectUrl(currentUrl, "file:///etc/passwd")
+        }
+        assertThrows(SecurityException::class.java) {
+            WhisperEngine.resolveRedirectUrl(currentUrl, "ftp://example.com/model.bin")
+        }
+    }
+
+    @Test
+    fun testThreadSchedulingClampRange() {
+        assertEquals(2, WhisperEngine.calculateNumThreads(0))
+        assertEquals(2, WhisperEngine.calculateNumThreads(1))
+        assertEquals(2, WhisperEngine.calculateNumThreads(2))
+        assertEquals(3, WhisperEngine.calculateNumThreads(3))
+        assertEquals(4, WhisperEngine.calculateNumThreads(4))
+        assertEquals(4, WhisperEngine.calculateNumThreads(8))
+        assertEquals(4, WhisperEngine.calculateNumThreads(16))
     }
 }
