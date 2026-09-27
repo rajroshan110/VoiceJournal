@@ -49,7 +49,7 @@ class AudioPlayerManager(private val context: Context) {
                     AudioPlaybackService.stop(context)
                 }
                 Player.STATE_READY -> {
-                    if (!player.isPlaying && player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    if (!player.playWhenReady && !player.isPlaying && player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
                         val dur = player.duration.coerceAtLeast(0)
                         _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
                         progressJob?.cancel()
@@ -74,6 +74,7 @@ class AudioPlayerManager(private val context: Context) {
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             val player = exoPlayer ?: return
+            if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) return
             if (!playWhenReady && !player.isPlaying) {
                 val dur = player.duration.coerceAtLeast(0)
                 _playbackState.value = PlayerState.Paused(currentEntryId, player.currentPosition, dur, currentAudioPath)
@@ -162,10 +163,6 @@ class AudioPlayerManager(private val context: Context) {
         get() = exoPlayer?.duration?.coerceAtLeast(0) ?: -1L
 
     fun play(audioPath: String, title: String = "Voice Note Playback", entryId: Long? = null) {
-        currentTitle = title.ifBlank { "Voice Note Playback" }
-        currentEntryId = entryId
-        currentAudioPath = audioPath
-
         if (audioPath.isEmpty()) {
             _playbackState.value = PlayerState.Error("Audio path is empty")
             return
@@ -177,17 +174,22 @@ class AudioPlayerManager(private val context: Context) {
             return
         }
 
+        // Cancel progress tracking and stop existing playback before switching audio paths
+        progressJob?.cancel()
+        try {
+            exoPlayer?.stop()
+            exoPlayer?.clearMediaItems()
+        } catch (ignored: Exception) {}
+
+        currentTitle = title.ifBlank { "Voice Note Playback" }
+        currentEntryId = entryId
+        currentAudioPath = audioPath
+
         val mediaUri: Uri = if (audioFile != null) {
             Uri.fromFile(audioFile)
         } else {
             Uri.parse(audioPath)
         }
-
-        // Stop any existing playback and cancel progress tracking before starting new media
-        progressJob?.cancel()
-        try {
-            exoPlayer?.stop()
-        } catch (ignored: Exception) {}
 
         if (exoPlayer == null) {
             val audioAttributes = AudioAttributes.Builder()
