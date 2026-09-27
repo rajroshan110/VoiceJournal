@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VoiceJournal</string>
-
-    <!-- Recording Service -->
-    <string name="recording_notification_channel">Recording</string>
-    <string name="recording_notification_title">Voice is recording…</string>
 </resources>

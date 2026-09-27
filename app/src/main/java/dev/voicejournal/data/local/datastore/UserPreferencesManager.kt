@@ -44,7 +44,6 @@ class UserPreferencesManager @Inject constructor(
     companion object {
         val AUDIO_FORMAT = stringPreferencesKey("audio_format")
         val WHISPER_MODEL = stringPreferencesKey("whisper_model")
-        val DAILY_REMINDER = booleanPreferencesKey("daily_reminder")
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val SORT_OPTION = stringPreferencesKey("sort_option")
         val FOLDER_IS_GRID_VIEW = booleanPreferencesKey("folder_is_grid_view")
@@ -103,10 +102,6 @@ class UserPreferencesManager @Inject constructor(
 
     val whisperModel: Flow<String> = dataStore.data.map { prefs ->
         prefs[WHISPER_MODEL] ?: "NONE"
-    }
-
-    val dailyReminder: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[DAILY_REMINDER] ?: false
     }
 
     val appThemeMode: StateFlow<AppThemeMode> = dataStore.data.map { prefs ->
@@ -257,12 +252,6 @@ class UserPreferencesManager @Inject constructor(
     suspend fun setWhisperModel(model: String) {
         dataStore.edit { prefs ->
             prefs[WHISPER_MODEL] = model
-        }
-    }
-
-    suspend fun setDailyReminder(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[DAILY_REMINDER] = enabled
         }
     }
 

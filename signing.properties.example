@@ -1,0 +1,8 @@
+# Example Signing Configuration for VoiceJournal
+# Copy this file to 'signing.properties' in the repository root and fill in your keystore values.
+# Do NOT commit signing.properties to git (it is already in .gitignore).
+
+storeFile=/path/to/your/release-keystore.jks
+storePassword=yourKeystorePassword
+keyAlias=yourKeyAlias
+keyPassword=yourKeyPassword

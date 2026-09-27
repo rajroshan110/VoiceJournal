@@ -65,12 +65,7 @@ class BackupManifestBuilder(
         try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             versionName = pInfo.versionName ?: "0.1.0"
-            @Suppress("DEPRECATION")
-            versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                pInfo.longVersionCode.toInt()
-            } else {
-                pInfo.versionCode
-            }
+            versionCode = pInfo.longVersionCode.toInt()
         } catch (e: Exception) {
             // Fallback default
         }

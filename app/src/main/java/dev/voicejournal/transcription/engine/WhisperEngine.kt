@@ -37,6 +37,17 @@ class WhisperEngine @Inject constructor(
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
             "https://github.com/ggerganov/whisper.cpp/raw/master/models/ggml-base-q5_1.bin"
         )
+
+        fun resolveRedirectUrl(currentUrl: String, redirectLocation: String): String {
+            val resolved = URL(URL(currentUrl), redirectLocation).toString()
+            if (!resolved.startsWith("https://")) {
+                throw SecurityException("Insecure redirect to non-HTTPS URL: $resolved")
+            }
+            return resolved
+        }
+
+        fun calculateNumThreads(availableProcessors: Int = Runtime.getRuntime().availableProcessors()): Int =
+            availableProcessors.coerceIn(2, 4)
     }
 
     // Quantized 5-bit Multilingual Model (~59.7 MB, supports English & Hindi)
@@ -131,13 +142,19 @@ class WhisperEngine @Inject constructor(
                             val newUrl = connection.getHeaderField("Location")
                             connection.disconnect()
                             if (!newUrl.isNullOrEmpty()) {
-                                Log.d(TAG, "Redirecting to: $newUrl")
-                                currentUrl = newUrl
+                                val resolvedUrl = resolveRedirectUrl(currentUrl, newUrl)
+                                Log.d(TAG, "Redirecting to: $resolvedUrl")
+                                currentUrl = resolvedUrl
                                 redirects++
                                 continue
                             }
                         }
                         break
+                    }
+
+                    if (redirects >= maxRedirects) {
+                        Log.e(TAG, "Exceeded maximum redirect limit ($maxRedirects) for $urlStr")
+                        continue
                     }
     
                     val finalConn = connection ?: continue
@@ -271,7 +288,7 @@ class WhisperEngine @Inject constructor(
                 }
 
                 // 3. Optimal Thread Scheduling & Language Setting (Default: "auto" for auto-detection)
-                val numThreads = Runtime.getRuntime().availableProcessors().coerceIn(4, 6)
+                val numThreads = calculateNumThreads()
                 val targetLang = language ?: "auto"
 
                 // 4. Native Whisper Inference & Real-Time Partial Callback

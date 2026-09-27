@@ -51,11 +51,9 @@ interface JournalRepository {
     
     val audioFormat: Flow<AudioFormat>
     val whisperModel: Flow<String>
-    val dailyReminder: Flow<Boolean>
     
     suspend fun setAudioFormat(format: AudioFormat)
     suspend fun setWhisperModel(model: String)
-    suspend fun setDailyReminder(enabled: Boolean)
 
     suspend fun refreshAndHealData()
 }

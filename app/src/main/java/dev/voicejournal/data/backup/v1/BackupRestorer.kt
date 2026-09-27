@@ -409,9 +409,6 @@ class BackupRestorer(
         // and intentionally NEVER mutated by backup restore.
         Log.i("Backup", "Preserving destination device App Lock state; app lock configuration from backup is intentionally ignored.")
 
-        // Data Management
-        prefsManager.setDailyReminder(p.dataManagement.dailyReminder)
-
         // Tag Organiser & Visibility
         prefsManager.setFolderEnabled(p.tagOrganiser.isFolderEnabled)
         prefsManager.setNotesOrganisationEnabled(p.tagOrganiser.isNotesOrganisationEnabled)

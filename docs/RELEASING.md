@@ -53,8 +53,8 @@ GitHub generates notes from commits and pull requests since the previous
 release. Prefer clear titles such as `feat: add rich-text alignment`,
 `fix: repair audio playback state`, and `ui: improve settings spacing`.
 
-Release from `main`, not from a feature branch. The current checkout is on
-`refinement/richtext`; merge it into `main` before creating the first release.
+Release from `main`, not from a feature branch. Ensure all changes and tests
+are passing on `main` before creating the release tag.
 
 ## Signing
 

@@ -1,5 +1,6 @@
 package dev.voicejournal.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
@@ -371,7 +372,6 @@ class JournalRepositoryImpl @Inject constructor(
 
     override val audioFormat: Flow<AudioFormat> = prefs.audioFormat
     override val whisperModel: Flow<String> = prefs.whisperModel
-    override val dailyReminder: Flow<Boolean> = prefs.dailyReminder
 
     override suspend fun setAudioFormat(format: AudioFormat) {
         prefs.setAudioFormat(format)
@@ -379,10 +379,6 @@ class JournalRepositoryImpl @Inject constructor(
 
     override suspend fun setWhisperModel(model: String) {
         prefs.setWhisperModel(model)
-    }
-
-    override suspend fun setDailyReminder(enabled: Boolean) {
-        prefs.setDailyReminder(enabled)
     }
 
     private fun extractAudioDuration(file: File): Long {
@@ -415,6 +411,7 @@ class JournalRepositoryImpl @Inject constructor(
         }
     }
 
+    @SuppressLint("RestrictedApi")
     override suspend fun refreshAndHealData() = withContext(Dispatchers.IO) {
         // 1. Repair WAV file headers with corrupt/zero sizes
         AudioFileRepair.forceRepair(context)

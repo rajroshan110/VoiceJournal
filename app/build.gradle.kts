@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.voicejournal"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 35
         versionCode = 103
         versionName = "1.0.3"
@@ -120,7 +120,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.ui.text.google.fonts)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -137,7 +136,6 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
 
     implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
 
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)

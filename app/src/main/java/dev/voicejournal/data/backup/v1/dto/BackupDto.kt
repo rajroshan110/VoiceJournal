@@ -285,12 +285,10 @@ data class SecurityPreferences(
 }
 
 data class DataManagementPreferences(
-    val trashRetentionDays: Int = 7,
-    val dailyReminder: Boolean = false
+    val trashRetentionDays: Int = 7
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("trash_retention_days", trashRetentionDays)
-        put("daily_reminder", dailyReminder)
     }
 }
 

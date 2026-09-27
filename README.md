@@ -13,7 +13,7 @@
 <p align="center">
 
 ![Platform](https://img.shields.io/badge/Platform-Android-green)
-![Min SDK](https://img.shields.io/badge/Min%20SDK-26-blue)
+![Min SDK](https://img.shields.io/badge/Min%20SDK-29%20(Android%2010%2B)-blue)
 ![Kotlin](https://img.shields.io/badge/Kotlin-100%25-purple)
 ![Material 3](https://img.shields.io/badge/Material%203-Jetpack%20Compose-blue)
 ![Offline](https://img.shields.io/badge/Offline-First-success)
@@ -26,11 +26,9 @@
 
 VoiceJournal is a modern Android application that lets you record voice notes and automatically transcribe them **entirely on your device** using Whisper.cpp.
 
-No cloud processing.
-
-No accounts.
-
-No subscriptions.
+- **100% Local Inference**: Runs locally on your device with no external server processing.
+- **Bilingual Speech-to-Text**: Optimized for **English** and **Hindi/Urdu** speech out-of-the-box.
+- **Strict Privacy**: No cloud processing, no accounts, no subscriptions, no ads, and zero telemetry.
 
 Your recordings and transcripts remain on your device unless you explicitly export them.
 
@@ -38,18 +36,19 @@ Your recordings and transcripts remain on your device unless you explicitly expo
 
 ## Features
 
-- 🎤 Record voice notes
-- 🤖 Offline AI transcription (Whisper.cpp)
-- 🔒 Privacy-first architecture
-- 📱 Material Design 3 interface
-- 🌙 Dark mode support
-- ♿ Accessibility support
-- 📂 Import & Export journals
-- 🔍 Search transcripts
-- 📝 Edit journal entries
-- ▶️ Built-in audio playback
-- 💾 Local storage
-- ⚡ Fast and lightweight
+- 🎤 High-quality voice note recording (M4A / WAV)
+- 🤖 Offline AI transcription powered by Whisper.cpp (English & Hindi)
+- 🌐 100% Offline operation (one-time ~60MB SHA-256 verified model download on first use)
+- 🔒 Privacy-first architecture (no analytics, no external tracking, no cloud dependencies)
+- 📱 Material Design 3 interface with dynamic theming
+- 🌙 Dark and light mode support
+- 🏷️ Flexible categorization with Tags and Folders
+- 📂 Secure Backup Import & Export (with Zip-Slip and path traversal protection)
+- 🔍 Fast local transcript search
+- 📝 Rich text editor for journaling notes
+- ▶️ Background audio playback with notification & lock-screen media controls
+- 🔐 Keystore-backed PIN lock and Biometric app protection
+- ⚡ Fast, lightweight, and battery-conscious
 
 ---
 
@@ -137,7 +136,6 @@ app/
 ├── data/             # Room database, repositories & import/export
 ├── di/               # Hilt dependency injection
 ├── domain/           # Models, repository interfaces & use cases
-├── service/          # Background services
 ├── transcription/    # Offline Whisper.cpp engine
 ├── ui/               # Jetpack Compose UI
 ├── util/             # Shared utilities
@@ -190,28 +188,37 @@ Build and run on an Android device.
 
 ## Requirements
 
-- Android 8.0+
-- Android Studio
-- Gradle
-- NDK (for Whisper.cpp)
-- CMake
+### Target Device
+- **Operating System**: Android 10+ (API 29+) (Supported: Android 10 to Android 15)
+- **Permissions**: Zero storage permissions required (uses Android Photo Picker via `PickVisualMedia` and local sandbox storage)
+- **Architecture**: 64-bit ARM (`arm64-v8a`) recommended for real-time inference (supports standard ARMv8-A baseline)
+- **Memory**: 3GB+ RAM recommended (Whisper inference allocates ~200-300MB working RAM)
+
+### Development & Build
+- **IDE**: Android Studio Ladybug / Meerkat or newer
+- **JDK**: Java 17 (e.g. Eclipse Adoptium Temurin 17)
+- **Android NDK**: 27.0.12077973+
+- **CMake**: 3.22.1+
 
 ---
 
-## Privacy
+## Privacy & Offline Architecture
 
-VoiceJournal follows an offline-first philosophy.
+VoiceJournal follows a strict offline-first philosophy:
 
-- No user accounts
-- No cloud sync
-- No cloud analytics
-- No ads
-- No audio uploaded
-- Local processing only
-- Stored inside Android app sandbox
-- Never leaves your device unless exported
+- **No user accounts or logins**
+- **No cloud sync or remote servers**
+- **No analytics, crashlytics, or telemetry**
+- **No ads or third-party trackers**
+- **No audio uploaded**: voice recordings never leave your device
+- **Zero storage permissions**: modern Android Photo Picker (`PickVisualMedia`) requires zero storage permissions
+- **Local sandbox storage**: all database records and audio files remain strictly inside the Android application sandbox
 
-Your data belongs to you.
+### One-Time Whisper Model Download
+To enable fully local AI speech recognition without bundling massive binaries into the repository:
+1. On initial transcription (or via **Settings > General**), the app downloads the quantized Whisper Base Q5 bilingual model (~59.7 MB) via HTTPS from official mirrors.
+2. The downloaded model is cryptographically verified against a strict **SHA-256 checksum** (`422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898`).
+3. Once verified, the model is stored locally on device. **The app never connects to the internet again** for daily note-taking, search, or transcription.
 
 ---
 
@@ -229,15 +236,14 @@ VoiceJournal employs a defense-in-depth approach to protect user data and ensure
 
 ## Roadmap
 
-- [x] Audio recording
-- [x] Offline transcription
-- [x] Audio playback
-- [x] Dark mode
-- [x] Import & Export
-- [x] Note tags
-- [ ] Tags and Folder organization
-- [ ] Individual note sharing
-- [ ] Multi-language transcription
+- [x] Audio recording (M4A / WAV)
+- [x] Offline bilingual AI transcription (English & Hindi)
+- [x] Audio playback with notification controls
+- [x] Dark and light themes
+- [x] Backup Import & Export with integrity rollback
+- [x] Note tags and folder organization
+- [ ] Multi-language transcription (Spanish, French, German, etc.)
+- [ ] Individual note export & sharing
 - [ ] Encrypted Backup & Restore
 
 ---

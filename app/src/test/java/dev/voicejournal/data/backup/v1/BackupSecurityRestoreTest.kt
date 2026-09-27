@@ -126,7 +126,7 @@ class BackupSecurityRestoreTest {
                 tagGridView = false
             ),
             editor = EditorPreferences(markdownEnabled = true),
-            dataManagement = DataManagementPreferences(dailyReminder = true),
+            dataManagement = DataManagementPreferences(trashRetentionDays = 14),
             security = SecurityPreferences(
                 appLockMode = "custom_pin",
                 screenPrivacyEnabled = true
@@ -146,7 +146,6 @@ class BackupSecurityRestoreTest {
         coVerify(exactly = 1) { mockPrefsManager.setFolderIsGridView(false) }
         coVerify(exactly = 1) { mockPrefsManager.setTagIsGridView(false) }
         coVerify(exactly = 1) { mockPrefsManager.setMarkdownEnabled(true) }
-        coVerify(exactly = 1) { mockPrefsManager.setDailyReminder(true) }
         coVerify(exactly = 1) { mockPrefsManager.setScreenPrivacyEnabled(true) }
 
         // AppLockMode was in backup but must NOT be touched
