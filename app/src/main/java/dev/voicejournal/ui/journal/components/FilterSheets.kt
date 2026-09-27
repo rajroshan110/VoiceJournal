@@ -159,29 +159,6 @@ fun TopicFilterBottomSheet(
     }
 }
 
-/**
- * Backward compatibility alias for TopicFilterBottomSheet
- */
-@Deprecated(
-    message = "Use TopicFilterBottomSheet instead",
-    replaceWith = ReplaceWith("TopicFilterBottomSheet(availableTags, selectedTagNames, onTagToggle, onClearAll, onDismissRequest)")
-)
-@Composable
-fun TagsFilterBottomSheet(
-    availableTags: List<Tag>,
-    selectedTagNames: Set<String>,
-    onTagToggle: (String) -> Unit,
-    onClearAll: () -> Unit,
-    onDismissRequest: () -> Unit
-) {
-    TopicFilterBottomSheet(
-        availableTags = availableTags,
-        selectedTagNames = selectedTagNames,
-        onTagToggle = onTagToggle,
-        onClearAll = onClearAll,
-        onDismissRequest = onDismissRequest
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

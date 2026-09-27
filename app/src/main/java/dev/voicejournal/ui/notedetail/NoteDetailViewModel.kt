@@ -25,7 +25,6 @@ import dev.voicejournal.domain.usecase.DeleteEntryUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
 import dev.voicejournal.domain.usecase.GetEntryByIdUseCase
 import dev.voicejournal.domain.usecase.SaveEntryUseCase
-import dev.voicejournal.transcription.WhisperManager
 import dev.voicejournal.domain.usecase.GenerateTranscriptUseCase
 import dev.voicejournal.transcription.AudioFileResolver
 import dev.voicejournal.transcription.engine.SpeechToTextEngine
@@ -112,7 +111,6 @@ class NoteDetailViewModel @Inject constructor(
     private val audioRecorderManager: AudioRecorderManager,
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
-    private val whisperManager: WhisperManager,
     private val speechToTextEngine: SpeechToTextEngine,
     private val generateTranscriptUseCase: GenerateTranscriptUseCase
 ) : ViewModel() {

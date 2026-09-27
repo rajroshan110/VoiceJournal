@@ -11,7 +11,6 @@ import dev.voicejournal.domain.model.AudioTrack
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.*
-import dev.voicejournal.transcription.WhisperManager
 import dev.voicejournal.transcription.engine.SpeechToTextEngine
 import dev.voicejournal.ui.notedetail.NoteDetailViewModel
 import io.mockk.every
@@ -106,7 +105,6 @@ class PlaybackErrorHandlingTest {
             audioRecorderManager = mockk(relaxed = true),
             audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,
-            whisperManager = mockk(relaxed = true),
             speechToTextEngine = mockk(relaxed = true),
             generateTranscriptUseCase = mockk(relaxed = true)
         )

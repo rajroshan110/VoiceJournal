@@ -24,9 +24,6 @@ import java.nio.ByteOrder
  */
 object AudioFileRepair {
 
-    private const val PREFS_NAME = "audio_repair_prefs"
-    private const val KEY_REPAIRED = "wav_headers_repaired_v1"
-
     /**
      * Run on app startup. Scans the audio directory for WAV files
      * with corrupt headers and rewrites the size fields based on actual file size.
