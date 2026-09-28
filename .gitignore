@@ -64,3 +64,11 @@ notes/
 
 .agents/
 .claude/
+
+# Temporary showcase preview and generator scripts
+preview_readme.html
+generate_light_mockups.py
+generate_flagship_mockups.py
+
+# Raw unedited screenshot captures
+assets/screenshots/raw/
