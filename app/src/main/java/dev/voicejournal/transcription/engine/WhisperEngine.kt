@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import dev.voicejournal.BuildConfig
@@ -173,6 +174,7 @@ class WhisperEngine @Inject constructor(
                             var total: Long = 0
                             var count: Int
                             while (input.read(data).also { count = it } != -1) {
+                                ensureActive()
                                 total += count
                                 if (fileLength > 0) {
                                     _downloadProgress.value = (total.toFloat() / fileLength.toFloat()).coerceIn(0f, 1f)
@@ -282,9 +284,18 @@ class WhisperEngine @Inject constructor(
                 }
 
                 // 2. Model Context Retrieval
-                val contextPtr = getOrInitContext()
+                var contextPtr = getOrInitContext()
                 if (contextPtr == 0L) {
-                    return@withContext Result.failure(Exception("Failed to initialize Whisper engine context."))
+                    Log.e(TAG, "Failed to initialize Whisper engine context. Model may be corrupted. Attempting redownload...")
+                    if (modelFile.exists()) modelFile.delete()
+                    _isModelDownloaded.value = false
+                    val downloaded = ensureModelDownloaded()
+                    if (downloaded) {
+                        contextPtr = getOrInitContext()
+                    }
+                    if (contextPtr == 0L) {
+                        return@withContext Result.failure(Exception("Failed to initialize Whisper engine context even after redownload."))
+                    }
                 }
 
                 // 3. Optimal Thread Scheduling & Language Setting (Default: "auto" for auto-detection)

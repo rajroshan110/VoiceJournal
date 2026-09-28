@@ -71,6 +71,7 @@ class PlaybackErrorHandlingTest {
             getAllEntriesUseCase = mockk(relaxed = true),
             getAllTagsUseCase = mockk(relaxed = true),
             deleteEntryUseCase = mockk(relaxed = true),
+            extractUnifiedTagsUseCase = mockk(relaxed = true),
             journalRepository = mockk(relaxed = true),
             audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,

@@ -33,10 +33,6 @@ import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.data.local.datastore.SecurityRecoveryReason
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Text
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
@@ -44,6 +40,7 @@ import dev.voicejournal.ui.theme.AppThemeMode
 import dev.voicejournal.ui.navigation.AppNavHost
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.designsystem.theme.VoiceTheme
+import dev.voicejournal.audio.AudioPlayerManager
 import javax.inject.Inject
 
 import android.content.Intent
@@ -53,6 +50,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var userPreferencesManager: UserPreferencesManager
+
+    @Inject
+    lateinit var audioPlayerManager: AudioPlayerManager
 
     private var lastStopTimestamp: Long = 0L
     private var openEntryIdState = mutableLongStateOf(-1L)
@@ -217,9 +217,9 @@ class MainActivity : FragmentActivity() {
                 intent.action?.startsWith("dev.voicejournal.action.OPEN_NOTE_") == true
 
         val idFromExtra = intent.getLongExtra("open_entry_id", -1L)
-        val activePlayerEntryId = (dev.voicejournal.audio.AudioPlayerManager.instance?.playbackState?.value as? dev.voicejournal.audio.PlayerState.Playing)?.entryId
-            ?: (dev.voicejournal.audio.AudioPlayerManager.instance?.playbackState?.value as? dev.voicejournal.audio.PlayerState.Paused)?.entryId
-            ?: dev.voicejournal.audio.AudioPlayerManager.instance?.currentEntryId
+        val activePlayerEntryId = (audioPlayerManager.playbackState.value as? dev.voicejournal.audio.PlayerState.Playing)?.entryId
+            ?: (audioPlayerManager.playbackState.value as? dev.voicejournal.audio.PlayerState.Paused)?.entryId
+            ?: audioPlayerManager.currentEntryId
             ?: -1L
 
         val targetId = if (idFromExtra != -1L) idFromExtra else activePlayerEntryId

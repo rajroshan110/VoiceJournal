@@ -47,8 +47,8 @@ fun BatchCategorizeSheet(
     val enabledTabs = remember(isFolderEnabled, isTopicsEnabled, isPeopleEnabled) {
         buildList {
             if (isFolderEnabled) add(0 to "Folders")
-            if (isTopicsEnabled) add(1 to "Topics (#)")
-            if (isPeopleEnabled) add(2 to "People (@)")
+            if (isTopicsEnabled) add(1 to "Topics")
+            if (isPeopleEnabled) add(2 to "People")
         }
     }
 
@@ -65,14 +65,14 @@ fun BatchCategorizeSheet(
 
     val selectedTopics = remember(appliedTagNames) {
         mutableStateListOf<String>().apply {
-            addAll(cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#") == tag && it.type != TagType.PERSON && it.type != TagType.FOLDER } })
+            addAll(cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#").removePrefix("@") == tag && it.type == TagType.TOPIC } })
         }
     }
     var newTopicInput by rememberSaveable { mutableStateOf("") }
 
     val selectedPeople = remember(appliedTagNames) {
         mutableStateListOf<String>().apply {
-            addAll(cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("@") == person } })
+            addAll(cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("#").removePrefix("@") == person } })
         }
     }
     var newPersonInput by rememberSaveable { mutableStateOf("") }
@@ -262,7 +262,7 @@ fun BatchCategorizeSheet(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            availableTags.filter { it.type == TagType.TOPIC || it.type == TagType.THING }.forEach { tag ->
+                            availableTags.filter { it.type == TagType.TOPIC }.forEach { tag ->
                                 val cleanName = tag.name.trim().removePrefix("#").removePrefix("@")
                                 val isSelected = selectedTopics.contains(cleanName)
 
@@ -289,7 +289,7 @@ fun BatchCategorizeSheet(
                                             Spacer(modifier = Modifier.width(4.dp))
                                         }
                                         Text(
-                                            text = "#$cleanName",
+                                            text = cleanName,
                                             fontSize = 13.sp,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isSelected) colors.onPrimary else colors.textPrimary
@@ -308,8 +308,8 @@ fun BatchCategorizeSheet(
                         ) {
                             OutlinedTextField(
                                 value = newTopicInput,
-                                onValueChange = { newTopicInput = it.trim().removePrefix("#") },
-                                placeholder = { Text("New topic #tag...", fontSize = 13.sp) },
+                                onValueChange = { newTopicInput = it.trim().removePrefix("#").removePrefix("@") },
+                                placeholder = { Text("New topic...", fontSize = 13.sp) },
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = colors.primary,
@@ -349,7 +349,7 @@ fun BatchCategorizeSheet(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             availablePeople.forEach { person ->
-                                val cleanName = person.trim().removePrefix("@")
+                                val cleanName = person.trim().removePrefix("#").removePrefix("@")
                                 val isSelected = selectedPeople.contains(cleanName)
 
                                 Surface(
@@ -375,7 +375,7 @@ fun BatchCategorizeSheet(
                                             Spacer(modifier = Modifier.width(4.dp))
                                         }
                                         Text(
-                                            text = "@$cleanName",
+                                            text = cleanName,
                                             fontSize = 13.sp,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isSelected) colors.onPrimary else colors.textPrimary
@@ -394,8 +394,8 @@ fun BatchCategorizeSheet(
                         ) {
                             OutlinedTextField(
                                 value = newPersonInput,
-                                onValueChange = { newPersonInput = it.trim().removePrefix("@") },
-                                placeholder = { Text("New @person...", fontSize = 13.sp) },
+                                onValueChange = { newPersonInput = it.trim().removePrefix("#").removePrefix("@") },
+                                placeholder = { Text("New person...", fontSize = 13.sp) },
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = colors.primary,
@@ -427,18 +427,18 @@ fun BatchCategorizeSheet(
             // Action Apply Button
             Button(
                 onClick = {
-                    val topicTagsToAssign = if (isTopicsEnabled) selectedTopics.map { Tag(name = "#$it", type = TagType.TOPIC) } else emptyList()
-                    val personTagsToAssign = if (isPeopleEnabled) selectedPeople.map { Tag(name = "@$it", type = TagType.PERSON) } else emptyList()
+                    val topicTagsToAssign = if (isTopicsEnabled) selectedTopics.map { Tag(name = it, type = TagType.TOPIC) } else emptyList()
+                    val personTagsToAssign = if (isPeopleEnabled) selectedPeople.map { Tag(name = it, type = TagType.PERSON) } else emptyList()
 
                     val removedTopicNames = if (isTopicsEnabled) {
-                        cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#") == tag && it.type != TagType.PERSON && it.type != TagType.FOLDER } } - selectedTopics.toSet()
+                        cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#").removePrefix("@") == tag && it.type == TagType.TOPIC } } - selectedTopics.toSet()
                     } else emptySet()
                     val removedPersonNames = if (isPeopleEnabled) {
-                        cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("@") == person } } - selectedPeople.toSet()
+                        cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("#").removePrefix("@") == person } } - selectedPeople.toSet()
                     } else emptySet()
 
-                    val topicTagsToRemove = removedTopicNames.map { Tag(name = "#$it", type = TagType.TOPIC) }
-                    val personTagsToRemove = removedPersonNames.map { Tag(name = "@$it", type = TagType.PERSON) }
+                    val topicTagsToRemove = removedTopicNames.map { Tag(name = it, type = TagType.TOPIC) }
+                    val personTagsToRemove = removedPersonNames.map { Tag(name = it, type = TagType.PERSON) }
 
                     val finalSelectedFolder = if (isFolderEnabled) selectedFolder else null
                     val folderToRemove = if (isFolderEnabled && appliedFolder != null && appliedFolder != finalSelectedFolder) appliedFolder else null

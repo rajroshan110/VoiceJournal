@@ -64,7 +64,7 @@ fun TopicFilterBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Filter by Topics (#)",
+                    text = "Filter by Topics",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
@@ -93,7 +93,7 @@ fun TopicFilterBottomSheet(
 
             if (availableTags.isEmpty()) {
                 Text(
-                    text = "No topics (#) found in notes",
+                    text = "No topics found in notes",
                     color = colors.textSecondary,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -120,7 +120,7 @@ fun TopicFilterBottomSheet(
                     ) {
                         filteredTags.forEach { tag ->
                             val isSelected = selectedTagNames.contains(tag.name)
-                            val displayName = "#${tag.name.removePrefix("#")}"
+                            val displayName = tag.name.removePrefix("#")
                             
                             Surface(
                                 onClick = { onTagToggle(tag.name) },
@@ -203,7 +203,7 @@ fun PeopleFilterBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Filter by People (@)",
+                    text = "Filter by People",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
@@ -232,7 +232,7 @@ fun PeopleFilterBottomSheet(
 
             if (availablePeople.isEmpty()) {
                 Text(
-                    text = "No people (@mentions) found in notes",
+                    text = "No people found in notes",
                     color = colors.textSecondary,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -259,7 +259,7 @@ fun PeopleFilterBottomSheet(
                     ) {
                         filteredPeople.forEach { person ->
                             val isSelected = selectedPeople.contains(person)
-                            val displayName = "@${person.removePrefix("@")}"
+                            val displayName = person.removePrefix("@")
 
                             Surface(
                                 onClick = { onPersonToggle(person) },

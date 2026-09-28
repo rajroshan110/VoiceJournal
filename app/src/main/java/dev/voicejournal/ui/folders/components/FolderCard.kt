@@ -146,14 +146,6 @@ fun FolderCardGrid(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Empty folder",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary.copy(alpha = 0.6f),
-                    fontSize = 12.sp
-                )
             }
         }
     }

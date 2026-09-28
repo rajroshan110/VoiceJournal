@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.journal
 
+import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -111,6 +112,7 @@ private data class JournalBackupState(
     val resultDialog: BackupResultDialog?
 )
 
+
 @HiltViewModel
 class JournalViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -118,6 +120,7 @@ class JournalViewModel @Inject constructor(
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
     private val deleteEntryUseCase: DeleteEntryUseCase,
+    private val extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase,
     private val journalRepository: JournalRepository,
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
@@ -219,29 +222,8 @@ class JournalViewModel @Inject constructor(
             val rawTagsFlow = getAllTagsUseCase().catch { }
 
             val extractedDataFlow = combine(rawEntriesFlow, rawTagsFlow) { rawEntries, rawTags ->
-                val personTagNames = rawTags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("@") }
-                val entryPersonTags = rawEntries.flatMap { entry ->
-                    entry.tags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("@") }
-                }
-                val textMentions = rawEntries.flatMap { entry ->
-                    val text = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
-                    Regex("@\\w+").findAll(text).map { it.value.removePrefix("@") }.toList()
-                }
-                val extractedPeople = (personTagNames + entryPersonTags + textMentions)
-                    .distinct()
-                    .filter { it.isNotBlank() }
-                    .sorted()
-
-                val extractedHashtags = rawEntries.flatMap { entry ->
-                    val text = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
-                    Regex("#\\w+").findAll(text).map { it.value.removePrefix("#") }.toList()
-                }.distinct().filter { it.isNotBlank() }
-
-                val topicTagNames = rawTags.filter { it.type == TagType.TOPIC }.map { it.name.removePrefix("#") }
-                val allTagNames = (topicTagNames + extractedHashtags).distinct()
-                val allTags = allTagNames.mapIndexed { i, name -> Tag(i.toLong(), name) }
-
-                Triple(rawEntries, allTags, extractedPeople)
+                val extracted = extractUnifiedTagsUseCase(rawEntries, rawTags)
+                Triple(rawEntries, extracted.allTags, extracted.allPeople)
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
             val prefConfigFlow = combine(
@@ -283,15 +265,11 @@ class JournalViewModel @Inject constructor(
                     val matchesQuery = query.isBlank() || textContent.contains(query, ignoreCase = true)
 
                     val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
-                            entry.tags.any { (it.type == TagType.TOPIC || it.type == TagType.THING) && it.name.removePrefix("#") in filters.selectedTags } ||
-                            filters.selectedTags.any { tag -> textContent.contains("#$tag", ignoreCase = true) }
+                            entry.tags.any { it.type == TagType.TOPIC && it.name.removePrefix("#").trim() in filters.selectedTags }
 
                     val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
                             entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
-                            entry.people.any { it.removePrefix("@") in filters.selectedPeople } ||
-                            filters.selectedPeople.any { person ->
-                                textContent.contains("@$person", ignoreCase = true)
-                            }
+                            entry.people.any { it.removePrefix("@") in filters.selectedPeople }
 
                     val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
 

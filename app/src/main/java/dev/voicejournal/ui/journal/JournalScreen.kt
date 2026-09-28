@@ -235,7 +235,7 @@ fun JournalScreen(
     }
 
     // Playback Error Dialog state
-    var audioErrorDialogMessage by remember { mutableStateOf<String?>(null) }
+    var audioErrorDialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cardPlaybackState.status, cardPlaybackState.errorMessage) {
         if (cardPlaybackState.status == PlaybackStatus.Error && cardPlaybackState.errorMessage != null) {
@@ -714,8 +714,8 @@ fun JournalScreen(
                     isFolderEnabled = uiState.isFolderEnabled,
                     isTopicsEnabled = uiState.isTopicsEnabled,
                     isPeopleEnabled = uiState.isPeopleEnabled,
-                    availableFolders = (listOf("Personal", "Work", "Ideas", "Journal") + uiState.availableTags.filter { it.type == TagType.FOLDER }.map { it.name }).distinct(),
-                    availableTags = uiState.availableTags,
+                    availableFolders = uiState.availableTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }.map { it.name }.distinct(),
+                    availableTags = uiState.availableTags.filter { it.type == TagType.TOPIC },
                     availablePeople = uiState.availablePeople,
                     appliedFolder = appliedFolder,
                     appliedTagNames = appliedTagNames,
@@ -733,7 +733,7 @@ fun JournalScreen(
             when (activeSheet) {
                 ActiveSheet.TAGS -> {
                     TopicFilterBottomSheet(
-                        availableTags = uiState.availableTags,
+                        availableTags = uiState.availableTags.filter { it.type == TagType.TOPIC },
                         selectedTagNames = uiState.filterState.selectedTags,
                         onTagToggle = { tagName -> viewModel.toggleTagFilter(tagName) },
                         onClearAll = { viewModel.clearAllFilters() },

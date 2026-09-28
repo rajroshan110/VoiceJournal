@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.tags
 
+import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,10 +31,12 @@ data class TagsUiState(
     val isPeopleEnabled: Boolean = true
 )
 
+
 @HiltViewModel
 class TagsViewModel @Inject constructor(
     private val repository: JournalRepository,
-    private val userPreferencesManager: UserPreferencesManager
+    private val userPreferencesManager: UserPreferencesManager,
+    private val extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TagsUiState(isLoading = true))
@@ -102,21 +105,28 @@ class TagsViewModel @Inject constructor(
     }
 
     private fun recalculateTags() {
+        val extractedData = extractUnifiedTagsUseCase(allEntries, allTags)
+        
         // Topics
-        val explicitTopics = allTags.filter { it.type == TagType.TOPIC }
-        val entryTopics = allEntries.flatMap { entry -> entry.tags.filter { it.type == TagType.TOPIC } }
-        val allTopicsByName = (explicitTopics + entryTopics)
-            .distinctBy { it.id }
-            .sortedBy { it.name }
+        val allTopics = extractedData.allTopics
 
-        val topicItems = allTopicsByName.map { tag ->
+        val topicItems = allTopics.map { tag ->
             val matchingEntries = allEntries.filter { entry ->
                 entry.tags.any { it.type == TagType.TOPIC && it.name.equals(tag.name, ignoreCase = true) }
             }
             val noteCount = matchingEntries.size
             val latestDate = matchingEntries.maxOfOrNull { it.createdAt } ?: 0L
-            val previewTitle = matchingEntries.maxByOrNull { it.createdAt }?.title?.takeIf { it.isNotBlank() }
-                ?: matchingEntries.maxByOrNull { it.createdAt }?.plainUserText?.take(30)
+            
+            val noteWithText = matchingEntries.sortedByDescending { it.createdAt }.firstOrNull { 
+                !it.title.isNullOrBlank() || !it.plainUserText.isNullOrBlank() 
+            }
+            val previewTitle = if (matchingEntries.isEmpty()) {
+                "Empty tag"
+            } else if (noteWithText != null) {
+                noteWithText.title?.takeIf { it.isNotBlank() } ?: noteWithText.plainUserText?.takeIf { it.isNotBlank() }?.take(30)
+            } else {
+                "Audio Tracks"
+            }
 
             TagItem(
                 tag = tag,
@@ -127,20 +137,26 @@ class TagsViewModel @Inject constructor(
         }
 
         // People
-        val explicitPeople = allTags.filter { it.type == TagType.PERSON }
-        val entryPeople = allEntries.flatMap { entry -> entry.tags.filter { it.type == TagType.PERSON } }
-        val allPeopleByName = (explicitPeople + entryPeople)
-            .distinctBy { it.id }
-            .sortedBy { it.name }
+        val allPeople = extractedData.allPersonTags
 
-        val personItems = allPeopleByName.map { tag ->
+        val personItems = allPeople.map { tag ->
             val matchingEntries = allEntries.filter { entry ->
-                entry.tags.any { it.type == TagType.PERSON && it.name.equals(tag.name, ignoreCase = true) }
+                entry.tags.any { it.type == TagType.PERSON && it.name.equals(tag.name, ignoreCase = true) } ||
+                entry.people.any { it.equals(tag.name, ignoreCase = true) }
             }
             val noteCount = matchingEntries.size
             val latestDate = matchingEntries.maxOfOrNull { it.createdAt } ?: 0L
-            val previewTitle = matchingEntries.maxByOrNull { it.createdAt }?.title?.takeIf { it.isNotBlank() }
-                ?: matchingEntries.maxByOrNull { it.createdAt }?.plainUserText?.take(30)
+            
+            val noteWithText = matchingEntries.sortedByDescending { it.createdAt }.firstOrNull { 
+                !it.title.isNullOrBlank() || !it.plainUserText.isNullOrBlank() 
+            }
+            val previewTitle = if (matchingEntries.isEmpty()) {
+                "Empty tag"
+            } else if (noteWithText != null) {
+                noteWithText.title?.takeIf { it.isNotBlank() } ?: noteWithText.plainUserText?.takeIf { it.isNotBlank() }?.take(30)
+            } else {
+                "Audio Tracks"
+            }
 
             TagItem(
                 tag = tag,
@@ -153,7 +169,12 @@ class TagsViewModel @Inject constructor(
         val currentSelected = _uiState.value.selectedTag
         val updatedNotesInSelected = if (currentSelected != null) {
             allEntries.filter { entry ->
-                entry.tags.any { it.type == currentSelected.type && it.name.equals(currentSelected.name, ignoreCase = true) }
+                if (currentSelected.type == TagType.PERSON) {
+                    entry.tags.any { it.type == TagType.PERSON && it.name.equals(currentSelected.name, ignoreCase = true) } ||
+                    entry.people.any { it.equals(currentSelected.name, ignoreCase = true) }
+                } else {
+                    entry.tags.any { it.type == TagType.TOPIC && it.name.equals(currentSelected.name, ignoreCase = true) }
+                }
             }
         } else {
             emptyList()
@@ -176,7 +197,12 @@ class TagsViewModel @Inject constructor(
     fun selectTag(tag: Tag?) {
         val notes = if (tag != null) {
             allEntries.filter { entry ->
-                entry.tags.any { it.type == tag.type && it.name.equals(tag.name, ignoreCase = true) }
+                if (tag.type == TagType.PERSON) {
+                    entry.tags.any { it.type == TagType.PERSON && it.name.equals(tag.name, ignoreCase = true) } ||
+                    entry.people.any { it.equals(tag.name, ignoreCase = true) }
+                } else {
+                    entry.tags.any { it.type == TagType.TOPIC && it.name.equals(tag.name, ignoreCase = true) }
+                }
             }
         } else {
             emptyList()

@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.folders
 
+import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,10 +34,12 @@ data class FoldersUiState(
     val timeFormat: TimeFormat = TimeFormat.SYSTEM_DEFAULT
 )
 
+
 @HiltViewModel
 class FoldersViewModel @Inject constructor(
     private val repository: JournalRepository,
-    private val userPreferencesManager: UserPreferencesManager
+    private val userPreferencesManager: UserPreferencesManager,
+    private val extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FoldersUiState(isLoading = true))
@@ -81,14 +84,8 @@ class FoldersViewModel @Inject constructor(
     }
 
     private fun recalculateFolders() {
-        val explicitFolderTags = allTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }
-        val entryFolderTags = allEntries.flatMap { entry ->
-            entry.tags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }
-        }
-
-        val allFolderTagsByName = (explicitFolderTags + entryFolderTags)
-            .distinctBy { it.id }
-            .sortedBy { it.name }
+        val extractedData = extractUnifiedTagsUseCase(allEntries, allTags)
+        val allFolderTagsByName = extractedData.allFolders
 
         val folderItems = allFolderTagsByName.map { folderTag ->
             val matchingEntries = allEntries.filter { entry ->
@@ -99,8 +96,17 @@ class FoldersViewModel @Inject constructor(
             }
             val noteCount = matchingEntries.size
             val latestDate = matchingEntries.maxOfOrNull { it.createdAt } ?: 0L
-            val previewTitle = matchingEntries.maxByOrNull { it.createdAt }?.title?.takeIf { it.isNotBlank() }
-                ?: matchingEntries.maxByOrNull { it.createdAt }?.plainUserText?.take(30)
+            
+            val noteWithText = matchingEntries.sortedByDescending { it.createdAt }.firstOrNull { 
+                !it.title.isNullOrBlank() || !it.plainUserText.isNullOrBlank() 
+            }
+            val previewTitle = if (matchingEntries.isEmpty()) {
+                "Empty folder"
+            } else if (noteWithText != null) {
+                noteWithText.title?.takeIf { it.isNotBlank() } ?: noteWithText.plainUserText?.takeIf { it.isNotBlank() }?.take(30)
+            } else {
+                "Audio Tracks"
+            }
 
             FolderItem(
                 tag = folderTag,

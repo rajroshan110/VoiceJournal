@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -152,9 +153,6 @@ class AudioPlayerManager(private val context: Context) {
         AudioPlaybackService.stop(context)
     }
 
-    init {
-        instance = this
-    }
 
     val currentPosition: Long
         get() = exoPlayer?.currentPosition ?: 0L
@@ -330,11 +328,5 @@ class AudioPlayerManager(private val context: Context) {
         _playbackState.value = PlayerState.Idle
         progressJob?.cancel()
         AudioPlaybackService.stop(context)
-        if (instance == this) instance = null
-    }
-
-    companion object {
-        var instance: AudioPlayerManager? = null
-            private set
     }
 }

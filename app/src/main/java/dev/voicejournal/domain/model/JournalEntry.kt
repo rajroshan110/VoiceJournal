@@ -44,7 +44,7 @@ data class JournalEntry(
 
     val isExpiringSoon: Boolean get() = isDeleted && daysUntilPermanentDeletion <= 1
     // Dynamic people derived from PERSON tags
-    val people: List<String> get() = tags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("@") }
+    val people: List<String> get() = tags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("#").removePrefix("@").trim() }
 
     // UI convenience & spec properties
     val timestamp: Long get() = createdAt

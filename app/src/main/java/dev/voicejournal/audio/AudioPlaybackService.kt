@@ -13,10 +13,16 @@ import androidx.core.app.NotificationCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import dagger.hilt.android.AndroidEntryPoint
 import dev.voicejournal.MainActivity
 import dev.voicejournal.R
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AudioPlaybackService : Service() {
+
+    @Inject
+    lateinit var audioPlayerManager: AudioPlayerManager
 
     private val binder = PlaybackBinder()
 
@@ -34,22 +40,22 @@ class AudioPlaybackService : Service() {
         mediaSession = MediaSessionCompat(this, "AudioPlaybackService").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onSeekTo(pos: Long) {
-                    AudioPlayerManager.instance?.seekTo(pos)
+                    audioPlayerManager.seekTo(pos)
                 }
                 override fun onPlay() {
-                    AudioPlayerManager.instance?.resume()
+                    audioPlayerManager.resume()
                 }
                 override fun onPause() {
-                    AudioPlayerManager.instance?.pause()
+                    audioPlayerManager.pause()
                 }
                 override fun onStop() {
-                    AudioPlayerManager.instance?.stop()
+                    audioPlayerManager.stop()
                 }
                 override fun onSkipToNext() {
-                    AudioPlayerManager.instance?.skipForward()
+                    audioPlayerManager.skipForward()
                 }
                 override fun onSkipToPrevious() {
-                    AudioPlayerManager.instance?.skipBackward()
+                    audioPlayerManager.skipBackward()
                 }
             })
             isActive = true
@@ -60,6 +66,12 @@ class AudioPlaybackService : Service() {
         mediaSession?.isActive = false
         mediaSession?.release()
         super.onDestroy()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        audioPlayerManager.stop()
+        stopSelf()
     }
 
     private var currentEntryId: Long? = null
@@ -96,16 +108,16 @@ class AudioPlaybackService : Service() {
                 startForegroundCompat(NOTIFICATION_ID, notification)
             }
             ACTION_TOGGLE -> {
-                AudioPlayerManager.instance?.togglePlayPause()
+                audioPlayerManager.togglePlayPause()
             }
             ACTION_SKIP_FORWARD -> {
-                AudioPlayerManager.instance?.skipForward(10000L)
+                audioPlayerManager.skipForward(10000L)
             }
             ACTION_SKIP_BACKWARD -> {
-                AudioPlayerManager.instance?.skipBackward(10000L)
+                audioPlayerManager.skipBackward(10000L)
             }
             ACTION_STOP -> {
-                AudioPlayerManager.instance?.stop()
+                audioPlayerManager.stop()
                 try {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                 } catch (ignored: Throwable) {}
@@ -144,7 +156,7 @@ class AudioPlaybackService : Service() {
     }
 
     private fun buildNotification(title: String, isPlaying: Boolean): android.app.Notification {
-        val activeEntryId = AudioPlayerManager.instance?.currentEntryId ?: currentEntryId ?: -1L
+        val activeEntryId = audioPlayerManager.currentEntryId ?: currentEntryId ?: -1L
         val openIntent = Intent(this, MainActivity::class.java).apply {
             action = "dev.voicejournal.action.NOTIFICATION_CLICK"
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -196,8 +208,8 @@ class AudioPlaybackService : Service() {
         val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
         val playPauseTitle = if (isPlaying) "Pause" else "Play"
 
-        val duration = AudioPlayerManager.instance?.duration ?: -1L
-        val currentPosition = AudioPlayerManager.instance?.currentPosition ?: 0L
+        val duration = audioPlayerManager.duration ?: -1L
+        val currentPosition = audioPlayerManager.currentPosition ?: 0L
 
         mediaSession?.setPlaybackState(
             PlaybackStateCompat.Builder()

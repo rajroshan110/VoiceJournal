@@ -87,7 +87,7 @@ fun NoteDetailScreen(
 
     var showTagsDialog by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var datePickerTab by remember { mutableIntStateOf(0) }
+    var datePickerTab by rememberSaveable { mutableIntStateOf(0) }
     var showAddItemSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteSelectedTracksDialog by rememberSaveable { mutableStateOf(false) }
@@ -95,7 +95,7 @@ fun NoteDetailScreen(
 
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
-    var lastBackPressTime by remember { mutableLongStateOf(0L) }
+    var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
     var showUnsavedPromptDialog by rememberSaveable { mutableStateOf(false) }
     var showDraftOrDiscardDialog by rememberSaveable { mutableStateOf(false) }
     var showDiscardRecordingConfirmDialog by rememberSaveable { mutableStateOf(false) }
