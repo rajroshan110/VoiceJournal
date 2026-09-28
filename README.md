@@ -30,7 +30,7 @@
 - **100% Local Inference**: Runs offline directly on your smartphone with no cloud servers or external API calls.
 - **Bilingual Speech-to-Text**: Optimized for **English** and **Hindi/Urdu** speech out-of-the-box.
 - **Strict Privacy**: Zero tracking, zero telemetry, no accounts, no subscriptions, and zero advertisements.
-- **Zero Storage Permissions**: Built for Android 10+ (API 29–35) utilizing the modern Android Photo Picker (`PickVisualMedia`) and isolated sandbox storage.
+- **Zero Storage Permissions**: Built for Android 10+ (API 29+) and newer, utilizing the modern Android Photo Picker (`PickVisualMedia`) and isolated sandbox storage.
 
 Your recordings, notes, and transcripts remain strictly on your device unless you explicitly export them.
 
@@ -176,7 +176,7 @@ app/src/main/
 ## Requirements
 
 ### Target Device
-- **Operating System**: Android 10+ (`API 29+`) to Android 15 (`API 35`)
+- **Operating System**: Android 10+ (`API 29+`) and all newer versions (fully compatible with Android 15, Android 16+)
 - **Permissions**: Zero storage permissions required (uses Android Photo Picker via `PickVisualMedia` and local sandbox storage)
 - **Architecture**: 64-bit ARM (`arm64-v8a`) recommended for real-time inference speed
 - **Memory**: 3GB+ RAM recommended (~200–300MB allocated during Whisper model execution)
