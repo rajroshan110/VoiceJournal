@@ -14,6 +14,7 @@
 
 ![Platform](https://img.shields.io/badge/Platform-Android-green)
 ![Min SDK](https://img.shields.io/badge/Min%20SDK-29%20(Android%2010%2B)-blue)
+![License](https://img.shields.io/badge/License-GPLv3%20%2B%20Commons%20Clause-blue)
 ![Kotlin](https://img.shields.io/badge/Kotlin-100%25-purple)
 ![Material 3](https://img.shields.io/badge/Material%203-Jetpack%20Compose-blue)
 ![Offline](https://img.shields.io/badge/Offline-First-success)
@@ -250,7 +251,7 @@ VoiceJournal employs a defense-in-depth approach to protect user data and ensure
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are welcome! By submitting a pull request or contributing to VoiceJournal, you agree to the terms in the [Contributor License Agreement](CLA.md).
 
 1. Fork the repository
 2. Create a feature branch
@@ -272,6 +273,16 @@ git push -u origin feature/your-feature
 ```
 
 5. Open a Pull Request
+
+---
+
+## License
+
+VoiceJournal is licensed under the **GNU General Public License v3.0 with the Commons Clause Condition v1.0** — see the [LICENSE](LICENSE) file for complete details.
+
+- **Source-Available**: You are free to inspect, build, fork, modify, and run the code for personal, non-commercial purposes.
+- **Commercial Restriction**: The Commons Clause explicitly restricts selling the software or charging fees for commercial hosting, distribution, or derived commercial services.
+- **Contributor Agreement**: All contributions are licensed to the project maintainer under our [Contributor License Agreement](CLA.md) to preserve project flexibility and future licensing evolution.
 
 ---
 
