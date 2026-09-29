@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -315,15 +316,27 @@ private fun CalendarDatePickerDialog(
     val colors = AppTheme.colors
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val context = LocalContext.current
+    val isReducedMotion = remember(context) {
+        dev.voicejournal.ui.designsystem.motion.NavigationMotion.isReducedMotion(context)
+    }
+    val coroutineScope = rememberCoroutineScope()
 
     val today = remember { LocalDate.now() }
     var selectedEpochDay by rememberSaveable { mutableLongStateOf(initialDate.toEpochDay()) }
-    var displayedYear by rememberSaveable { mutableIntStateOf(initialDate.year) }
-    var displayedMonth by rememberSaveable { mutableIntStateOf(initialDate.monthValue) }
     var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
 
+    val initialPage = remember(initialDate) {
+        CalendarUtils.yearMonthToPage(YearMonth.of(initialDate.year, initialDate.monthValue))
+            .coerceIn(0, CalendarUtils.getMaxPage())
+    }
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { CalendarUtils.getPageCount() }
+    )
+
     val selectedDate = remember(selectedEpochDay) { LocalDate.ofEpochDay(selectedEpochDay) }
-    val displayedYearMonth = remember(displayedYear, displayedMonth) { YearMonth.of(displayedYear, displayedMonth) }
+    val displayedYearMonth = remember(pagerState.currentPage) { CalendarUtils.pageToYearMonth(pagerState.currentPage) }
 
     val onConfirm = {
         onDateSelected(
@@ -410,13 +423,17 @@ private fun CalendarDatePickerDialog(
                                 currentYear = today.year,
                                 selectedYear = selectedDate.year,
                                 onYearSelected = { y ->
-                                    val newYearMonth = YearMonth.of(y, displayedMonth)
-                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(newYearMonth.lengthOfMonth())
-                                    val candidate = LocalDate.of(y, displayedMonth, adjustedDay)
-                                    val finalDate = if (candidate > today) today else candidate
+                                    val nowMonth = YearMonth.now()
+                                    val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
+                                    val targetYearMonth = if (candidateYearMonth > nowMonth) nowMonth else candidateYearMonth
+                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(targetYearMonth.lengthOfMonth())
+                                    val candidateDate = targetYearMonth.atDay(adjustedDay)
+                                    val finalDate = if (candidateDate > today) today else candidateDate
                                     selectedEpochDay = finalDate.toEpochDay()
-                                    displayedYear = finalDate.year
-                                    displayedMonth = finalDate.monthValue
+                                    val targetPage = CalendarUtils.yearMonthToPage(targetYearMonth).coerceIn(0, CalendarUtils.getMaxPage())
+                                    coroutineScope.launch {
+                                        pagerState.scrollToPage(targetPage)
+                                    }
                                     isYearPickerVisible = false
                                 },
                                 isLandscape = true
@@ -425,29 +442,48 @@ private fun CalendarDatePickerDialog(
                             Column {
                                 MonthNavigationHeader(
                                     displayedYearMonth = displayedYearMonth,
-                                    canGoNext = displayedYearMonth.plusMonths(1).atDay(1) <= today,
+                                    canGoNext = pagerState.currentPage < CalendarUtils.getMaxPage(),
                                     onPrevious = {
-                                        val prev = displayedYearMonth.minusMonths(1)
-                                        displayedYear = prev.year
-                                        displayedMonth = prev.monthValue
+                                        if (pagerState.currentPage > 0) {
+                                            val target = pagerState.currentPage - 1
+                                            coroutineScope.launch {
+                                                if (isReducedMotion) pagerState.scrollToPage(target)
+                                                else pagerState.animateScrollToPage(target)
+                                            }
+                                        }
                                     },
                                     onNext = {
-                                        val next = displayedYearMonth.plusMonths(1)
-                                        displayedYear = next.year
-                                        displayedMonth = next.monthValue
+                                        if (pagerState.currentPage < CalendarUtils.getMaxPage()) {
+                                            val target = pagerState.currentPage + 1
+                                            coroutineScope.launch {
+                                                if (isReducedMotion) pagerState.scrollToPage(target)
+                                                else pagerState.animateScrollToPage(target)
+                                            }
+                                        }
                                     },
                                     onTitleClick = { isYearPickerVisible = true }
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 WeekdayHeaderRow()
                                 Spacer(modifier = Modifier.height(2.dp))
-                                CalendarGridDays(
-                                    displayedYearMonth = displayedYearMonth,
-                                    selectedDate = selectedDate,
-                                    today = today,
-                                    onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
-                                    isLandscape = true
-                                )
+                                HorizontalPager(
+                                    state = pagerState,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    key = { page -> page },
+                                    pageSpacing = 16.dp,
+                                    beyondViewportPageCount = 1
+                                ) { page ->
+                                    val pageYearMonth = remember(page) {
+                                        CalendarUtils.pageToYearMonth(page)
+                                    }
+                                    CalendarGridDays(
+                                        displayedYearMonth = pageYearMonth,
+                                        selectedDate = selectedDate,
+                                        today = today,
+                                        onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
+                                        isLandscape = true
+                                    )
+                                }
                             }
                         }
 
@@ -504,13 +540,17 @@ private fun CalendarDatePickerDialog(
                                 currentYear = today.year,
                                 selectedYear = selectedDate.year,
                                 onYearSelected = { y ->
-                                    val newYearMonth = YearMonth.of(y, displayedMonth)
-                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(newYearMonth.lengthOfMonth())
-                                    val candidate = LocalDate.of(y, displayedMonth, adjustedDay)
-                                    val finalDate = if (candidate > today) today else candidate
+                                    val nowMonth = YearMonth.now()
+                                    val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
+                                    val targetYearMonth = if (candidateYearMonth > nowMonth) nowMonth else candidateYearMonth
+                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(targetYearMonth.lengthOfMonth())
+                                    val candidateDate = targetYearMonth.atDay(adjustedDay)
+                                    val finalDate = if (candidateDate > today) today else candidateDate
                                     selectedEpochDay = finalDate.toEpochDay()
-                                    displayedYear = finalDate.year
-                                    displayedMonth = finalDate.monthValue
+                                    val targetPage = CalendarUtils.yearMonthToPage(targetYearMonth).coerceIn(0, CalendarUtils.getMaxPage())
+                                    coroutineScope.launch {
+                                        pagerState.scrollToPage(targetPage)
+                                    }
                                     isYearPickerVisible = false
                                 },
                                 isLandscape = false
@@ -518,29 +558,48 @@ private fun CalendarDatePickerDialog(
                         } else {
                             MonthNavigationHeader(
                                 displayedYearMonth = displayedYearMonth,
-                                canGoNext = displayedYearMonth.plusMonths(1).atDay(1) <= today,
+                                canGoNext = pagerState.currentPage < CalendarUtils.getMaxPage(),
                                 onPrevious = {
-                                    val prev = displayedYearMonth.minusMonths(1)
-                                    displayedYear = prev.year
-                                    displayedMonth = prev.monthValue
+                                    if (pagerState.currentPage > 0) {
+                                        val target = pagerState.currentPage - 1
+                                        coroutineScope.launch {
+                                            if (isReducedMotion) pagerState.scrollToPage(target)
+                                            else pagerState.animateScrollToPage(target)
+                                        }
+                                    }
                                 },
                                 onNext = {
-                                    val next = displayedYearMonth.plusMonths(1)
-                                    displayedYear = next.year
-                                    displayedMonth = next.monthValue
+                                    if (pagerState.currentPage < CalendarUtils.getMaxPage()) {
+                                        val target = pagerState.currentPage + 1
+                                        coroutineScope.launch {
+                                            if (isReducedMotion) pagerState.scrollToPage(target)
+                                            else pagerState.animateScrollToPage(target)
+                                        }
+                                    }
                                 },
                                 onTitleClick = { isYearPickerVisible = true }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             WeekdayHeaderRow()
                             Spacer(modifier = Modifier.height(4.dp))
-                            CalendarGridDays(
-                                displayedYearMonth = displayedYearMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
-                                isLandscape = false
-                            )
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.fillMaxWidth(),
+                                key = { page -> page },
+                                pageSpacing = 16.dp,
+                                beyondViewportPageCount = 1
+                            ) { page ->
+                                val pageYearMonth = remember(page) {
+                                    CalendarUtils.pageToYearMonth(page)
+                                }
+                                CalendarGridDays(
+                                    displayedYearMonth = pageYearMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
+                                    isLandscape = false
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
