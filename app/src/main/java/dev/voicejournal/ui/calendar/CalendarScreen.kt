@@ -22,6 +22,7 @@ import dev.voicejournal.ui.journal.components.PeopleFilterBottomSheet
 import dev.voicejournal.ui.journal.components.TopicFilterBottomSheet
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
+import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.LocalDate
 
@@ -258,7 +259,7 @@ fun CalendarScreen(
     when (activeSheet) {
         ActiveSheet.TAGS -> {
             TopicFilterBottomSheet(
-                availableTags = uiState.availableTags,
+                availableTags = uiState.availableTags.filter { it.type == TagType.TOPIC },
                 selectedTagNames = uiState.filterState.selectedTags,
                 onTagToggle = { tagName -> viewModel.toggleTagFilter(tagName) },
                 onClearAll = { viewModel.clearAllFilters() },

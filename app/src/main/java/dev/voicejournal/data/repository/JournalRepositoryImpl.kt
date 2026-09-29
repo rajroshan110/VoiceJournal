@@ -90,9 +90,8 @@ class JournalRepositoryImpl @Inject constructor(
                         TagType.PERSON -> "@$cleanName"
                         else -> cleanName
                     }
-                    val existingTag = tagDao.getTagByNameAndType(normalizedName, tag.type.name)
-                        ?: tagDao.getTagByNameAndType(cleanName, tag.type.name)
-                    if (existingTag != null) {
+                    val existingTags = tagDao.getTagsByNameAndType(normalizedName, cleanName, tag.type.name)
+                    existingTags.forEach { existingTag ->
                         journalEntryDao.deleteSpecificTagCrossRefs(ids, existingTag.id)
                     }
                 }

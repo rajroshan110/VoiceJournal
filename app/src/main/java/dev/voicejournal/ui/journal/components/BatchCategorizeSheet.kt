@@ -60,19 +60,30 @@ fun BatchCategorizeSheet(
     var customFolderInput by rememberSaveable { mutableStateOf("") }
 
     val cleanAppliedTags = remember(appliedTagNames) {
-        appliedTagNames.map { it.trim().removePrefix("#").removePrefix("@") }.toSet()
+        appliedTagNames.map { it.trim().trimStart('#', '@').trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .toSet()
     }
 
     val selectedTopics = remember(appliedTagNames) {
         mutableStateListOf<String>().apply {
-            addAll(cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#").removePrefix("@") == tag && it.type == TagType.TOPIC } })
+            addAll(cleanAppliedTags.filter { tag ->
+                availableTags.any {
+                    it.name.trim().trimStart('#', '@').trim().equals(tag, ignoreCase = true) && it.type == TagType.TOPIC
+                }
+            })
         }
     }
     var newTopicInput by rememberSaveable { mutableStateOf("") }
 
     val selectedPeople = remember(appliedTagNames) {
         mutableStateListOf<String>().apply {
-            addAll(cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("#").removePrefix("@") == person } })
+            addAll(cleanAppliedTags.filter { person ->
+                availablePeople.any {
+                    it.trim().trimStart('#', '@').trim().equals(person, ignoreCase = true)
+                }
+            })
         }
     }
     var newPersonInput by rememberSaveable { mutableStateOf("") }
@@ -262,9 +273,11 @@ fun BatchCategorizeSheet(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            availableTags.filter { it.type == TagType.TOPIC }.forEach { tag ->
-                                val cleanName = tag.name.trim().removePrefix("#").removePrefix("@")
-                                val isSelected = selectedTopics.contains(cleanName)
+                            availableTags.filter { it.type == TagType.TOPIC }
+                                .distinctBy { it.name.trim().trimStart('#', '@').trim().lowercase() }
+                                .forEach { tag ->
+                                val cleanName = tag.name.trim().trimStart('#', '@').trim()
+                                val isSelected = selectedTopics.any { it.equals(cleanName, ignoreCase = true) }
 
                                 Surface(
                                     shape = RoundedCornerShape(20.dp),
@@ -272,7 +285,12 @@ fun BatchCategorizeSheet(
                                     border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.divider),
                                     modifier = Modifier
                                         .clickable {
-                                            if (isSelected) selectedTopics.remove(cleanName) else selectedTopics.add(cleanName)
+                                            val existing = selectedTopics.firstOrNull { it.equals(cleanName, ignoreCase = true) }
+                                            if (existing != null) {
+                                                selectedTopics.removeAll { it.equals(cleanName, ignoreCase = true) }
+                                            } else {
+                                                selectedTopics.add(cleanName)
+                                            }
                                         }
                                 ) {
                                     Row(
@@ -308,7 +326,7 @@ fun BatchCategorizeSheet(
                         ) {
                             OutlinedTextField(
                                 value = newTopicInput,
-                                onValueChange = { newTopicInput = it.trim().removePrefix("#").removePrefix("@") },
+                                onValueChange = { newTopicInput = it },
                                 placeholder = { Text("New topic...", fontSize = 13.sp) },
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -320,9 +338,10 @@ fun BatchCategorizeSheet(
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = {
-                                    if (newTopicInput.isNotBlank()) {
-                                        val clean = newTopicInput.trim()
-                                        if (!selectedTopics.contains(clean)) selectedTopics.add(clean)
+                                    val clean = newTopicInput.trim().trimStart('#', '@').trim()
+                                    if (clean.isNotBlank()) {
+                                        val existing = selectedTopics.firstOrNull { it.equals(clean, ignoreCase = true) }
+                                        if (existing == null) selectedTopics.add(clean)
                                         newTopicInput = ""
                                     }
                                 },
@@ -348,9 +367,12 @@ fun BatchCategorizeSheet(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            availablePeople.forEach { person ->
-                                val cleanName = person.trim().removePrefix("#").removePrefix("@")
-                                val isSelected = selectedPeople.contains(cleanName)
+                            availablePeople
+                                .map { it.trim().trimStart('#', '@').trim() }
+                                .filter { it.isNotBlank() }
+                                .distinctBy { it.lowercase() }
+                                .forEach { cleanName ->
+                                val isSelected = selectedPeople.any { it.equals(cleanName, ignoreCase = true) }
 
                                 Surface(
                                     shape = RoundedCornerShape(20.dp),
@@ -358,7 +380,12 @@ fun BatchCategorizeSheet(
                                     border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.divider),
                                     modifier = Modifier
                                         .clickable {
-                                            if (isSelected) selectedPeople.remove(cleanName) else selectedPeople.add(cleanName)
+                                            val existing = selectedPeople.firstOrNull { it.equals(cleanName, ignoreCase = true) }
+                                            if (existing != null) {
+                                                selectedPeople.removeAll { it.equals(cleanName, ignoreCase = true) }
+                                            } else {
+                                                selectedPeople.add(cleanName)
+                                            }
                                         }
                                 ) {
                                     Row(
@@ -394,7 +421,7 @@ fun BatchCategorizeSheet(
                         ) {
                             OutlinedTextField(
                                 value = newPersonInput,
-                                onValueChange = { newPersonInput = it.trim().removePrefix("#").removePrefix("@") },
+                                onValueChange = { newPersonInput = it },
                                 placeholder = { Text("New person...", fontSize = 13.sp) },
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -406,9 +433,10 @@ fun BatchCategorizeSheet(
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = {
-                                    if (newPersonInput.isNotBlank()) {
-                                        val clean = newPersonInput.trim()
-                                        if (!selectedPeople.contains(clean)) selectedPeople.add(clean)
+                                    val clean = newPersonInput.trim().trimStart('#', '@').trim()
+                                    if (clean.isNotBlank()) {
+                                        val existing = selectedPeople.firstOrNull { it.equals(clean, ignoreCase = true) }
+                                        if (existing == null) selectedPeople.add(clean)
                                         newPersonInput = ""
                                     }
                                 },
@@ -431,11 +459,19 @@ fun BatchCategorizeSheet(
                     val personTagsToAssign = if (isPeopleEnabled) selectedPeople.map { Tag(name = it, type = TagType.PERSON) } else emptyList()
 
                     val removedTopicNames = if (isTopicsEnabled) {
-                        cleanAppliedTags.filter { tag -> availableTags.any { it.name.trim().removePrefix("#").removePrefix("@") == tag && it.type == TagType.TOPIC } } - selectedTopics.toSet()
-                    } else emptySet()
+                        cleanAppliedTags.filter { tag ->
+                            availableTags.any {
+                                it.name.trim().trimStart('#', '@').trim().equals(tag, ignoreCase = true) && it.type == TagType.TOPIC
+                            }
+                        }.filter { tag -> selectedTopics.none { it.equals(tag, ignoreCase = true) } }
+                    } else emptyList()
                     val removedPersonNames = if (isPeopleEnabled) {
-                        cleanAppliedTags.filter { person -> availablePeople.any { it.trim().removePrefix("#").removePrefix("@") == person } } - selectedPeople.toSet()
-                    } else emptySet()
+                        cleanAppliedTags.filter { person ->
+                            availablePeople.any {
+                                it.trim().trimStart('#', '@').trim().equals(person, ignoreCase = true)
+                            }
+                        }.filter { person -> selectedPeople.none { it.equals(person, ignoreCase = true) } }
+                    } else emptyList()
 
                     val topicTagsToRemove = removedTopicNames.map { Tag(name = it, type = TagType.TOPIC) }
                     val personTagsToRemove = removedPersonNames.map { Tag(name = it, type = TagType.PERSON) }

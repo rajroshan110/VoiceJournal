@@ -95,7 +95,7 @@ fun SettingsHomeScreen(
     val isExpanded = configuration.screenWidthDp >= 600
 
     var selectedCompactSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
-    var isSearchFocused by remember { mutableStateOf(false) }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(uiState.activeSubScreen) {
         if (selectedCompactSubScreen != null && selectedCompactSubScreen != uiState.activeSubScreen) {
@@ -103,14 +103,14 @@ fun SettingsHomeScreen(
         }
     }
 
-    val isSearchActive = isSearchFocused || uiState.isSearching || uiState.searchQuery.isNotEmpty()
+    val isSearchActive = isSearchVisible || uiState.isSearching || uiState.searchQuery.isNotEmpty()
 
     // System Back Button Interceptor
     BackHandler(enabled = isSearchActive || uiState.isViewingAppLockDetail || (!isExpanded && selectedCompactSubScreen != null)) {
         if (isSearchActive) {
             focusManager.clearFocus()
             viewModel.clearSearch()
-            isSearchFocused = false
+            isSearchVisible = false
         } else if (uiState.isViewingAppLockDetail) {
             viewModel.setViewingAppLockDetail(false)
         } else if (!isExpanded && selectedCompactSubScreen != null) {
@@ -144,9 +144,8 @@ fun SettingsHomeScreen(
                                 onClose = {
                                     focusManager.clearFocus()
                                     viewModel.clearSearch()
-                                    isSearchFocused = false
+                                    isSearchVisible = false
                                 },
-                                onFocusChanged = { isSearchFocused = it },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -197,7 +196,7 @@ fun SettingsHomeScreen(
 
                             if (selectedCompactSubScreen == null || isExpanded) {
                                 IconButton(
-                                    onClick = { isSearchFocused = true },
+                                    onClick = { isSearchVisible = true },
                                     modifier = Modifier.minimumInteractiveComponentSize()
                                 ) {
                                     Icon(
@@ -260,7 +259,7 @@ fun SettingsHomeScreen(
                                 onClick = {
                                     focusManager.clearFocus()
                                     viewModel.clearSearch()
-                                    isSearchFocused = false
+                                    isSearchVisible = false
                                     viewModel.setActiveSubScreen(item.targetSubScreen)
                                     selectedCompactSubScreen = item.targetSubScreen
                                     viewModel.highlightSetting(item.targetPreferenceKey)

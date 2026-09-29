@@ -111,8 +111,9 @@ class TagsViewModel @Inject constructor(
         val allTopics = extractedData.allTopics
 
         val topicItems = allTopics.map { tag ->
+            val cleanTagName = tag.name.trim().trimStart('#', '@').trim()
             val matchingEntries = allEntries.filter { entry ->
-                entry.tags.any { it.type == TagType.TOPIC && it.name.equals(tag.name, ignoreCase = true) }
+                entry.tags.any { it.type == TagType.TOPIC && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
             }
             val noteCount = matchingEntries.size
             val latestDate = matchingEntries.maxOfOrNull { it.createdAt } ?: 0L
@@ -140,9 +141,10 @@ class TagsViewModel @Inject constructor(
         val allPeople = extractedData.allPersonTags
 
         val personItems = allPeople.map { tag ->
+            val cleanTagName = tag.name.trim().trimStart('#', '@').trim()
             val matchingEntries = allEntries.filter { entry ->
-                entry.tags.any { it.type == TagType.PERSON && it.name.equals(tag.name, ignoreCase = true) } ||
-                entry.people.any { it.equals(tag.name, ignoreCase = true) }
+                entry.tags.any { it.type == TagType.PERSON && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) } ||
+                entry.people.any { it.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
             }
             val noteCount = matchingEntries.size
             val latestDate = matchingEntries.maxOfOrNull { it.createdAt } ?: 0L
@@ -168,12 +170,13 @@ class TagsViewModel @Inject constructor(
 
         val currentSelected = _uiState.value.selectedTag
         val updatedNotesInSelected = if (currentSelected != null) {
+            val cleanTagName = currentSelected.name.trim().trimStart('#', '@').trim()
             allEntries.filter { entry ->
                 if (currentSelected.type == TagType.PERSON) {
-                    entry.tags.any { it.type == TagType.PERSON && it.name.equals(currentSelected.name, ignoreCase = true) } ||
-                    entry.people.any { it.equals(currentSelected.name, ignoreCase = true) }
+                    entry.tags.any { it.type == TagType.PERSON && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) } ||
+                    entry.people.any { it.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
                 } else {
-                    entry.tags.any { it.type == TagType.TOPIC && it.name.equals(currentSelected.name, ignoreCase = true) }
+                    entry.tags.any { it.type == TagType.TOPIC && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
                 }
             }
         } else {
@@ -196,12 +199,13 @@ class TagsViewModel @Inject constructor(
 
     fun selectTag(tag: Tag?) {
         val notes = if (tag != null) {
+            val cleanTagName = tag.name.trim().trimStart('#', '@').trim()
             allEntries.filter { entry ->
                 if (tag.type == TagType.PERSON) {
-                    entry.tags.any { it.type == TagType.PERSON && it.name.equals(tag.name, ignoreCase = true) } ||
-                    entry.people.any { it.equals(tag.name, ignoreCase = true) }
+                    entry.tags.any { it.type == TagType.PERSON && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) } ||
+                    entry.people.any { it.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
                 } else {
-                    entry.tags.any { it.type == TagType.TOPIC && it.name.equals(tag.name, ignoreCase = true) }
+                    entry.tags.any { it.type == TagType.TOPIC && it.name.trim().trimStart('#', '@').trim().equals(cleanTagName, ignoreCase = true) }
                 }
             }
         } else {

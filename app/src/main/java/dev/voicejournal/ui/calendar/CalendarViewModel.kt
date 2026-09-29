@@ -10,6 +10,7 @@ import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.domain.model.TimeFormat
+import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
 import dev.voicejournal.domain.usecase.GetAllEntriesUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
 import dev.voicejournal.ui.journal.FilterState
@@ -66,15 +67,17 @@ class CalendarViewModel internal constructor(
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
     private val userPreferencesManager: UserPreferencesManager,
-    private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
+    private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default,
+    private val extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase = ExtractUnifiedTagsUseCase()
 ) : ViewModel() {
 
     @Inject
     constructor(
         getAllEntriesUseCase: GetAllEntriesUseCase,
         getAllTagsUseCase: GetAllTagsUseCase,
-        userPreferencesManager: UserPreferencesManager
-    ) : this(getAllEntriesUseCase, getAllTagsUseCase, userPreferencesManager, Dispatchers.Default)
+        userPreferencesManager: UserPreferencesManager,
+        extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase
+    ) : this(getAllEntriesUseCase, getAllTagsUseCase, userPreferencesManager, Dispatchers.Default, extractUnifiedTagsUseCase)
 
     private val _yearMonth = MutableStateFlow(YearMonth.now())
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
@@ -91,29 +94,8 @@ class CalendarViewModel internal constructor(
             val rawTagsFlow = getAllTagsUseCase().catch { }
 
             val extractedDataFlow = combine(rawEntriesFlow, rawTagsFlow) { rawEntries, rawTags ->
-                val personTagNames = rawTags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("@") }
-                val entryPersonTags = rawEntries.flatMap { entry ->
-                    entry.tags.filter { it.type == TagType.PERSON }.map { it.name.removePrefix("@") }
-                }
-                val textMentions = rawEntries.flatMap { entry ->
-                    val text = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
-                    Regex("@\\w+").findAll(text).map { it.value.removePrefix("@") }.toList()
-                }
-                val extractedPeople = (personTagNames + entryPersonTags + textMentions)
-                    .distinct()
-                    .filter { it.isNotBlank() }
-                    .sorted()
-
-                val extractedHashtags = rawEntries.flatMap { entry ->
-                    val text = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
-                    Regex("#\\w+").findAll(text).map { it.value.removePrefix("#") }.toList()
-                }.distinct().filter { it.isNotBlank() }
-
-                val topicTagNames = rawTags.filter { it.type == TagType.TOPIC }.map { it.name.removePrefix("#") }
-                val allTagNames = (topicTagNames + extractedHashtags).distinct()
-                val allTags = allTagNames.mapIndexed { i, name -> Tag(i.toLong(), name) }
-                
-                Triple(rawEntries, allTags, extractedPeople)
+                val extracted = extractUnifiedTagsUseCase(rawEntries, rawTags)
+                Triple(rawEntries, extracted.allTags, extracted.allPeople)
             }.distinctUntilChanged().flowOn(defaultDispatcher)
 
             val preferencesFlow = combine(
@@ -153,14 +135,18 @@ class CalendarViewModel internal constructor(
                     val textContent = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
 
                     val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
-                            entry.tags.any { (it.type == TagType.TOPIC || it.type == TagType.THING) && it.name.removePrefix("#") in filters.selectedTags } ||
-                            filters.selectedTags.any { tag -> textContent.contains("#$tag", ignoreCase = true) }
+                            entry.tags.any { tag ->
+                                tag.type == TagType.TOPIC &&
+                                filters.selectedTags.any { it.equals(tag.name.trim().trimStart('#', '@').trim(), ignoreCase = true) }
+                            }
 
                     val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
-                            entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
-                            entry.people.any { it.removePrefix("@") in filters.selectedPeople } ||
-                            filters.selectedPeople.any { person ->
-                                textContent.contains("@$person", ignoreCase = true)
+                            entry.tags.any { tag ->
+                                tag.type == TagType.PERSON &&
+                                filters.selectedPeople.any { it.equals(tag.name.trim().trimStart('#', '@').trim(), ignoreCase = true) }
+                            } ||
+                            entry.people.any { p ->
+                                filters.selectedPeople.any { it.equals(p.trim().trimStart('#', '@').trim(), ignoreCase = true) }
                             }
 
                     val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
@@ -270,16 +256,26 @@ class CalendarViewModel internal constructor(
 
 
     fun toggleTagFilter(tagName: String) {
-        val cleanTag = tagName.removePrefix("#")
+        val cleanTag = tagName.trim().trimStart('#', '@').trim()
         val current = _filterState.value.selectedTags
-        val next = if (cleanTag in current) current - cleanTag else current + cleanTag
+        val existing = current.firstOrNull { it.equals(cleanTag, ignoreCase = true) }
+        val next = if (existing != null) {
+            current.filterNot { it.equals(cleanTag, ignoreCase = true) }.toSet()
+        } else {
+            current + cleanTag
+        }
         _filterState.value = _filterState.value.copy(selectedTags = next)
     }
 
     fun togglePersonFilter(person: String) {
-        val cleanPerson = person.removePrefix("@")
+        val cleanPerson = person.trim().trimStart('#', '@').trim()
         val current = _filterState.value.selectedPeople
-        val next = if (cleanPerson in current) current - cleanPerson else current + cleanPerson
+        val existing = current.firstOrNull { it.equals(cleanPerson, ignoreCase = true) }
+        val next = if (existing != null) {
+            current.filterNot { it.equals(cleanPerson, ignoreCase = true) }.toSet()
+        } else {
+            current + cleanPerson
+        }
         _filterState.value = _filterState.value.copy(selectedPeople = next)
     }
 

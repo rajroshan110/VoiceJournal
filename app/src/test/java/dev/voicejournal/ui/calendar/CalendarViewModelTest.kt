@@ -137,4 +137,40 @@ class CalendarViewModelTest {
         assertEquals(now, viewModel.uiState.value.currentYearMonth)
         assertEquals(targetDate, viewModel.uiState.value.selectedDate)
     }
+
+    @Test
+    fun testToggleTagFilterCaseInsensitive() {
+        // Toggle "Songs" (adds it)
+        viewModel.toggleTagFilter("#Songs")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(setOf("Songs"), viewModel.uiState.value.filterState.selectedTags)
+
+        // Toggle "songs" (case-insensitive match, should remove "Songs")
+        viewModel.toggleTagFilter("songs")
+        testDispatcher.scheduler.advanceUntilIdle()
+        org.junit.Assert.assertTrue(viewModel.uiState.value.filterState.selectedTags.isEmpty())
+
+        // Toggle "MUSIC" (adds it)
+        viewModel.toggleTagFilter("MUSIC")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(setOf("MUSIC"), viewModel.uiState.value.filterState.selectedTags)
+
+        // Toggle "#music" (should remove "MUSIC")
+        viewModel.toggleTagFilter("#music")
+        testDispatcher.scheduler.advanceUntilIdle()
+        org.junit.Assert.assertTrue(viewModel.uiState.value.filterState.selectedTags.isEmpty())
+    }
+
+    @Test
+    fun testTogglePersonFilterCaseInsensitive() {
+        // Toggle "@Alice" (adds it)
+        viewModel.togglePersonFilter("@Alice")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(setOf("Alice"), viewModel.uiState.value.filterState.selectedPeople)
+
+        // Toggle "alice" (case-insensitive match, should remove "Alice")
+        viewModel.togglePersonFilter("alice")
+        testDispatcher.scheduler.advanceUntilIdle()
+        org.junit.Assert.assertTrue(viewModel.uiState.value.filterState.selectedPeople.isEmpty())
+    }
 }

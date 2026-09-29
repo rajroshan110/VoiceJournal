@@ -19,8 +19,11 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name ASC")
     suspend fun getAllTagsSync(): List<TagEntity>
 
-    @Query("SELECT * FROM tags WHERE name = :name AND type = :type LIMIT 1")
+    @Query("SELECT * FROM tags WHERE LOWER(name) = LOWER(:name) AND type = :type LIMIT 1")
     suspend fun getTagByNameAndType(name: String, type: String): TagEntity?
+
+    @Query("SELECT * FROM tags WHERE (LOWER(name) = LOWER(:name) OR LOWER(name) = LOWER(:cleanName)) AND type = :type")
+    suspend fun getTagsByNameAndType(name: String, cleanName: String, type: String): List<TagEntity>
 
     @Query("DELETE FROM tags WHERE id = :id")
     suspend fun deleteTagInternal(id: Long)

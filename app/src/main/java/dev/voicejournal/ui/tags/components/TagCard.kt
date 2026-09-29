@@ -203,7 +203,7 @@ fun TagCardGrid(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = tagItem.tag.name,
+                text = tagItem.tag.name.trim().trimStart('#', '@').trim(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary,
@@ -280,7 +280,7 @@ fun TagCardList(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tagItem.tag.name,
+                    text = tagItem.tag.name.trim().trimStart('#', '@').trim(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,

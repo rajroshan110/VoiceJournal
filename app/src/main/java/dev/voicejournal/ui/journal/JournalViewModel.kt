@@ -114,7 +114,7 @@ private data class JournalBackupState(
 
 
 @HiltViewModel
-class JournalViewModel @Inject constructor(
+class JournalViewModel internal constructor(
     @ApplicationContext private val context: Context,
     private val savedStateHandle: SavedStateHandle,
     private val getAllEntriesUseCase: GetAllEntriesUseCase,
@@ -124,8 +124,35 @@ class JournalViewModel @Inject constructor(
     private val journalRepository: JournalRepository,
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
-    private val importManager: ImportManager
+    private val importManager: ImportManager,
+    private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        savedStateHandle: SavedStateHandle,
+        getAllEntriesUseCase: GetAllEntriesUseCase,
+        getAllTagsUseCase: GetAllTagsUseCase,
+        deleteEntryUseCase: DeleteEntryUseCase,
+        extractUnifiedTagsUseCase: ExtractUnifiedTagsUseCase,
+        journalRepository: JournalRepository,
+        audioPlayerManager: AudioPlayerManager,
+        userPreferencesManager: UserPreferencesManager,
+        importManager: ImportManager
+    ) : this(
+        context = context,
+        savedStateHandle = savedStateHandle,
+        getAllEntriesUseCase = getAllEntriesUseCase,
+        getAllTagsUseCase = getAllTagsUseCase,
+        deleteEntryUseCase = deleteEntryUseCase,
+        extractUnifiedTagsUseCase = extractUnifiedTagsUseCase,
+        journalRepository = journalRepository,
+        audioPlayerManager = audioPlayerManager,
+        userPreferencesManager = userPreferencesManager,
+        importManager = importManager,
+        defaultDispatcher = Dispatchers.Default
+    )
 
     private val _filterState = MutableStateFlow(FilterState())
     private val _sortOption = MutableStateFlow(SortOption.MODIFIED_DESC)
@@ -224,7 +251,7 @@ class JournalViewModel @Inject constructor(
             val extractedDataFlow = combine(rawEntriesFlow, rawTagsFlow) { rawEntries, rawTags ->
                 val extracted = extractUnifiedTagsUseCase(rawEntries, rawTags)
                 Triple(rawEntries, extracted.allTags, extracted.allPeople)
-            }.distinctUntilChanged().flowOn(Dispatchers.Default)
+            }.distinctUntilChanged().flowOn(defaultDispatcher)
 
             val prefConfigFlow = combine(
                 combine(
@@ -265,11 +292,19 @@ class JournalViewModel @Inject constructor(
                     val matchesQuery = query.isBlank() || textContent.contains(query, ignoreCase = true)
 
                     val matchesTags = !prefs.isTopicsEnabled || filters.selectedTags.isEmpty() ||
-                            entry.tags.any { it.type == TagType.TOPIC && it.name.removePrefix("#").trim() in filters.selectedTags }
+                            entry.tags.any { tag ->
+                                tag.type == TagType.TOPIC &&
+                                filters.selectedTags.any { it.equals(tag.name.trim().trimStart('#', '@').trim(), ignoreCase = true) }
+                            }
 
                     val matchesPeople = !prefs.isPeopleEnabled || filters.selectedPeople.isEmpty() ||
-                            entry.tags.any { it.type == TagType.PERSON && (it.name.removePrefix("@") in filters.selectedPeople || it.name in filters.selectedPeople) } ||
-                            entry.people.any { it.removePrefix("@") in filters.selectedPeople }
+                            entry.tags.any { tag ->
+                                tag.type == TagType.PERSON &&
+                                filters.selectedPeople.any { it.equals(tag.name.trim().trimStart('#', '@').trim(), ignoreCase = true) }
+                            } ||
+                            entry.people.any { p ->
+                                filters.selectedPeople.any { it.equals(p.trim().trimStart('#', '@').trim(), ignoreCase = true) }
+                            }
 
                     val matchesMoods = !prefs.isMoodEnabled || filters.selectedMoods.isEmpty() || (entry.mood in filters.selectedMoods)
 
@@ -309,7 +344,7 @@ class JournalViewModel @Inject constructor(
                     isPeopleEnabled = prefs.isPeopleEnabled,
                     isMoodEnabled = prefs.isMoodEnabled
                 )
-            }.distinctUntilChanged().flowOn(Dispatchers.Default)
+            }.distinctUntilChanged().flowOn(defaultDispatcher)
 
             val statusFlow = combine(
                 _isSearchActive,
@@ -442,18 +477,28 @@ class JournalViewModel @Inject constructor(
     fun setSearchQuery(query: String) = updateSearchQuery(query)
 
     fun toggleTagFilter(tagName: String) {
-        val cleanTag = tagName.removePrefix("#")
+        val cleanTag = tagName.trim().trimStart('#', '@').trim()
         val current = _filterState.value.selectedTags
-        val next = if (cleanTag in current) current - cleanTag else current + cleanTag
+        val existing = current.firstOrNull { it.equals(cleanTag, ignoreCase = true) }
+        val next = if (existing != null) {
+            current.filterNot { it.equals(cleanTag, ignoreCase = true) }.toSet()
+        } else {
+            current + cleanTag
+        }
         _filterState.value = _filterState.value.copy(selectedTags = next)
     }
 
     fun setTagFilter(tag: String) = toggleTagFilter(tag)
 
     fun togglePersonFilter(person: String) {
-        val cleanPerson = person.removePrefix("@")
+        val cleanPerson = person.trim().trimStart('#', '@').trim()
         val current = _filterState.value.selectedPeople
-        val next = if (cleanPerson in current) current - cleanPerson else current + cleanPerson
+        val existing = current.firstOrNull { it.equals(cleanPerson, ignoreCase = true) }
+        val next = if (existing != null) {
+            current.filterNot { it.equals(cleanPerson, ignoreCase = true) }.toSet()
+        } else {
+            current + cleanPerson
+        }
         _filterState.value = _filterState.value.copy(selectedPeople = next)
     }
 

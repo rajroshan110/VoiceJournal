@@ -33,9 +33,19 @@ fun TopicFilterBottomSheet(
     val colors = AppTheme.colors
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    // Sort so selected tags appear first
-    val sortedTags = remember(availableTags, selectedTagNames) {
-        availableTags.sortedByDescending { selectedTagNames.contains(it.name) }
+    val distinctTags = remember(availableTags) {
+        availableTags.distinctBy { it.name.trim().trimStart('#', '@').trim().lowercase() }
+    }
+
+    // Capture initial selection on sheet opening so selected tags sort to the top,
+    // but don't jump around under the user's finger during active multi-selection
+    val initialSelected = remember(availableTags) { selectedTagNames }
+
+    val sortedTags = remember(distinctTags) {
+        distinctTags.sortedByDescending { tag ->
+            val cleanName = tag.name.trim().trimStart('#', '@').trim()
+            initialSelected.any { it.equals(cleanName, ignoreCase = true) }
+        }
     }
 
     // Filter by search query
@@ -43,8 +53,8 @@ fun TopicFilterBottomSheet(
         if (searchQuery.isBlank()) {
             sortedTags
         } else {
-            val query = searchQuery.trim().lowercase().removePrefix("#")
-            sortedTags.filter { it.name.removePrefix("#").lowercase().contains(query) }
+            val query = searchQuery.trim().trimStart('#', '@').trim().lowercase()
+            sortedTags.filter { it.name.trim().trimStart('#', '@').trim().lowercase().contains(query) }
         }
     }
 
@@ -119,11 +129,12 @@ fun TopicFilterBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         filteredTags.forEach { tag ->
-                            val isSelected = selectedTagNames.contains(tag.name)
-                            val displayName = tag.name.removePrefix("#")
+                            val cleanName = tag.name.trim().trimStart('#', '@').trim()
+                            val isSelected = selectedTagNames.any { it.equals(cleanName, ignoreCase = true) }
+                            val displayName = cleanName
                             
                             Surface(
-                                onClick = { onTagToggle(tag.name) },
+                                onClick = { onTagToggle(cleanName) },
                                 shape = RoundedCornerShape(16.dp),
                                 color = if (isSelected) colors.primary.copy(alpha = 0.2f) else colors.surfaceVariant,
                                 border = if (isSelected) BorderStroke(1.dp, colors.primary) else null
@@ -172,9 +183,21 @@ fun PeopleFilterBottomSheet(
     val colors = AppTheme.colors
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    // Sort so selected people appear first
-    val sortedPeople = remember(availablePeople, selectedPeople) {
-        availablePeople.sortedByDescending { selectedPeople.contains(it) }
+    val distinctPeople = remember(availablePeople) {
+        availablePeople
+            .map { it.trim().trimStart('#', '@').trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+    }
+
+    // Capture initial selection on sheet opening so selected people sort to the top,
+    // but don't jump around under the user's finger during active multi-selection
+    val initialSelected = remember(availablePeople) { selectedPeople }
+
+    val sortedPeople = remember(distinctPeople) {
+        distinctPeople.sortedByDescending { person ->
+            initialSelected.any { it.equals(person, ignoreCase = true) }
+        }
     }
 
     // Filter by search query
@@ -182,8 +205,8 @@ fun PeopleFilterBottomSheet(
         if (searchQuery.isBlank()) {
             sortedPeople
         } else {
-            val query = searchQuery.trim().lowercase().removePrefix("@")
-            sortedPeople.filter { it.removePrefix("@").lowercase().contains(query) }
+            val query = searchQuery.trim().trimStart('#', '@').trim().lowercase()
+            sortedPeople.filter { it.lowercase().contains(query) }
         }
     }
 
@@ -258,11 +281,12 @@ fun PeopleFilterBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         filteredPeople.forEach { person ->
-                            val isSelected = selectedPeople.contains(person)
-                            val displayName = person.removePrefix("@")
+                            val cleanPerson = person.trim().trimStart('#', '@').trim()
+                            val isSelected = selectedPeople.any { it.equals(cleanPerson, ignoreCase = true) }
+                            val displayName = cleanPerson
 
                             Surface(
-                                onClick = { onPersonToggle(person) },
+                                onClick = { onPersonToggle(cleanPerson) },
                                 shape = RoundedCornerShape(16.dp),
                                 color = if (isSelected) colors.primary.copy(alpha = 0.2f) else colors.surfaceVariant,
                                 border = if (isSelected) BorderStroke(1.dp, colors.primary) else null

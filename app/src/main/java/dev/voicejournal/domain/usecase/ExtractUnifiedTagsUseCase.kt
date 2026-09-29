@@ -17,7 +17,7 @@ class ExtractUnifiedTagsUseCase @Inject constructor() {
         val allPersonTags: List<Tag>
     )
 
-    private fun String.sanitize(): String = this.removePrefix("#").removePrefix("@").trim()
+    private fun String.sanitize(): String = this.trim().trimStart('#', '@').trim()
 
     operator fun invoke(rawEntries: List<JournalEntry>, rawTags: List<Tag>): ExtractedData {
         // People
@@ -28,13 +28,13 @@ class ExtractUnifiedTagsUseCase @Inject constructor() {
         val entryPeopleFields = rawEntries.flatMap { it.people.map { p -> p.sanitize() } }
         
         val extractedPeople = (personTagNames + entryPersonTags + entryPeopleFields)
-            .distinct()
             .filter { it.isNotBlank() }
-            .sorted()
+            .distinctBy { it.lowercase() }
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
             
         val allPersonTags = extractedPeople.mapIndexed { i, name ->
-            rawTags.find { it.type == TagType.PERSON && it.name.sanitize().equals(name, ignoreCase = true) }
-                ?: Tag(i.toLong() + 30000, name, TagType.PERSON)
+            val match = rawTags.find { it.type == TagType.PERSON && it.name.sanitize().equals(name, ignoreCase = true) }
+            match?.copy(name = name) ?: Tag(i.toLong() + 30000, name, TagType.PERSON)
         }
 
         // Topics
@@ -43,13 +43,13 @@ class ExtractUnifiedTagsUseCase @Inject constructor() {
             entry.tags.filter { it.type == TagType.TOPIC }.map { it.name.sanitize() } 
         }
         val allTopicNames = (topicTagNames + entryTopicNames)
-            .distinct()
             .filter { it.isNotBlank() }
-            .sorted()
+            .distinctBy { it.lowercase() }
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
             
         val allTopics = allTopicNames.mapIndexed { i, name ->
-            rawTags.find { it.type == TagType.TOPIC && it.name.sanitize().equals(name, ignoreCase = true) }
-                ?: Tag(i.toLong() + 20000, name, TagType.TOPIC)
+            val match = rawTags.find { it.type == TagType.TOPIC && it.name.sanitize().equals(name, ignoreCase = true) }
+            match?.copy(name = name) ?: Tag(i.toLong() + 20000, name, TagType.TOPIC)
         }
 
         // Folders/Things
@@ -58,13 +58,13 @@ class ExtractUnifiedTagsUseCase @Inject constructor() {
             entry.tags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }.map { it.name.sanitize() }
         }
         val allFolderNames = (folderTagNames + entryFolderTags)
-            .distinct()
             .filter { it.isNotBlank() }
-            .sorted()
+            .distinctBy { it.lowercase() }
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
             
         val allFolders = allFolderNames.mapIndexed { i, name ->
-            rawTags.find { (it.type == TagType.FOLDER || it.type == TagType.THING) && it.name.sanitize().equals(name, ignoreCase = true) }
-                ?: Tag(i.toLong() + 10000, name, TagType.FOLDER)
+            val match = rawTags.find { (it.type == TagType.FOLDER || it.type == TagType.THING) && it.name.sanitize().equals(name, ignoreCase = true) }
+            match?.copy(name = name) ?: Tag(i.toLong() + 10000, name, TagType.FOLDER)
         }
 
         val allTagsList = allTopics + allFolders + allPersonTags

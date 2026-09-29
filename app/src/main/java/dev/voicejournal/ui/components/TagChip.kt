@@ -55,8 +55,9 @@ fun TagChip(
             .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
     ) {
+        val cleanName = tag.name.trim().trimStart('#', '@').trim()
         Text(
-            text = "$icon${tag.name}",
+            text = "$icon$cleanName",
             color = if (selected) colors.onPrimary else colors.textPrimary,
             style = androidx.compose.material3.MaterialTheme.typography.labelMedium
         )

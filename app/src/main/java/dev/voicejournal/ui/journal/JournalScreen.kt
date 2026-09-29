@@ -693,19 +693,35 @@ fun JournalScreen(
                 }
                 val appliedFolder = remember(selectedEntries) {
                     if (selectedEntries.isNotEmpty()) {
-                        val folderSets = selectedEntries.map { entry ->
-                            entry.tags.filter { it.type == TagType.FOLDER }.map { it.name }.toSet()
+                        val firstFolders = selectedEntries.first().tags
+                            .filter { it.type == TagType.FOLDER || it.type == TagType.THING }
+                            .map { it.name.trim().trimStart('#', '@').trim() }
+                            .filter { it.isNotBlank() }
+                            .distinctBy { it.lowercase() }
+                        val commonFolders = selectedEntries.drop(1).fold(firstFolders) { acc, entry ->
+                            val entryFolders = entry.tags
+                                .filter { it.type == TagType.FOLDER || it.type == TagType.THING }
+                                .map { it.name.trim().trimStart('#', '@').trim() }
+                            acc.filter { folder -> entryFolders.any { it.equals(folder, ignoreCase = true) } }
                         }
-                        folderSets.reduce { acc, set -> acc.intersect(set) }.firstOrNull()
-                            ?: selectedEntries.flatMap { it.tags }.find { it.type == TagType.FOLDER }?.name
+                        commonFolders.firstOrNull()
+                            ?: selectedEntries.flatMap { it.tags }
+                                .firstOrNull { it.type == TagType.FOLDER || it.type == TagType.THING }
+                                ?.name?.trim()?.trimStart('#', '@')?.trim()
                     } else null
                 }
                 val appliedTagNames = remember(selectedEntries) {
                     if (selectedEntries.isNotEmpty()) {
-                        val firstTags = selectedEntries.first().tags.map { it.name.trim().removePrefix("#").removePrefix("@") }.toSet()
-                        selectedEntries.fold(firstTags) { acc, entry ->
-                            acc.intersect(entry.tags.map { it.name.trim().removePrefix("#").removePrefix("@") }.toSet())
-                        }
+                        val firstTags = selectedEntries.first().tags
+                            .map { it.name.trim().trimStart('#', '@').trim() }
+                            .filter { it.isNotBlank() }
+                            .distinctBy { it.lowercase() }
+                        selectedEntries.drop(1).fold(firstTags) { acc, entry ->
+                            val entryCleanTags = entry.tags
+                                .map { it.name.trim().trimStart('#', '@').trim() }
+                                .filter { it.isNotBlank() }
+                            acc.filter { tag -> entryCleanTags.any { it.equals(tag, ignoreCase = true) } }
+                        }.toSet()
                     } else emptySet()
                 }
 
@@ -714,7 +730,7 @@ fun JournalScreen(
                     isFolderEnabled = uiState.isFolderEnabled,
                     isTopicsEnabled = uiState.isTopicsEnabled,
                     isPeopleEnabled = uiState.isPeopleEnabled,
-                    availableFolders = uiState.availableTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }.map { it.name }.distinct(),
+                    availableFolders = uiState.availableTags.filter { it.type == TagType.FOLDER || it.type == TagType.THING }.map { it.name.trim().trimStart('#', '@').trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase() },
                     availableTags = uiState.availableTags.filter { it.type == TagType.TOPIC },
                     availablePeople = uiState.availablePeople,
                     appliedFolder = appliedFolder,
