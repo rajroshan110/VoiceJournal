@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.notedetail.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -32,11 +34,6 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private enum class ClockSelectionMode {
-    Hour,
-    Minute
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JuneDateTimePicker(
@@ -46,7 +43,7 @@ fun JuneDateTimePicker(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
-    var selectedTab by remember { mutableIntStateOf(initialTab) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(initialTab) }
     val now = remember { System.currentTimeMillis() }
     val calendar = remember {
         Calendar.getInstance().apply {
@@ -67,7 +64,21 @@ fun JuneDateTimePicker(
         initialMinute = calendar.get(Calendar.MINUTE),
         is24Hour = false
     )
-    
+
+    var isMinuteMode by rememberSaveable { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
+
+    if (!isInitialized) {
+        if (isMinuteMode) {
+            timePickerState.selection = TimePickerSelectionMode.Minute
+        }
+        isInitialized = true
+    }
+
+    LaunchedEffect(timePickerState.selection) {
+        isMinuteMode = (timePickerState.selection == TimePickerSelectionMode.Minute)
+    }
+
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -295,7 +306,7 @@ private fun LandscapeTimePicker(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    var activeMode by remember { mutableStateOf(ClockSelectionMode.Hour) }
+    val isMinute = timePickerState.selection == TimePickerSelectionMode.Minute
     val isAfternoon = timePickerState.hour >= 12
     val displayHour = remember(timePickerState.hour) {
         val h = timePickerState.hour % 12
@@ -317,17 +328,17 @@ private fun LandscapeTimePicker(
             // Hour Box
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (activeMode == ClockSelectionMode.Hour) colors.primary else colors.surfaceVariant,
+                color = if (!isMinute) colors.primary else MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
-                    .clickable { activeMode = ClockSelectionMode.Hour }
+                    .clickable { timePickerState.selection = TimePickerSelectionMode.Hour }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = displayHour.toString().padStart(2, '0'),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (activeMode == ClockSelectionMode.Hour) colors.onPrimary else colors.textPrimary
+                        color = if (!isMinute) colors.onPrimary else colors.textPrimary
                     )
                 }
             }
@@ -336,24 +347,24 @@ private fun LandscapeTimePicker(
                 text = ":",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = colors.textSecondary,
+                color = colors.textPrimary,
                 modifier = Modifier.padding(vertical = 2.dp)
             )
 
             // Minute Box
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (activeMode == ClockSelectionMode.Minute) colors.primary else colors.surfaceVariant,
+                color = if (isMinute) colors.primary else MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
-                    .clickable { activeMode = ClockSelectionMode.Minute }
+                    .clickable { timePickerState.selection = TimePickerSelectionMode.Minute }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = displayMinute.toString().padStart(2, '0'),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (activeMode == ClockSelectionMode.Minute) colors.onPrimary else colors.textPrimary
+                        color = if (isMinute) colors.onPrimary else colors.textPrimary
                     )
                 }
             }
@@ -363,7 +374,8 @@ private fun LandscapeTimePicker(
             // AM / PM Toggle Stack
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = colors.surfaceVariant,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                 modifier = Modifier.width(58.dp)
             ) {
                 Column(modifier = Modifier.padding(2.dp)) {
@@ -372,7 +384,7 @@ private fun LandscapeTimePicker(
                             .fillMaxWidth()
                             .height(24.dp)
                             .background(
-                                color = if (!isAfternoon) colors.primary else Color.Transparent,
+                                color = if (!isAfternoon) MaterialTheme.colorScheme.tertiaryContainer else Color.Transparent,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable {
@@ -386,7 +398,7 @@ private fun LandscapeTimePicker(
                             text = "AM",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (!isAfternoon) colors.onPrimary else colors.textSecondary
+                            color = if (!isAfternoon) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
@@ -395,7 +407,7 @@ private fun LandscapeTimePicker(
                             .fillMaxWidth()
                             .height(24.dp)
                             .background(
-                                color = if (isAfternoon) colors.primary else Color.Transparent,
+                                color = if (isAfternoon) MaterialTheme.colorScheme.tertiaryContainer else Color.Transparent,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable {
@@ -409,7 +421,7 @@ private fun LandscapeTimePicker(
                             text = "PM",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isAfternoon) colors.onPrimary else colors.textSecondary
+                            color = if (isAfternoon) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -426,9 +438,10 @@ private fun LandscapeTimePicker(
         val centerDotRadiusPx = with(density) { 4.dp.toPx() }
         val handStrokeWidthPx = with(density) { 2.dp.toPx() }
         val smallDotRadiusPx = with(density) { 2.5f.dp.toPx() }
+        val dialFaceColor = if (colors.isLight) Color(0xFFE6E1E8) else Color(0xFF49454E)
 
-        val selectorAngleDeg = remember(activeMode, timePickerState.hour, timePickerState.minute) {
-            if (activeMode == ClockSelectionMode.Hour) {
+        val selectorAngleDeg = remember(isMinute, timePickerState.hour, timePickerState.minute) {
+            if (!isMinute) {
                 val h12 = if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12
                 (h12 * 30 - 90).toDouble()
             } else {
@@ -446,7 +459,7 @@ private fun LandscapeTimePicker(
             var degrees = Math.toDegrees(angleRad.toDouble()) + 90.0
             if (degrees < 0) degrees += 360.0
 
-            if (activeMode == ClockSelectionMode.Hour) {
+            if (!isMinute) {
                 val raw = (Math.round(degrees / 30.0).toInt()) % 12
                 val hour12 = if (raw == 0) 12 else raw
                 val isPm = timePickerState.hour >= 12
@@ -465,7 +478,7 @@ private fun LandscapeTimePicker(
         Box(
             modifier = Modifier
                 .size(dialSize)
-                .pointerInput(activeMode) {
+                .pointerInput(isMinute) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         updateFromPosition(down.position)
@@ -473,8 +486,8 @@ private fun LandscapeTimePicker(
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull() ?: break
                             if (!change.pressed) {
-                                if (activeMode == ClockSelectionMode.Hour) {
-                                    activeMode = ClockSelectionMode.Minute
+                                if (!isMinute) {
+                                    timePickerState.selection = TimePickerSelectionMode.Minute
                                 }
                                 break
                             }
@@ -488,7 +501,7 @@ private fun LandscapeTimePicker(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Dial Face Background (true circle, never clipped)
                 drawCircle(
-                    color = colors.surfaceVariant.copy(alpha = 0.5f),
+                    color = dialFaceColor,
                     radius = size.minDimension / 2f,
                     center = center
                 )
@@ -517,7 +530,7 @@ private fun LandscapeTimePicker(
                 )
 
                 // If minute is not a multiple of 5, draw a small white dot at hand tip
-                if (activeMode == ClockSelectionMode.Minute && timePickerState.minute % 5 != 0) {
+                if (isMinute && timePickerState.minute % 5 != 0) {
                     drawCircle(
                         color = colors.onPrimary,
                         radius = smallDotRadiusPx,
@@ -527,7 +540,7 @@ private fun LandscapeTimePicker(
             }
 
             // Draw Clock Numbers
-            if (activeMode == ClockSelectionMode.Hour) {
+            if (!isMinute) {
                 val curHour12 = if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12
                 (1..12).forEach { h ->
                     val angleRad = Math.toRadians((h * 30 - 90).toDouble())

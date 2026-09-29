@@ -22,8 +22,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.TagChip
@@ -54,6 +59,22 @@ fun JournalTagsDialog(
     
     var tagInput by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue("", selection = TextRange(0)))
+    }
+    
+    var hadFocus by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var hasRestoredFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (hadFocus && !hasRestoredFocus) {
+            hasRestoredFocus = true
+            delay(200L)
+            try {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            } catch (_: Exception) {}
+        }
     }
     
     val colors = AppTheme.colors
@@ -184,7 +205,17 @@ fun JournalTagsDialog(
                                         fontSize = 14.sp
                                     )
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            hadFocus = true
+                                            hasRestoredFocus = true
+                                        } else if (hasRestoredFocus) {
+                                            hadFocus = false
+                                        }
+                                    },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     unfocusedBorderColor = Color.Transparent,
                                     focusedBorderColor = Color.Transparent,

@@ -78,27 +78,60 @@ fun CalendarScreen(
     }
 
 
-    fun launchDatePicker() {
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+
+    var isDatePickerVisible by rememberSaveable { mutableStateOf(false) }
+    var pendingDateYear by rememberSaveable { mutableIntStateOf(-1) }
+    var pendingDateMonth by rememberSaveable { mutableIntStateOf(-1) }
+    var pendingDateDay by rememberSaveable { mutableIntStateOf(-1) }
+
+    if (isDatePickerVisible) {
         val selected = uiState.selectedDate ?: LocalDate.now()
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                viewModel.jumpToDate(year, month + 1, dayOfMonth)
-            },
-            selected.year,
-            selected.monthValue - 1,
-            selected.dayOfMonth
-        ).apply {
-            datePicker.maxDate = System.currentTimeMillis()
-        }.show()
+        val initialYear = if (pendingDateYear != -1) pendingDateYear else selected.year
+        val initialMonth = if (pendingDateMonth != -1) pendingDateMonth else selected.monthValue - 1
+        val initialDay = if (pendingDateDay != -1) pendingDateDay else selected.dayOfMonth
+
+        DisposableEffect(configuration.orientation) {
+            var isDisposing = false
+            val dialog = DatePickerDialog(
+                context,
+                { _, year, month, dayOfMonth ->
+                    viewModel.jumpToDate(year, month + 1, dayOfMonth)
+                    pendingDateYear = -1
+                    pendingDateMonth = -1
+                    pendingDateDay = -1
+                    isDatePickerVisible = false
+                },
+                initialYear,
+                initialMonth,
+                initialDay
+            ).apply {
+                datePicker.maxDate = System.currentTimeMillis()
+                window?.setWindowAnimations(0)
+                setOnDismissListener {
+                    if (!isDisposing) {
+                        pendingDateYear = -1
+                        pendingDateMonth = -1
+                        pendingDateDay = -1
+                        isDatePickerVisible = false
+                    }
+                }
+            }
+            dialog.show()
+            onDispose {
+                isDisposing = true
+                pendingDateYear = dialog.datePicker.year
+                pendingDateMonth = dialog.datePicker.month
+                pendingDateDay = dialog.datePicker.dayOfMonth
+                dialog.dismiss()
+            }
+        }
     }
 
     val hasActiveFilters = uiState.filterState.selectedTags.isNotEmpty() ||
             uiState.filterState.selectedPeople.isNotEmpty() ||
             uiState.filterState.selectedMoods.isNotEmpty()
-
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
 
     Scaffold(
         containerColor = AppTheme.colors.background,
@@ -138,7 +171,7 @@ fun CalendarScreen(
                             }
                         }
                     },
-                    onDatePickerClick = { launchDatePicker() },
+                    onDatePickerClick = { isDatePickerVisible = true },
                     onTitleClick = {
                         val now = LocalDate.now()
                         viewModel.jumpToDate(now.year, now.monthValue, now.dayOfMonth)
