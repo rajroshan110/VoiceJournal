@@ -316,27 +316,12 @@ private fun CalendarDatePickerDialog(
     val colors = AppTheme.colors
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val context = LocalContext.current
-    val isReducedMotion = remember(context) {
-        dev.voicejournal.ui.designsystem.motion.NavigationMotion.isReducedMotion(context)
-    }
-    val coroutineScope = rememberCoroutineScope()
 
-    val today = remember { LocalDate.now() }
     var selectedEpochDay by rememberSaveable { mutableLongStateOf(initialDate.toEpochDay()) }
-    var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
-
-    val initialPage = remember(initialDate) {
-        CalendarUtils.yearMonthToPage(YearMonth.of(initialDate.year, initialDate.monthValue))
-            .coerceIn(0, CalendarUtils.getMaxPage())
-    }
-    val pagerState = rememberPagerState(
-        initialPage = initialPage,
-        pageCount = { CalendarUtils.getPageCount() }
-    )
+    val yearPickerVisibleState = rememberSaveable { mutableStateOf(false) }
+    var isYearPickerVisible by yearPickerVisibleState
 
     val selectedDate = remember(selectedEpochDay) { LocalDate.ofEpochDay(selectedEpochDay) }
-    val displayedYearMonth = remember(pagerState.currentPage) { CalendarUtils.pageToYearMonth(pagerState.currentPage) }
 
     val onConfirm = {
         onDateSelected(
@@ -406,7 +391,7 @@ private fun CalendarDatePickerDialog(
                         }
                     }
 
-                    // Right Column: Calendar Body + Actions
+                    // Right Column: Calendar Month Picker + Actions
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -418,74 +403,12 @@ private fun CalendarDatePickerDialog(
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (isYearPickerVisible) {
-                            YearPickerContent(
-                                currentYear = today.year,
-                                selectedYear = selectedDate.year,
-                                onYearSelected = { y ->
-                                    val nowMonth = YearMonth.now()
-                                    val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
-                                    val targetYearMonth = if (candidateYearMonth > nowMonth) nowMonth else candidateYearMonth
-                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(targetYearMonth.lengthOfMonth())
-                                    val candidateDate = targetYearMonth.atDay(adjustedDay)
-                                    val finalDate = if (candidateDate > today) today else candidateDate
-                                    selectedEpochDay = finalDate.toEpochDay()
-                                    val targetPage = CalendarUtils.yearMonthToPage(targetYearMonth).coerceIn(0, CalendarUtils.getMaxPage())
-                                    coroutineScope.launch {
-                                        pagerState.scrollToPage(targetPage)
-                                    }
-                                    isYearPickerVisible = false
-                                },
-                                isLandscape = true
-                            )
-                        } else {
-                            Column {
-                                MonthNavigationHeader(
-                                    displayedYearMonth = displayedYearMonth,
-                                    canGoNext = pagerState.currentPage < CalendarUtils.getMaxPage(),
-                                    onPrevious = {
-                                        if (pagerState.currentPage > 0) {
-                                            val target = pagerState.currentPage - 1
-                                            coroutineScope.launch {
-                                                if (isReducedMotion) pagerState.scrollToPage(target)
-                                                else pagerState.animateScrollToPage(target)
-                                            }
-                                        }
-                                    },
-                                    onNext = {
-                                        if (pagerState.currentPage < CalendarUtils.getMaxPage()) {
-                                            val target = pagerState.currentPage + 1
-                                            coroutineScope.launch {
-                                                if (isReducedMotion) pagerState.scrollToPage(target)
-                                                else pagerState.animateScrollToPage(target)
-                                            }
-                                        }
-                                    },
-                                    onTitleClick = { isYearPickerVisible = true }
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                WeekdayHeaderRow()
-                                Spacer(modifier = Modifier.height(2.dp))
-                                HorizontalPager(
-                                    state = pagerState,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    key = { page -> page },
-                                    pageSpacing = 16.dp,
-                                    beyondViewportPageCount = 1
-                                ) { page ->
-                                    val pageYearMonth = remember(page) {
-                                        CalendarUtils.pageToYearMonth(page)
-                                    }
-                                    CalendarGridDays(
-                                        displayedYearMonth = pageYearMonth,
-                                        selectedDate = selectedDate,
-                                        today = today,
-                                        onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
-                                        isLandscape = true
-                                    )
-                                }
-                            }
-                        }
+                        CalendarMonthPicker(
+                            selectedDate = selectedDate,
+                            onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
+                            isLandscape = true,
+                            isYearPickerVisibleState = yearPickerVisibleState
+                        )
 
                         CalendarActionButtons(
                             onDismiss = onDismiss,
@@ -535,72 +458,12 @@ private fun CalendarDatePickerDialog(
                             )
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        if (isYearPickerVisible) {
-                            YearPickerContent(
-                                currentYear = today.year,
-                                selectedYear = selectedDate.year,
-                                onYearSelected = { y ->
-                                    val nowMonth = YearMonth.now()
-                                    val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
-                                    val targetYearMonth = if (candidateYearMonth > nowMonth) nowMonth else candidateYearMonth
-                                    val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(targetYearMonth.lengthOfMonth())
-                                    val candidateDate = targetYearMonth.atDay(adjustedDay)
-                                    val finalDate = if (candidateDate > today) today else candidateDate
-                                    selectedEpochDay = finalDate.toEpochDay()
-                                    val targetPage = CalendarUtils.yearMonthToPage(targetYearMonth).coerceIn(0, CalendarUtils.getMaxPage())
-                                    coroutineScope.launch {
-                                        pagerState.scrollToPage(targetPage)
-                                    }
-                                    isYearPickerVisible = false
-                                },
-                                isLandscape = false
-                            )
-                        } else {
-                            MonthNavigationHeader(
-                                displayedYearMonth = displayedYearMonth,
-                                canGoNext = pagerState.currentPage < CalendarUtils.getMaxPage(),
-                                onPrevious = {
-                                    if (pagerState.currentPage > 0) {
-                                        val target = pagerState.currentPage - 1
-                                        coroutineScope.launch {
-                                            if (isReducedMotion) pagerState.scrollToPage(target)
-                                            else pagerState.animateScrollToPage(target)
-                                        }
-                                    }
-                                },
-                                onNext = {
-                                    if (pagerState.currentPage < CalendarUtils.getMaxPage()) {
-                                        val target = pagerState.currentPage + 1
-                                        coroutineScope.launch {
-                                            if (isReducedMotion) pagerState.scrollToPage(target)
-                                            else pagerState.animateScrollToPage(target)
-                                        }
-                                    }
-                                },
-                                onTitleClick = { isYearPickerVisible = true }
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            WeekdayHeaderRow()
-                            Spacer(modifier = Modifier.height(4.dp))
-                            HorizontalPager(
-                                state = pagerState,
-                                modifier = Modifier.fillMaxWidth(),
-                                key = { page -> page },
-                                pageSpacing = 16.dp,
-                                beyondViewportPageCount = 1
-                            ) { page ->
-                                val pageYearMonth = remember(page) {
-                                    CalendarUtils.pageToYearMonth(page)
-                                }
-                                CalendarGridDays(
-                                    displayedYearMonth = pageYearMonth,
-                                    selectedDate = selectedDate,
-                                    today = today,
-                                    onDateClick = { date -> selectedEpochDay = date.toEpochDay() },
-                                    isLandscape = false
-                                )
-                            }
-                        }
+                        CalendarMonthPicker(
+                            selectedDate = selectedDate,
+                            onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
+                            isLandscape = false,
+                            isYearPickerVisibleState = yearPickerVisibleState
+                        )
 
                         Spacer(modifier = Modifier.height(12.dp))
                         CalendarActionButtons(
@@ -609,215 +472,6 @@ private fun CalendarDatePickerDialog(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthNavigationHeader(
-    displayedYearMonth: YearMonth,
-    canGoNext: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onTitleClick: () -> Unit
-) {
-    val colors = AppTheme.colors
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(
-            onClick = onPrevious,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Previous Month",
-                tint = colors.textPrimary
-            )
-        }
-        Text(
-            text = displayedYearMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { onTitleClick() }
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-        IconButton(
-            onClick = onNext,
-            enabled = canGoNext,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Next Month",
-                tint = if (canGoNext) colors.textPrimary else colors.textSecondary.copy(alpha = 0.38f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun WeekdayHeaderRow() {
-    val colors = AppTheme.colors
-    val weekdays = listOf("S", "M", "T", "W", "T", "F", "S")
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        weekdays.forEach { dayName ->
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = dayName,
-                    color = colors.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalendarGridDays(
-    displayedYearMonth: YearMonth,
-    selectedDate: LocalDate,
-    today: LocalDate,
-    onDateClick: (LocalDate) -> Unit,
-    isLandscape: Boolean
-) {
-    val colors = AppTheme.colors
-    val daysInMonth = displayedYearMonth.lengthOfMonth()
-    val firstOfMonth = displayedYearMonth.atDay(1)
-    val startDayOfWeek = firstOfMonth.dayOfWeek.value % 7 // 0 for Sunday .. 6 for Saturday
-
-    val rowHeight = if (isLandscape) 33.dp else 38.dp
-    val circleSize = if (isLandscape) 28.dp else 34.dp
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        for (r in 0..5) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(rowHeight),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                for (c in 0..6) {
-                    val cellIndex = r * 7 + c
-                    val dayNumber = cellIndex - startDayOfWeek + 1
-                    if (dayNumber in 1..daysInMonth) {
-                        val cellDate = displayedYearMonth.atDay(dayNumber)
-                        val isSelectable = cellDate <= today
-                        val isSelected = cellDate == selectedDate
-                        val isToday = cellDate == today
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(circleSize)
-                                    .then(
-                                        if (isSelected) {
-                                            Modifier.background(colors.primary, CircleShape)
-                                        } else if (isToday) {
-                                            Modifier.border(1.dp, colors.primary, CircleShape)
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
-                                    .then(
-                                        if (isSelectable) {
-                                            Modifier
-                                                .clip(CircleShape)
-                                                .clickable(
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    indication = ripple(bounded = true, radius = circleSize / 2)
-                                                ) {
-                                                    onDateClick(cellDate)
-                                                }
-                                        } else {
-                                            Modifier
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = dayNumber.toString(),
-                                    color = when {
-                                        isSelected -> colors.onPrimary
-                                        !isSelectable -> colors.textSecondary.copy(alpha = 0.38f)
-                                        isToday -> colors.primary
-                                        else -> colors.textPrimary
-                                    },
-                                    fontSize = 14.sp,
-                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun YearPickerContent(
-    currentYear: Int,
-    selectedYear: Int,
-    onYearSelected: (Int) -> Unit,
-    isLandscape: Boolean
-) {
-    val colors = AppTheme.colors
-    val years = remember(currentYear) { (1970..currentYear).toList().reversed() }
-    val initialIndex = remember(selectedYear) {
-        (years.indexOf(selectedYear) - 3).coerceAtLeast(0)
-    }
-    val listState = rememberLazyGridState(initialFirstVisibleItemIndex = initialIndex)
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(if (isLandscape) 220.dp else 260.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        items(years) { y ->
-            val isCurrentSel = y == selectedYear
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 3.dp)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(if (isCurrentSel) colors.primary else Color.Transparent)
-                    .clickable { onYearSelected(y) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = y.toString(),
-                    color = if (isCurrentSel) colors.onPrimary else colors.textPrimary,
-                    fontWeight = if (isCurrentSel) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 15.sp
-                )
             }
         }
     }

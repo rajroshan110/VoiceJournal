@@ -61,7 +61,7 @@ import dev.voicejournal.ui.notedetail.components.TranscriptSection
 import dev.voicejournal.ui.notedetail.components.EditorToolbar
 import dev.voicejournal.ui.notedetail.components.ImageMosaic
 import dev.voicejournal.ui.notedetail.components.JournalTagsDialog
-import dev.voicejournal.ui.notedetail.components.JuneDateTimePicker
+import dev.voicejournal.ui.notedetail.components.DateTimePicker
 import dev.voicejournal.ui.notedetail.components.MicFabState
 import dev.voicejournal.ui.notedetail.components.MicRecordingPill
 import dev.voicejournal.ui.notedetail.components.NoteDetailHeader
@@ -658,9 +658,9 @@ fun NoteDetailScreen(
 }
 }
 
-    // June Interactive Date & Time Picker Dialog
+    // Interactive Date & Time Picker Dialog
     if (showDatePicker) {
-        JuneDateTimePicker(
+        DateTimePicker(
             initialDateTimeMillis = uiState.createdAt,
             initialTab = datePickerTab,
             onDateTimeSelected = { selectedMillis ->

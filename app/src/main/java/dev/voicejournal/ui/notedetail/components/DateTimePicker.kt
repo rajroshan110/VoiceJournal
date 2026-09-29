@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +27,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import dev.voicejournal.ui.calendar.components.CalendarMonthPicker
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import java.time.LocalDate
 import java.util.Calendar
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -36,7 +37,7 @@ import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JuneDateTimePicker(
+fun DateTimePicker(
     initialDateTimeMillis: Long,
     initialTab: Int = 0,
     onDateTimeSelected: (Long) -> Unit,
@@ -51,14 +52,16 @@ fun JuneDateTimePicker(
         }
     }
 
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = calendar.timeInMillis,
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                return utcTimeMillis <= System.currentTimeMillis()
-            }
-        }
-    )
+    val initialLocalDate = remember {
+        LocalDate.of(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1,
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+    var selectedDateEpochDay by rememberSaveable { mutableLongStateOf(initialLocalDate.toEpochDay()) }
+    val selectedDate = remember(selectedDateEpochDay) { LocalDate.ofEpochDay(selectedDateEpochDay) }
+
     val timePickerState = rememberTimePickerState(
         initialHour = calendar.get(Calendar.HOUR_OF_DAY),
         initialMinute = calendar.get(Calendar.MINUTE),
@@ -84,12 +87,15 @@ fun JuneDateTimePicker(
 
     val onConfirm = {
         val currentNow = System.currentTimeMillis()
-        val selectedCal = Calendar.getInstance()
-        datePickerState.selectedDateMillis?.let { millis ->
-            selectedCal.timeInMillis = millis
+        val selectedCal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedDate.year)
+            set(Calendar.MONTH, selectedDate.monthValue - 1)
+            set(Calendar.DAY_OF_MONTH, selectedDate.dayOfMonth)
+            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+            set(Calendar.MINUTE, timePickerState.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        selectedCal.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-        selectedCal.set(Calendar.MINUTE, timePickerState.minute)
         val finalMillis = minOf(selectedCal.timeInMillis, currentNow)
         onDateTimeSelected(finalMillis)
     }
@@ -134,24 +140,6 @@ fun JuneDateTimePicker(
         }
     }
 
-    val datePickerComponent = @Composable {
-        DatePicker(
-            state = datePickerState,
-            colors = DatePickerDefaults.colors(
-                containerColor = colors.surface,
-                selectedDayContainerColor = colors.primary,
-                selectedDayContentColor = colors.onPrimary,
-                todayDateBorderColor = colors.primary,
-                dayContentColor = colors.textPrimary,
-                weekdayContentColor = colors.textSecondary,
-                subheadContentColor = colors.textSecondary
-            ),
-            title = null,
-            headline = null,
-            showModeToggle = false
-        )
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(
@@ -163,7 +151,7 @@ fun JuneDateTimePicker(
                 shape = RoundedCornerShape(20.dp),
                 color = colors.surface,
                 modifier = Modifier
-                    .widthIn(min = 380.dp, max = 410.dp)
+                    .widthIn(min = 390.dp, max = 420.dp)
                     .wrapContentHeight()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
@@ -204,33 +192,15 @@ fun JuneDateTimePicker(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(276.dp),
+                            .height(260.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (selectedTab == 0) {
-                            BoxWithConstraints(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // targetH = 392dp = M3 DatePicker's exact minimum natural height
-                                // (MonthYearHeight 56 + WeekDays 48 + 6 weeks × 48 = 392dp)
-                                // Using this exact value prevents internal compression of the
-                                // weekday-row1 gap while maximising rendered scale (~0.70 vs 0.63).
-                                val targetW = 360.dp
-                                val targetH = 392.dp
-                                val scale = minOf(1f, maxWidth / targetW, maxHeight / targetH)
-                                Box(
-                                    modifier = Modifier
-                                        .requiredSize(targetW, targetH)
-                                        .graphicsLayer {
-                                            scaleX = scale
-                                            scaleY = scale
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    datePickerComponent()
-                                }
-                            }
+                            CalendarMonthPicker(
+                                selectedDate = selectedDate,
+                                onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
+                                isLandscape = true
+                            )
                         } else {
                             LandscapeTimePicker(timePickerState = timePickerState)
                         }
@@ -260,7 +230,11 @@ fun JuneDateTimePicker(
                         contentAlignment = Alignment.Center
                     ) {
                         if (selectedTab == 0) {
-                            datePickerComponent()
+                            CalendarMonthPicker(
+                                selectedDate = selectedDate,
+                                onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
+                                isLandscape = false
+                            )
                         } else {
                             TimePicker(
                                 state = timePickerState,
@@ -297,6 +271,25 @@ fun JuneDateTimePicker(
             }
         }
     }
+}
+
+/**
+ * Backwards-compatibility alias for [DateTimePicker].
+ */
+@Deprecated("Use DateTimePicker instead", ReplaceWith("DateTimePicker(initialDateTimeMillis, initialTab, onDateTimeSelected, onDismiss)"))
+@Composable
+fun JuneDateTimePicker(
+    initialDateTimeMillis: Long,
+    initialTab: Int = 0,
+    onDateTimeSelected: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    DateTimePicker(
+        initialDateTimeMillis = initialDateTimeMillis,
+        initialTab = initialTab,
+        onDateTimeSelected = onDateTimeSelected,
+        onDismiss = onDismiss
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
