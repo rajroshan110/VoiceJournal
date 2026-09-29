@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -77,9 +78,9 @@ fun CalendarMonthPicker(
                 currentYear = maxDate.year,
                 selectedYear = selectedDate.year,
                 onYearSelected = { y ->
-                    val nowMonth = YearMonth.now()
+                    val maxYearMonth = YearMonth.of(maxDate.year, maxDate.monthValue)
                     val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
-                    val targetYearMonth = if (candidateYearMonth > nowMonth) nowMonth else candidateYearMonth
+                    val targetYearMonth = if (candidateYearMonth > maxYearMonth) maxYearMonth else candidateYearMonth
                     val adjustedDay = selectedDate.dayOfMonth.coerceAtMost(targetYearMonth.lengthOfMonth())
                     val candidateDate = targetYearMonth.atDay(adjustedDay)
                     val finalDate = if (candidateDate > maxDate) maxDate else candidateDate
@@ -90,6 +91,7 @@ fun CalendarMonthPicker(
                     }
                     isYearPickerVisible = false
                 },
+                onDismiss = { isYearPickerVisible = false },
                 isLandscape = isLandscape
             )
         } else {
@@ -311,6 +313,7 @@ private fun YearPickerGrid(
     currentYear: Int,
     selectedYear: Int,
     onYearSelected: (Int) -> Unit,
+    onDismiss: () -> Unit,
     isLandscape: Boolean
 ) {
     val colors = AppTheme.colors
@@ -320,31 +323,58 @@ private fun YearPickerGrid(
     }
     val listState = rememberLazyGridState(initialFirstVisibleItemIndex = initialIndex)
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(if (isLandscape) 215.dp else 260.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        items(years) { y ->
-            val isCurrentSel = y == selectedYear
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 3.dp)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(if (isCurrentSel) colors.primary else Color.Transparent)
-                    .clickable { onYearSelected(y) },
-                contentAlignment = Alignment.Center
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = if (isLandscape) 2.dp else 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Select Year",
+                color = colors.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(32.dp)
             ) {
-                Text(
-                    text = y.toString(),
-                    color = if (isCurrentSel) colors.onPrimary else colors.textPrimary,
-                    fontWeight = if (isCurrentSel) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 15.sp
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close year selection",
+                    tint = colors.textSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
+            }
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (isLandscape) 205.dp else 250.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+        ) {
+            items(years) { y ->
+                val isCurrentSel = y == selectedYear
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp, vertical = 3.dp)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (isCurrentSel) colors.primary else Color.Transparent)
+                        .clickable { onYearSelected(y) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = y.toString(),
+                        color = if (isCurrentSel) colors.onPrimary else colors.textPrimary,
+                        fontWeight = if (isCurrentSel) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 15.sp
+                    )
+                }
             }
         }
     }

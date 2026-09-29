@@ -321,7 +321,7 @@ private fun LandscapeTimePicker(
             // Hour Box
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (!isMinute) colors.primary else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (!isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
                     .clickable { timePickerState.selection = TimePickerSelectionMode.Hour }
@@ -347,7 +347,7 @@ private fun LandscapeTimePicker(
             // Minute Box
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isMinute) colors.primary else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
                     .clickable { timePickerState.selection = TimePickerSelectionMode.Minute }
@@ -367,8 +367,8 @@ private fun LandscapeTimePicker(
             // AM / PM Toggle Stack
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                color = colors.surface,
+                border = BorderStroke(1.dp, colors.divider),
                 modifier = Modifier.width(58.dp)
             ) {
                 Column(modifier = Modifier.padding(2.dp)) {
@@ -377,7 +377,7 @@ private fun LandscapeTimePicker(
                             .fillMaxWidth()
                             .height(24.dp)
                             .background(
-                                color = if (!isAfternoon) MaterialTheme.colorScheme.tertiaryContainer else Color.Transparent,
+                                color = if (!isAfternoon) colors.primaryContainer else Color.Transparent,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable {
@@ -391,7 +391,7 @@ private fun LandscapeTimePicker(
                             text = "AM",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (!isAfternoon) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (!isAfternoon) colors.primary else colors.textSecondary
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
@@ -400,7 +400,7 @@ private fun LandscapeTimePicker(
                             .fillMaxWidth()
                             .height(24.dp)
                             .background(
-                                color = if (isAfternoon) MaterialTheme.colorScheme.tertiaryContainer else Color.Transparent,
+                                color = if (isAfternoon) colors.primaryContainer else Color.Transparent,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable {
@@ -414,7 +414,7 @@ private fun LandscapeTimePicker(
                             text = "PM",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isAfternoon) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isAfternoon) colors.primary else colors.textSecondary
                         )
                     }
                 }
