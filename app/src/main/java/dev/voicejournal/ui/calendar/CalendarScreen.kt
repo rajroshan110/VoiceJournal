@@ -318,8 +318,7 @@ private fun CalendarDatePickerDialog(
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     var selectedEpochDay by rememberSaveable { mutableLongStateOf(initialDate.toEpochDay()) }
-    val yearPickerVisibleState = rememberSaveable { mutableStateOf(false) }
-    var isYearPickerVisible by yearPickerVisibleState
+    var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
 
     val initialPage = remember {
         CalendarUtils.yearMonthToPage(YearMonth.of(initialDate.year, initialDate.monthValue))
@@ -329,6 +328,7 @@ private fun CalendarDatePickerDialog(
         initialPage = initialPage,
         pageCount = { CalendarUtils.getPageCount() }
     )
+    val yearGridState = rememberLazyGridState()
 
     val selectedDate = remember(selectedEpochDay) { LocalDate.ofEpochDay(selectedEpochDay) }
 
@@ -417,7 +417,9 @@ private fun CalendarDatePickerDialog(
                             onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
                             isLandscape = true,
                             pagerState = pagerState,
-                            isYearPickerVisibleState = yearPickerVisibleState
+                            isYearPickerVisible = isYearPickerVisible,
+                            onYearPickerVisibleChange = { isYearPickerVisible = it },
+                            yearGridState = yearGridState
                         )
 
                         CalendarActionButtons(
@@ -473,7 +475,9 @@ private fun CalendarDatePickerDialog(
                             onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
                             isLandscape = false,
                             pagerState = pagerState,
-                            isYearPickerVisibleState = yearPickerVisibleState
+                            isYearPickerVisible = isYearPickerVisible,
+                            onYearPickerVisibleChange = { isYearPickerVisible = it },
+                            yearGridState = yearGridState
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))

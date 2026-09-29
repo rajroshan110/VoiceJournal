@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -48,7 +49,9 @@ fun CalendarMonthPicker(
     isLandscape: Boolean = false,
     maxDate: LocalDate = LocalDate.now(),
     pagerState: PagerState? = null,
-    isYearPickerVisibleState: MutableState<Boolean>? = null
+    isYearPickerVisible: Boolean? = null,
+    onYearPickerVisibleChange: ((Boolean) -> Unit)? = null,
+    yearGridState: LazyGridState? = null
 ) {
     val colors = AppTheme.colors
     val context = LocalContext.current
@@ -57,9 +60,15 @@ fun CalendarMonthPicker(
     }
     val coroutineScope = rememberCoroutineScope()
 
-    val internalYearPickerState = rememberSaveable { mutableStateOf(false) }
-    val yearPickerVisibleState = isYearPickerVisibleState ?: internalYearPickerState
-    var isYearPickerVisible by yearPickerVisibleState
+    var internalYearPickerVisible by rememberSaveable { mutableStateOf(false) }
+    val effectiveYearPickerVisible = isYearPickerVisible ?: internalYearPickerVisible
+    val setYearPickerVisible: (Boolean) -> Unit = { visible ->
+        if (onYearPickerVisibleChange != null) {
+            onYearPickerVisibleChange(visible)
+        } else {
+            internalYearPickerVisible = visible
+        }
+    }
 
     val initialPage = remember(selectedDate) {
         CalendarUtils.yearMonthToPage(YearMonth.of(selectedDate.year, selectedDate.monthValue))
@@ -75,11 +84,14 @@ fun CalendarMonthPicker(
         CalendarUtils.pageToYearMonth(effectivePagerState.currentPage)
     }
 
+    val defaultYearGridState = rememberLazyGridState()
+    val effectiveYearGridState = yearGridState ?: defaultYearGridState
+
     Column(modifier = modifier.fillMaxWidth()) {
-        if (isYearPickerVisible) {
+        if (effectiveYearPickerVisible) {
             YearPickerGrid(
                 currentYear = maxDate.year,
-                selectedYear = selectedDate.year,
+                selectedYear = displayedYearMonth.year,
                 onYearSelected = { y ->
                     val maxYearMonth = YearMonth.of(maxDate.year, maxDate.monthValue)
                     val candidateYearMonth = YearMonth.of(y, displayedYearMonth.monthValue)
@@ -92,10 +104,11 @@ fun CalendarMonthPicker(
                     coroutineScope.launch {
                         effectivePagerState.scrollToPage(targetPage)
                     }
-                    isYearPickerVisible = false
+                    setYearPickerVisible(false)
                 },
-                onDismiss = { isYearPickerVisible = false },
-                isLandscape = isLandscape
+                onDismiss = { setYearPickerVisible(false) },
+                isLandscape = isLandscape,
+                gridState = effectiveYearGridState
             )
         } else {
             MonthNavigationHeader(
@@ -119,7 +132,7 @@ fun CalendarMonthPicker(
                         }
                     }
                 },
-                onTitleClick = { isYearPickerVisible = true }
+                onTitleClick = { setYearPickerVisible(true) }
             )
             Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 6.dp))
             WeekdayHeaderRow()
@@ -317,14 +330,20 @@ private fun YearPickerGrid(
     selectedYear: Int,
     onYearSelected: (Int) -> Unit,
     onDismiss: () -> Unit,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    gridState: LazyGridState = rememberLazyGridState()
 ) {
     val colors = AppTheme.colors
     val years = remember(currentYear) { (1970..currentYear).toList().reversed() }
-    val initialIndex = remember(selectedYear) {
+    val targetIndex = remember(selectedYear) {
         (years.indexOf(selectedYear) - 3).coerceAtLeast(0)
     }
-    val listState = rememberLazyGridState(initialFirstVisibleItemIndex = initialIndex)
+
+    LaunchedEffect(selectedYear) {
+        if (gridState.firstVisibleItemIndex == 0 && targetIndex > 0) {
+            gridState.scrollToItem(targetIndex)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -354,7 +373,7 @@ private fun YearPickerGrid(
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            state = listState,
+            state = gridState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(if (isLandscape) 205.dp else 250.dp),

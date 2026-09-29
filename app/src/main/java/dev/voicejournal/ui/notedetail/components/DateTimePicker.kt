@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,7 +66,8 @@ fun DateTimePicker(
     var selectedDateEpochDay by rememberSaveable { mutableLongStateOf(initialLocalDate.toEpochDay()) }
     val selectedDate = remember(selectedDateEpochDay) { LocalDate.ofEpochDay(selectedDateEpochDay) }
 
-    val yearPickerVisibleState = rememberSaveable { mutableStateOf(false) }
+    var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
+    val yearGridState = rememberLazyGridState()
 
     val initialPage = remember {
         CalendarUtils.yearMonthToPage(YearMonth.of(initialLocalDate.year, initialLocalDate.monthValue))
@@ -199,7 +201,9 @@ fun DateTimePicker(
                                 onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
                                 isLandscape = true,
                                 pagerState = pagerState,
-                                isYearPickerVisibleState = yearPickerVisibleState
+                                isYearPickerVisible = isYearPickerVisible,
+                                onYearPickerVisibleChange = { isYearPickerVisible = it },
+                                yearGridState = yearGridState
                             )
                         } else {
                             LandscapeTimePicker(
@@ -242,7 +246,9 @@ fun DateTimePicker(
                                 onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
                                 isLandscape = false,
                                 pagerState = pagerState,
-                                isYearPickerVisibleState = yearPickerVisibleState
+                                isYearPickerVisible = isYearPickerVisible,
+                                onYearPickerVisibleChange = { isYearPickerVisible = it },
+                                yearGridState = yearGridState
                             )
                         } else {
                             key(isLandscape) {
