@@ -321,6 +321,15 @@ private fun CalendarDatePickerDialog(
     val yearPickerVisibleState = rememberSaveable { mutableStateOf(false) }
     var isYearPickerVisible by yearPickerVisibleState
 
+    val initialPage = remember {
+        CalendarUtils.yearMonthToPage(YearMonth.of(initialDate.year, initialDate.monthValue))
+            .coerceIn(0, CalendarUtils.getMaxPage())
+    }
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { CalendarUtils.getPageCount() }
+    )
+
     val selectedDate = remember(selectedEpochDay) { LocalDate.ofEpochDay(selectedEpochDay) }
 
     val onConfirm = {
@@ -407,6 +416,7 @@ private fun CalendarDatePickerDialog(
                             selectedDate = selectedDate,
                             onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
                             isLandscape = true,
+                            pagerState = pagerState,
                             isYearPickerVisibleState = yearPickerVisibleState
                         )
 
@@ -462,6 +472,7 @@ private fun CalendarDatePickerDialog(
                             selectedDate = selectedDate,
                             onDateSelected = { date -> selectedEpochDay = date.toEpochDay() },
                             isLandscape = false,
+                            pagerState = pagerState,
                             isYearPickerVisibleState = yearPickerVisibleState
                         )
 

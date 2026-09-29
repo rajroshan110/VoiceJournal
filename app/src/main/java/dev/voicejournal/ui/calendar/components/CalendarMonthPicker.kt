@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,7 @@ fun CalendarMonthPicker(
     modifier: Modifier = Modifier,
     isLandscape: Boolean = false,
     maxDate: LocalDate = LocalDate.now(),
+    pagerState: PagerState? = null,
     isYearPickerVisibleState: MutableState<Boolean>? = null
 ) {
     val colors = AppTheme.colors
@@ -63,13 +65,14 @@ fun CalendarMonthPicker(
         CalendarUtils.yearMonthToPage(YearMonth.of(selectedDate.year, selectedDate.monthValue))
             .coerceIn(0, CalendarUtils.getMaxPage())
     }
-    val pagerState = rememberPagerState(
+    val defaultPagerState = rememberPagerState(
         initialPage = initialPage,
         pageCount = { CalendarUtils.getPageCount() }
     )
+    val effectivePagerState = pagerState ?: defaultPagerState
 
-    val displayedYearMonth = remember(pagerState.currentPage) {
-        CalendarUtils.pageToYearMonth(pagerState.currentPage)
+    val displayedYearMonth = remember(effectivePagerState.currentPage) {
+        CalendarUtils.pageToYearMonth(effectivePagerState.currentPage)
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -87,7 +90,7 @@ fun CalendarMonthPicker(
                     onDateSelected(finalDate)
                     val targetPage = CalendarUtils.yearMonthToPage(targetYearMonth).coerceIn(0, CalendarUtils.getMaxPage())
                     coroutineScope.launch {
-                        pagerState.scrollToPage(targetPage)
+                        effectivePagerState.scrollToPage(targetPage)
                     }
                     isYearPickerVisible = false
                 },
@@ -97,22 +100,22 @@ fun CalendarMonthPicker(
         } else {
             MonthNavigationHeader(
                 displayedYearMonth = displayedYearMonth,
-                canGoNext = pagerState.currentPage < CalendarUtils.getMaxPage(),
+                canGoNext = effectivePagerState.currentPage < CalendarUtils.getMaxPage(),
                 onPrevious = {
-                    if (pagerState.currentPage > 0) {
-                        val target = pagerState.currentPage - 1
+                    if (effectivePagerState.currentPage > 0) {
+                        val target = effectivePagerState.currentPage - 1
                         coroutineScope.launch {
-                            if (isReducedMotion) pagerState.scrollToPage(target)
-                            else pagerState.animateScrollToPage(target)
+                            if (isReducedMotion) effectivePagerState.scrollToPage(target)
+                            else effectivePagerState.animateScrollToPage(target)
                         }
                     }
                 },
                 onNext = {
-                    if (pagerState.currentPage < CalendarUtils.getMaxPage()) {
-                        val target = pagerState.currentPage + 1
+                    if (effectivePagerState.currentPage < CalendarUtils.getMaxPage()) {
+                        val target = effectivePagerState.currentPage + 1
                         coroutineScope.launch {
-                            if (isReducedMotion) pagerState.scrollToPage(target)
-                            else pagerState.animateScrollToPage(target)
+                            if (isReducedMotion) effectivePagerState.scrollToPage(target)
+                            else effectivePagerState.animateScrollToPage(target)
                         }
                     }
                 },
@@ -122,7 +125,7 @@ fun CalendarMonthPicker(
             WeekdayHeaderRow()
             Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 4.dp))
             HorizontalPager(
-                state = pagerState,
+                state = effectivePagerState,
                 modifier = Modifier.fillMaxWidth(),
                 key = { page -> page },
                 pageSpacing = 16.dp,

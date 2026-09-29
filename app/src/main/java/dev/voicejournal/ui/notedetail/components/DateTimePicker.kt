@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,9 +28,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import dev.voicejournal.ui.calendar.CalendarUtils
 import dev.voicejournal.ui.calendar.components.CalendarMonthPicker
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.Calendar
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -62,25 +65,20 @@ fun DateTimePicker(
     var selectedDateEpochDay by rememberSaveable { mutableLongStateOf(initialLocalDate.toEpochDay()) }
     val selectedDate = remember(selectedDateEpochDay) { LocalDate.ofEpochDay(selectedDateEpochDay) }
 
-    val timePickerState = rememberTimePickerState(
-        initialHour = calendar.get(Calendar.HOUR_OF_DAY),
-        initialMinute = calendar.get(Calendar.MINUTE),
-        is24Hour = false
+    val yearPickerVisibleState = rememberSaveable { mutableStateOf(false) }
+
+    val initialPage = remember {
+        CalendarUtils.yearMonthToPage(YearMonth.of(initialLocalDate.year, initialLocalDate.monthValue))
+            .coerceIn(0, CalendarUtils.getMaxPage())
+    }
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { CalendarUtils.getPageCount() }
     )
 
+    var selectedHour by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.HOUR_OF_DAY)) }
+    var selectedMinute by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MINUTE)) }
     var isMinuteMode by rememberSaveable { mutableStateOf(false) }
-    var isInitialized by remember { mutableStateOf(false) }
-
-    if (!isInitialized) {
-        if (isMinuteMode) {
-            timePickerState.selection = TimePickerSelectionMode.Minute
-        }
-        isInitialized = true
-    }
-
-    LaunchedEffect(timePickerState.selection) {
-        isMinuteMode = (timePickerState.selection == TimePickerSelectionMode.Minute)
-    }
 
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -91,8 +89,8 @@ fun DateTimePicker(
             set(Calendar.YEAR, selectedDate.year)
             set(Calendar.MONTH, selectedDate.monthValue - 1)
             set(Calendar.DAY_OF_MONTH, selectedDate.dayOfMonth)
-            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-            set(Calendar.MINUTE, timePickerState.minute)
+            set(Calendar.HOUR_OF_DAY, selectedHour)
+            set(Calendar.MINUTE, selectedMinute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
@@ -199,10 +197,19 @@ fun DateTimePicker(
                             CalendarMonthPicker(
                                 selectedDate = selectedDate,
                                 onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
-                                isLandscape = true
+                                isLandscape = true,
+                                pagerState = pagerState,
+                                isYearPickerVisibleState = yearPickerVisibleState
                             )
                         } else {
-                            LandscapeTimePicker(timePickerState = timePickerState)
+                            LandscapeTimePicker(
+                                selectedHour = selectedHour,
+                                selectedMinute = selectedMinute,
+                                isMinuteMode = isMinuteMode,
+                                onHourChange = { newHour -> selectedHour = newHour },
+                                onMinuteChange = { newMinute -> selectedMinute = newMinute },
+                                onModeChange = { isMin -> isMinuteMode = isMin }
+                            )
                         }
                     }
                 }
@@ -233,20 +240,41 @@ fun DateTimePicker(
                             CalendarMonthPicker(
                                 selectedDate = selectedDate,
                                 onDateSelected = { date -> selectedDateEpochDay = date.toEpochDay() },
-                                isLandscape = false
+                                isLandscape = false,
+                                pagerState = pagerState,
+                                isYearPickerVisibleState = yearPickerVisibleState
                             )
                         } else {
-                            TimePicker(
-                                state = timePickerState,
-                                layoutType = TimePickerLayoutType.Vertical,
-                                colors = TimePickerDefaults.colors(
-                                    selectorColor = colors.primary,
-                                    timeSelectorSelectedContainerColor = colors.primary,
-                                    timeSelectorSelectedContentColor = colors.onPrimary,
-                                    timeSelectorUnselectedContainerColor = colors.surfaceVariant,
-                                    timeSelectorUnselectedContentColor = colors.textPrimary
+                            key(isLandscape) {
+                                val portraitTimePickerState = rememberTimePickerState(
+                                    initialHour = selectedHour,
+                                    initialMinute = selectedMinute,
+                                    is24Hour = false
                                 )
-                            )
+                                LaunchedEffect(Unit) {
+                                    if (isMinuteMode) {
+                                        portraitTimePickerState.selection = TimePickerSelectionMode.Minute
+                                    }
+                                }
+                                LaunchedEffect(portraitTimePickerState.hour, portraitTimePickerState.minute) {
+                                    selectedHour = portraitTimePickerState.hour
+                                    selectedMinute = portraitTimePickerState.minute
+                                }
+                                LaunchedEffect(portraitTimePickerState.selection) {
+                                    isMinuteMode = (portraitTimePickerState.selection == TimePickerSelectionMode.Minute)
+                                }
+                                TimePicker(
+                                    state = portraitTimePickerState,
+                                    layoutType = TimePickerLayoutType.Vertical,
+                                    colors = TimePickerDefaults.colors(
+                                        selectorColor = colors.primary,
+                                        timeSelectorSelectedContainerColor = colors.primary,
+                                        timeSelectorSelectedContentColor = colors.onPrimary,
+                                        timeSelectorUnselectedContainerColor = colors.surfaceVariant,
+                                        timeSelectorUnselectedContentColor = colors.textPrimary
+                                    )
+                                )
+                            }
                         }
                     }
 
@@ -292,20 +320,24 @@ fun JuneDateTimePicker(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LandscapeTimePicker(
-    timePickerState: TimePickerState,
+    selectedHour: Int,
+    selectedMinute: Int,
+    isMinuteMode: Boolean,
+    onHourChange: (Int) -> Unit,
+    onMinuteChange: (Int) -> Unit,
+    onModeChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val isMinute = timePickerState.selection == TimePickerSelectionMode.Minute
-    val isAfternoon = timePickerState.hour >= 12
-    val displayHour = remember(timePickerState.hour) {
-        val h = timePickerState.hour % 12
+    val isMinute = isMinuteMode
+    val isAfternoon = selectedHour >= 12
+    val displayHour = remember(selectedHour) {
+        val h = selectedHour % 12
         if (h == 0) 12 else h
     }
-    val displayMinute = timePickerState.minute
+    val displayMinute = selectedMinute
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -324,7 +356,7 @@ private fun LandscapeTimePicker(
                 color = if (!isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
-                    .clickable { timePickerState.selection = TimePickerSelectionMode.Hour }
+                    .clickable { onModeChange(false) }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
@@ -350,7 +382,7 @@ private fun LandscapeTimePicker(
                 color = if (isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
-                    .clickable { timePickerState.selection = TimePickerSelectionMode.Minute }
+                    .clickable { onModeChange(true) }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
@@ -382,7 +414,7 @@ private fun LandscapeTimePicker(
                             )
                             .clickable {
                                 if (isAfternoon) {
-                                    timePickerState.hour = (timePickerState.hour - 12).coerceAtLeast(0)
+                                    onHourChange((selectedHour - 12).coerceAtLeast(0))
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -405,7 +437,7 @@ private fun LandscapeTimePicker(
                             )
                             .clickable {
                                 if (!isAfternoon) {
-                                    timePickerState.hour = (timePickerState.hour + 12).coerceAtMost(23)
+                                    onHourChange((selectedHour + 12).coerceAtMost(23))
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -433,12 +465,12 @@ private fun LandscapeTimePicker(
         val smallDotRadiusPx = with(density) { 2.5f.dp.toPx() }
         val dialFaceColor = if (colors.isLight) Color(0xFFE6E1E8) else Color(0xFF49454E)
 
-        val selectorAngleDeg = remember(isMinute, timePickerState.hour, timePickerState.minute) {
+        val selectorAngleDeg = remember(isMinute, selectedHour, selectedMinute) {
             if (!isMinute) {
-                val h12 = if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12
+                val h12 = if (selectedHour % 12 == 0) 12 else selectedHour % 12
                 (h12 * 30 - 90).toDouble()
             } else {
-                (timePickerState.minute * 6 - 90).toDouble()
+                (selectedMinute * 6 - 90).toDouble()
             }
         }
         val selectorAngleRad = Math.toRadians(selectorAngleDeg)
@@ -455,16 +487,16 @@ private fun LandscapeTimePicker(
             if (!isMinute) {
                 val raw = (Math.round(degrees / 30.0).toInt()) % 12
                 val hour12 = if (raw == 0) 12 else raw
-                val isPm = timePickerState.hour >= 12
+                val isPm = selectedHour >= 12
                 val newHour24 = if (isPm) {
                     if (hour12 == 12) 12 else hour12 + 12
                 } else {
                     if (hour12 == 12) 0 else hour12
                 }
-                timePickerState.hour = newHour24
+                onHourChange(newHour24)
             } else {
                 val min = (Math.round(degrees / 6.0).toInt()) % 60
-                timePickerState.minute = min
+                onMinuteChange(min)
             }
         }
 
@@ -480,7 +512,7 @@ private fun LandscapeTimePicker(
                             val change = event.changes.firstOrNull() ?: break
                             if (!change.pressed) {
                                 if (!isMinute) {
-                                    timePickerState.selection = TimePickerSelectionMode.Minute
+                                    onModeChange(true)
                                 }
                                 break
                             }
@@ -523,7 +555,7 @@ private fun LandscapeTimePicker(
                 )
 
                 // If minute is not a multiple of 5, draw a small white dot at hand tip
-                if (isMinute && timePickerState.minute % 5 != 0) {
+                if (isMinute && selectedMinute % 5 != 0) {
                     drawCircle(
                         color = colors.onPrimary,
                         radius = smallDotRadiusPx,
@@ -534,7 +566,7 @@ private fun LandscapeTimePicker(
 
             // Draw Clock Numbers
             if (!isMinute) {
-                val curHour12 = if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12
+                val curHour12 = if (selectedHour % 12 == 0) 12 else selectedHour % 12
                 (1..12).forEach { h ->
                     val angleRad = Math.toRadians((h * 30 - 90).toDouble())
                     val nx = centerOffsetPx + numbersRadiusPx * cos(angleRad).toFloat()
@@ -566,7 +598,7 @@ private fun LandscapeTimePicker(
                     val angleRad = Math.toRadians((m * 6 - 90).toDouble())
                     val nx = centerOffsetPx + numbersRadiusPx * cos(angleRad).toFloat()
                     val ny = centerOffsetPx + numbersRadiusPx * sin(angleRad).toFloat()
-                    val isSelected = m == timePickerState.minute
+                    val isSelected = m == selectedMinute
 
                     Box(
                         modifier = Modifier
