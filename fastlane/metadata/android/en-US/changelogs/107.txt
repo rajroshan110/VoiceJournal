@@ -1,0 +1,7 @@
+- Offline bilingual speech-to-text powered by Whisper.cpp Base Q5.
+- Multi-track voice recording with real-time waveform visualization.
+- Refined orientation transitions and calendar date selection.
+- Keystore-backed PIN lock and biometric app protection.
+- Atomic lossless zip backup and restore.
+- Production performance and binary size optimizations with R8.
+- Codebase clean-up and pre-listing audit readiness.

@@ -239,7 +239,6 @@ fun NoteDetailScreen(
                 // prematurely sucking down the note to the top/bottom before the keyboard opens.
                 val isKeyboardActive = currentImeBottom > 0
                 if (!isKeyboardActive) {
-                    Log.d("VoiceJournalDebug", "calculateScrollDistance: keyboard closed -> 0f (offset=$offset, size=$size)")
                     return 0f
                 }
 
@@ -247,7 +246,6 @@ fun NoteDetailScreen(
                 // on initial focus gain), NEVER scroll the container to its bottom or top!
                 // Full containers should not jump the viewport; only targeted cursor rects should scroll.
                 if (size > containerSize * 0.5f) {
-                    Log.d("VoiceJournalDebug", "calculateScrollDistance: Ignored large child (size=$size > 0.5*container=$containerSize, offset=$offset)")
                     return 0f
                 }
 
@@ -257,20 +255,16 @@ fun NoteDetailScreen(
 
                 // 1. If cursor is ALREADY visible above the target bottom and below top, DO NOT JUMP:
                 if (offset >= 0f && offset + size <= targetBottom) {
-                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor already visible (offset=$offset, size=$size, targetBottom=$targetBottom) -> 0f")
                     return 0f
                 }
 
                 // 2. Only if the cursor is obscured below the target bottom:
                 if (offset + size > targetBottom) {
-                    val result = (offset + size) - targetBottom
-                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor obscured -> result=$result, offset=$offset, targetBottom=$targetBottom")
-                    return result
+                    return (offset + size) - targetBottom
                 }
 
                 // 3. If cursor is above the visible viewport (e.g. typing or arrowing up):
                 if (offset < 0f) {
-                    Log.d("VoiceJournalDebug", "calculateScrollDistance: cursor above viewport -> offset=$offset")
                     return offset
                 }
 

@@ -16,8 +16,8 @@ android {
         applicationId = "dev.voicejournal"
         minSdk = 29
         targetSdk = 35
-        versionCode = 106
-        versionName = "1.0.4-dev2"
+        versionCode = 107
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -71,7 +71,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             if (isReleaseTaskRequested) {
                 check(hasReleaseSigning) {
                     "Release signing is not configured. Set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD or create signing.properties."

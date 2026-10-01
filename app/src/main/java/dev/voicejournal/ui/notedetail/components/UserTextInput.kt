@@ -1,6 +1,5 @@
 package dev.voicejournal.ui.notedetail.components
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -86,10 +85,6 @@ fun UserTextInput(
         val transformedOffset = transformed.offsetMapping.originalToTransformed(rawOffset)
             .coerceIn(0, layout.layoutInput.text.length)
         val rawCursorRect = layout.getCursorRect(transformedOffset)
-        Log.d(
-            "VoiceJournalDebug",
-            "UserTextInput bringCursorIntoView ($source): rawOffset=$rawOffset, transformedOffset=$transformedOffset, rect=$rawCursorRect, imeBottom=$imeBottom"
-        )
         cursorBringIntoViewRequester.bringIntoView(rawCursorRect)
     }
 
@@ -170,7 +165,6 @@ fun UserTextInput(
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState ->
                         isTextFieldFocused = focusState.isFocused
-                        Log.d("VoiceJournalDebug", "UserTextInput onFocusChanged: isFocused=${focusState.isFocused}")
                     }
             )
         }

@@ -11,9 +11,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rajroshan110/VoiceJournal/releases/tag/v1.0.4"><img src="https://img.shields.io/badge/Release-v1.0.4-blue.svg?style=flat-square" alt="Version 1.0.4"/></a>
+  <a href="https://github.com/rajroshan110/VoiceJournal/releases"><img src="https://img.shields.io/github/v/release/rajroshan110/VoiceJournal?include_prereleases&style=flat-square&color=blue" alt="Latest Release"/></a>
   <a href="https://developer.android.com/about/versions/10"><img src="https://img.shields.io/badge/Platform-Android%2010%2B%20(API%2029%2B)-3DDC84.svg?style=flat-square&logo=android&logoColor=white" alt="Android 10+"/></a>
   <a href="https://developer.android.com/about/versions/15"><img src="https://img.shields.io/badge/Target%20SDK-35%20(Android%2015)-blue.svg?style=flat-square" alt="Target SDK 35"/></a>
+  <img src="https://img.shields.io/badge/Trackers-0%20(Clean)-success.svg?style=flat-square" alt="Zero Trackers"/>
   <a href="https://github.com/ggerganov/whisper.cpp"><img src="https://img.shields.io/badge/AI%20Engine-Whisper.cpp%20Base%20Q5-orange.svg?style=flat-square" alt="Whisper.cpp Base Q5"/></a>
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin 100%"/></a>
   <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Material%203-Jetpack%20Compose-4285F4.svg?style=flat-square" alt="Jetpack Compose Material 3"/></a>
@@ -248,8 +249,6 @@ To keep the repository lightweight and allow flexible updates:
 - [x] Vico-backed habit consistency and mood distribution analytics
 - [ ] Multi-language transcription model options (Spanish, French, German, Japanese)
 - [ ] Selective individual note export to Markdown (`.md`) and audio package
-- [ ] Hardware-encrypted backup archives with password protection (AES-GCM-256)
-- [ ] Smart audio silence truncation and background noise suppression filter
 
 ---
 

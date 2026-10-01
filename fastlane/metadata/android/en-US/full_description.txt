@@ -1,0 +1,12 @@
+VoiceJournal is a privacy-first Android journaling application featuring fully offline on-device AI transcription powered by Whisper.cpp.
+
+Key Features:
+• 100% On-Device AI Transcription: Transcribe voice reflections without sending data to third-party cloud servers.
+• Bilingual Speech Recognition: Out-of-the-box optimization for English and Hindi/Urdu.
+• High-Fidelity Audio: Hardware-accelerated M4A (AAC-LC) and studio-grade 16-bit PCM WAV (16kHz mono).
+• Multi-Track Audio Attachments: Attach multiple recordings per entry with real-time audio waveforms.
+• Absolute Privacy: Zero analytics, zero telemetry, no user accounts, and no advertisements.
+• Local Security: Android Keystore-backed PIN lock with biometric fingerprint and face authentication.
+• Smart Organization: Custom folders, searchable tags, drafts, archive, and safe trash.
+• Lossless Backup & Restore: Two-stage atomic zip export and import protected against Zip-Slip vulnerabilities.
+• Material Design 3: Fluid dynamic theming with Paper Light and Obsidian Dark color palettes.

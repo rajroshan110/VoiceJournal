@@ -1,0 +1,1 @@
+Private voice journal with offline AI transcription powered by Whisper.
