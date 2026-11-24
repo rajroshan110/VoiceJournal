@@ -1,6 +1,14 @@
 package dev.voicejournal.transcription
 
+import android.content.Context
+import android.util.Log
 import dev.voicejournal.transcription.engine.WhisperEngine
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -8,7 +16,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.security.MessageDigest
 
 class WhisperModelIntegrityTest {
@@ -118,16 +128,19 @@ class WhisperModelIntegrityTest {
         assertEquals("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1-mirror.bin", resolvedSibling)
         assertTrue(resolvedSibling.startsWith("https://"))
 
-        // 3. Absolute HTTPS redirect resolution
-        val absoluteHttpsRedirect = "https://cdn.huggingface.co/model.bin"
+        // 3. Absolute HTTPS redirect resolution (case-insensitive scheme)
+        val absoluteHttpsRedirect = "HTTPS://cdn.huggingface.co/model.bin"
         val resolvedAbsolute = WhisperEngine.resolveRedirectUrl(currentUrl, absoluteHttpsRedirect)
-        assertEquals("https://cdn.huggingface.co/model.bin", resolvedAbsolute)
-        assertTrue(resolvedAbsolute.startsWith("https://"))
+        assertEquals("https://cdn.huggingface.co/model.bin", resolvedAbsolute.lowercase())
+        assertTrue(java.net.URL(resolvedAbsolute).protocol.equals("https", ignoreCase = true))
 
-        // 4. Insecure HTTP redirect must throw SecurityException
+        // 4. Insecure HTTP redirect (including mixed-case) must throw SecurityException
         val insecureRedirect = "http://insecure-cdn.com/model.bin"
         assertThrows(SecurityException::class.java) {
             WhisperEngine.resolveRedirectUrl(currentUrl, insecureRedirect)
+        }
+        assertThrows(SecurityException::class.java) {
+            WhisperEngine.resolveRedirectUrl(currentUrl, "HTTP://insecure-cdn.com/model.bin")
         }
 
         // 5. Insecure non-HTTPS schemes (e.g. file:, ftp:) must throw SecurityException
@@ -136,6 +149,88 @@ class WhisperModelIntegrityTest {
         }
         assertThrows(SecurityException::class.java) {
             WhisperEngine.resolveRedirectUrl(currentUrl, "ftp://example.com/model.bin")
+        }
+    }
+
+    @Test
+    fun testEnsureModelDownloadedDisablesAutoRedirectsAndBlocksHttpRedirect() = runBlocking {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
+
+        try {
+            val filesDir = tempFolder.newFolder("files")
+            val context = mockk<Context>(relaxed = true) {
+                every { this@mockk.filesDir } returns filesDir
+            }
+            val engine = WhisperEngine(context)
+
+            val connections = mutableListOf<HttpURLConnection>()
+            engine.connectionFactory = { url ->
+                mockk<HttpURLConnection>(relaxed = true) {
+                    every { responseCode } returns HttpURLConnection.HTTP_MOVED_TEMP
+                    every { getHeaderField("Location") } returns "http://insecure.example.com/model.bin"
+                }.also { connections.add(it) }
+            }
+
+            val result = engine.ensureModelDownloaded()
+
+            assertFalse(result)
+            assertTrue(connections.isNotEmpty())
+            connections.forEach { conn ->
+                verify { conn.instanceFollowRedirects = false }
+            }
+        } finally {
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun testEnsureModelDownloadedFollowsHttpsRedirectsWithManualRedirectDisabled() = runBlocking {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
+
+        try {
+            val filesDir = tempFolder.newFolder("files_https")
+            val context = mockk<Context>(relaxed = true) {
+                every { this@mockk.filesDir } returns filesDir
+            }
+            val engine = WhisperEngine(context)
+
+            val requestedUrls = mutableListOf<String>()
+            val connections = mutableListOf<HttpURLConnection>()
+            engine.connectionFactory = { url ->
+                val urlStr = url.toString()
+                requestedUrls.add(urlStr)
+                val conn = if (requestedUrls.size == 1) {
+                    mockk<HttpURLConnection>(relaxed = true) {
+                        every { responseCode } returns HttpURLConnection.HTTP_MOVED_PERM
+                        every { getHeaderField("Location") } returns "HTTPS://cdn.huggingface.co/verified-model.bin"
+                    }
+                } else {
+                    mockk<HttpURLConnection>(relaxed = true) {
+                        every { responseCode } returns HttpURLConnection.HTTP_OK
+                        every { contentLengthLong } returns 4L
+                        every { inputStream } returns ByteArrayInputStream(byteArrayOf(1, 2, 3, 4))
+                    }
+                }
+                connections.add(conn)
+                conn
+            }
+
+            // Fails size/hash check after following HTTPS redirect, proving redirect happened safely
+            val result = engine.ensureModelDownloaded()
+
+            assertFalse(result)
+            assertTrue(requestedUrls.any { it.equals("https://cdn.huggingface.co/verified-model.bin", ignoreCase = true) })
+            connections.forEach { conn ->
+                verify { conn.instanceFollowRedirects = false }
+            }
+        } finally {
+            unmockkStatic(Log::class)
         }
     }
 

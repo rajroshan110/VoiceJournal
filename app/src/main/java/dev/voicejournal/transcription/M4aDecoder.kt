@@ -4,6 +4,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.util.Log
+import dev.voicejournal.BuildConfig
 import java.io.File
 import java.nio.ByteOrder
 
@@ -11,13 +12,13 @@ object M4aDecoder {
     private const val TAG = "WhisperProfile"
 
     private class ResizableFloatArray(initialCapacity: Int = 262144) {
-        var data = FloatArray(initialCapacity)
+        var data = FloatArray(initialCapacity.coerceAtLeast(1024))
         var size = 0
             private set
 
         fun add(element: Float) {
             if (size == data.size) {
-                data = data.copyOf(data.size * 2)
+                data = data.copyOf((data.size * 2).coerceAtLeast(size + 1))
             }
             data[size++] = element
         }
@@ -51,15 +52,22 @@ object M4aDecoder {
             extractor.selectTrack(audioTrackIndex)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: throw IllegalArgumentException("No mime type")
 
-            val sampleRate = if (format.containsKey(MediaFormat.KEY_SAMPLE_RATE)) format.getInteger(MediaFormat.KEY_SAMPLE_RATE) else 44100
-            val channels = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 1
+            var sampleRate = if (format.containsKey(MediaFormat.KEY_SAMPLE_RATE)) format.getInteger(MediaFormat.KEY_SAMPLE_RATE) else 44100
+            var channels = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 1
+
+            val initialCapacity = if (format.containsKey(MediaFormat.KEY_DURATION)) {
+                val durationUs = format.getLong(MediaFormat.KEY_DURATION)
+                ((durationUs * sampleRate) / 1_000_000L).toInt().coerceIn(4096, 8_000_000)
+            } else {
+                262144
+            }
 
             codec = MediaCodec.createDecoderByType(mime)
             codec.configure(format, null, null, 0)
             codec.start()
 
             val info = MediaCodec.BufferInfo()
-            val outputFloatBuffer = ResizableFloatArray()
+            val outputFloatBuffer = ResizableFloatArray(initialCapacity)
             var isEOS = false
 
             while (true) {
@@ -80,9 +88,7 @@ object M4aDecoder {
 
                 val outIndex = codec.dequeueOutputBuffer(info, 10000)
                 if (outIndex >= 0) {
-                    if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        break
-                    }
+                    val endOfStream = (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0
                     if (info.size > 0) {
                         val outBuffer = codec.getOutputBuffer(outIndex)
                         if (outBuffer != null) {
@@ -90,32 +96,51 @@ object M4aDecoder {
                             outBuffer.limit(info.offset + info.size)
                             outBuffer.order(ByteOrder.LITTLE_ENDIAN)
 
-                            while (outBuffer.remaining() >= 2) {
-                                val sample = outBuffer.short
-                                outputFloatBuffer.add(sample.toFloat() / 32768.0f)
+                            if (channels == 2) {
+                                while (outBuffer.remaining() >= 4) {
+                                    val left = outBuffer.short.toFloat() / 32768.0f
+                                    val right = outBuffer.short.toFloat() / 32768.0f
+                                    outputFloatBuffer.add((left + right) / 2.0f)
+                                }
+                            } else if (channels > 2) {
+                                val frameBytes = channels * 2
+                                val invChannels = 1.0f / channels.toFloat()
+                                while (outBuffer.remaining() >= frameBytes) {
+                                    var sum = 0.0f
+                                    for (ch in 0 until channels) {
+                                        sum += outBuffer.short.toFloat() / 32768.0f
+                                    }
+                                    outputFloatBuffer.add(sum * invChannels)
+                                }
+                            } else {
+                                while (outBuffer.remaining() >= 2) {
+                                    val sample = outBuffer.short
+                                    outputFloatBuffer.add(sample.toFloat() / 32768.0f)
+                                }
                             }
                         }
                     }
                     codec.releaseOutputBuffer(outIndex, false)
+                    if (endOfStream) {
+                        break
+                    }
                 } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    // Format changed
+                    val outFormat = codec.outputFormat
+                    if (outFormat.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
+                        sampleRate = outFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                    }
+                    if (outFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                        channels = outFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                    }
                 }
             }
 
-            var floatArray = outputFloatBuffer.toFloatArray()
-
-            if (channels == 2) {
-                val monoLength = floatArray.size / 2
-                val monoFloatArray = FloatArray(monoLength)
-                for (i in 0 until monoLength) {
-                    monoFloatArray[i] = (floatArray[i * 2] + floatArray[i * 2 + 1]) / 2.0f
-                }
-                floatArray = monoFloatArray
-            }
-
+            val floatArray = outputFloatBuffer.toFloatArray()
             val result = AudioResampler.resampleTo16kHz(floatArray, sampleRate)
             val duration = System.currentTimeMillis() - start
-            Log.i(TAG, "[Pipeline Profiler] Audio Decoding (M4A MediaCodec): ${duration}ms (Decoded ${result.size} samples at 16kHz)")
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[Pipeline Profiler] Audio Decoding (M4A MediaCodec): ${duration}ms (Decoded ${result.size} samples at 16kHz)")
+            }
             return result
 
         } finally {

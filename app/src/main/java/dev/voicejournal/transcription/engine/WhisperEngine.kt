@@ -3,18 +3,19 @@ package dev.voicejournal.transcription.engine
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.BuildConfig
+import dev.voicejournal.data.storage.MediaStorageManager
 import dev.voicejournal.transcription.M4aDecoder
 import dev.voicejournal.transcription.WavToFloatConverter
 import dev.voicejournal.transcription.WhisperLib
 import dev.voicejournal.transcription.model.TranscriptResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import dev.voicejournal.BuildConfig
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -40,11 +41,11 @@ class WhisperEngine @Inject constructor(
         )
 
         fun resolveRedirectUrl(currentUrl: String, redirectLocation: String): String {
-            val resolved = URL(URL(currentUrl), redirectLocation).toString()
-            if (!resolved.startsWith("https://")) {
-                throw SecurityException("Insecure redirect to non-HTTPS URL: $resolved")
+            val resolvedUrl = URL(URL(currentUrl), redirectLocation)
+            if (!resolvedUrl.protocol.equals("https", ignoreCase = true)) {
+                throw SecurityException("Insecure redirect to non-HTTPS URL: $resolvedUrl")
             }
-            return resolved
+            return resolvedUrl.toString()
         }
 
         fun calculateNumThreads(availableProcessors: Int = Runtime.getRuntime().availableProcessors()): Int =
@@ -58,8 +59,14 @@ class WhisperEngine @Inject constructor(
 
     private val mutex = Mutex()
 
-    // Model Context Cache
+    // Model Context Cache (guarded by mutex)
     private var cachedContextPtr: Long = 0L
+    @Volatile
+    private var pendingContextRelease = false
+
+    internal var connectionFactory: (URL) -> HttpURLConnection = {
+        it.openConnection() as HttpURLConnection
+    }
 
     private val _downloadProgress = MutableStateFlow<Float?>(null)
     override val downloadProgress: StateFlow<Float?> = _downloadProgress.asStateFlow()
@@ -71,7 +78,9 @@ class WhisperEngine @Inject constructor(
         // Only do a basic size check for existing models since hashing on every startup is slow.
         // Hashing is strictly enforced post-download before it becomes the production model.
         val valid = file.exists() && file.length() > 25_000_000L
-        Log.d(TAG, "isModelValid for ${file.absolutePath}: $valid (size=${file.length()} bytes)")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "isModelValid for ${file.absolutePath}: $valid (size=${file.length()} bytes)")
+        }
         return valid
     }
 
@@ -117,7 +126,9 @@ class WhisperEngine @Inject constructor(
         if (tempFile.exists()) tempFile.delete()
 
         for (urlStr in MODEL_URLS) {
-            Log.d(TAG, "Attempting to download Whisper Base Q5_1 model from: $urlStr")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Attempting to download Whisper Base Q5_1 model from: $urlStr")
+            }
             try {
                 _downloadProgress.value = 0f
                 var currentUrl = urlStr
@@ -128,23 +139,30 @@ class WhisperEngine @Inject constructor(
                 try {
                     while (redirects < maxRedirects) {
                         val url = URL(currentUrl)
-                        connection = url.openConnection() as HttpURLConnection
+                        if (!url.protocol.equals("https", ignoreCase = true)) {
+                            throw SecurityException("Non-HTTPS URL rejected: $currentUrl")
+                        }
+                        connection = connectionFactory(url)
                         connection.connectTimeout = 15000
                         connection.readTimeout = 30000
-                        connection.instanceFollowRedirects = true
+                        connection.instanceFollowRedirects = false
                         connection.setRequestProperty(
                             "User-Agent",
                             "Mozilla/5.0 (Android; Mobile; rv:109.0) Gecko/109.0 Firefox/115.0"
                         )
-    
+
                         val status = connection.responseCode
-                        Log.d(TAG, "HTTP status $status for $currentUrl")
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "HTTP status $status for $currentUrl")
+                        }
                         if (status in 300..399) {
                             val newUrl = connection.getHeaderField("Location")
                             connection.disconnect()
                             if (!newUrl.isNullOrEmpty()) {
                                 val resolvedUrl = resolveRedirectUrl(currentUrl, newUrl)
-                                Log.d(TAG, "Redirecting to: $resolvedUrl")
+                                if (BuildConfig.DEBUG) {
+                                    Log.d(TAG, "Redirecting to: $resolvedUrl")
+                                }
                                 currentUrl = resolvedUrl
                                 redirects++
                                 continue
@@ -154,20 +172,22 @@ class WhisperEngine @Inject constructor(
                     }
 
                     if (redirects >= maxRedirects) {
-                        Log.e(TAG, "Exceeded maximum redirect limit ($maxRedirects) for $urlStr")
+                        Log.e(TAG, "Exceeded maximum redirect limit ($maxRedirects)")
                         continue
                     }
-    
+
                     val finalConn = connection ?: continue
                     val responseCode = finalConn.responseCode
                     if (responseCode !in 200..299) {
                         Log.e(TAG, "Failed HTTP download with code $responseCode")
                         continue
                     }
-    
+
                     val fileLength = finalConn.contentLengthLong
-                    Log.d(TAG, "Download started, expected size: $fileLength bytes")
-    
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "Download started, expected size: $fileLength bytes")
+                    }
+
                     finalConn.inputStream.use { input ->
                         FileOutputStream(tempFile).use { output ->
                             val data = ByteArray(16384)
@@ -188,7 +208,9 @@ class WhisperEngine @Inject constructor(
                     connection?.disconnect()
                 }
 
-                Log.d(TAG, "Finished downloading temp file size: ${tempFile.length()} bytes")
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Finished downloading temp file size: ${tempFile.length()} bytes")
+                }
 
                 if (tempFile.exists() && tempFile.length() > 25_000_000L) {
                     val actualSha = calculateSha256(tempFile)
@@ -196,13 +218,15 @@ class WhisperEngine @Inject constructor(
                     if (actualSha != WHISPER_MODEL_EXPECTED_SHA256) {
                         throw Exception("SHA-256 verification failed! Expected $WHISPER_MODEL_EXPECTED_SHA256, got $actualSha")
                     }
-                    
+
                     if (modelFile.exists()) modelFile.delete()
                     val renamed = tempFile.renameTo(modelFile)
                     if (renamed) {
                         _isModelDownloaded.value = true
                         _downloadProgress.value = null
-                        Log.d(TAG, "Successfully saved Q5_1 model to ${modelFile.absolutePath}")
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "Successfully saved Q5_1 model to ${modelFile.absolutePath}")
+                        }
                         return@withContext true
                     } else {
                         throw Exception("Failed to rename temporary model file.")
@@ -211,7 +235,11 @@ class WhisperEngine @Inject constructor(
                     throw Exception("Downloaded file is too small or does not exist.")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error downloading model from $urlStr: ${e.message}", e)
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Error downloading model from $urlStr: ${e.message}", e)
+                } else {
+                    Log.e(TAG, "Error downloading model: ${e.javaClass.simpleName}")
+                }
                 if (tempFile.exists()) tempFile.delete()
             }
         }
@@ -223,25 +251,54 @@ class WhisperEngine @Inject constructor(
 
     private fun getOrInitContext(): Long {
         if (cachedContextPtr != 0L) {
-            Log.i(PERF_TAG, "[Pipeline Profiler] Model Loading: 0ms (Reusing cached context ptr: $cachedContextPtr)")
+            if (BuildConfig.DEBUG) {
+                Log.i(PERF_TAG, "[Pipeline Profiler] Model Loading: 0ms (Reusing cached context ptr: $cachedContextPtr)")
+            }
             return cachedContextPtr
         }
 
         val startLoad = System.currentTimeMillis()
         val ptr = WhisperLib.initContext(modelFile.absolutePath)
         val loadDuration = System.currentTimeMillis() - startLoad
-        Log.i(PERF_TAG, "[Pipeline Profiler] Model Loading: ${loadDuration}ms (Model file: ${modelFile.name}, ${modelFile.length()} bytes)")
+        if (BuildConfig.DEBUG) {
+            Log.i(PERF_TAG, "[Pipeline Profiler] Model Loading: ${loadDuration}ms (Model file: ${modelFile.name}, ${modelFile.length()} bytes)")
+        }
         if (ptr != 0L) {
             cachedContextPtr = ptr
         }
         return ptr
     }
 
-    fun releaseContext() {
+    private fun releaseContextLocked() {
+        pendingContextRelease = false
         if (cachedContextPtr != 0L) {
-            Log.d(TAG, "Releasing cached Whisper context ptr: $cachedContextPtr")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Releasing cached Whisper context ptr: $cachedContextPtr")
+            }
             WhisperLib.freeContext(cachedContextPtr)
             cachedContextPtr = 0L
+        }
+    }
+
+    override fun releaseContext() {
+        if (mutex.tryLock()) {
+            try {
+                releaseContextLocked()
+            } finally {
+                mutex.unlock()
+            }
+        } else {
+            // Avoid freeing cachedContextPtr while transcribe() holds the mutex; defer to finally.
+            pendingContextRelease = true
+            if (mutex.tryLock()) {
+                try {
+                    if (pendingContextRelease) {
+                        releaseContextLocked()
+                    }
+                } finally {
+                    mutex.unlock()
+                }
+            }
         }
     }
 
@@ -254,10 +311,14 @@ class WhisperEngine @Inject constructor(
             val totalStart = System.currentTimeMillis()
             var accumulatedText = ""
             try {
-                Log.d(TAG, "transcribe requested for file: ${audioFile.absolutePath} (size: ${audioFile.length()} bytes)")
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "transcribe requested for file: ${audioFile.absolutePath} (size: ${audioFile.length()} bytes)")
+                }
 
                 if (!isModelValid(modelFile)) {
-                    Log.d(TAG, "Model invalid/missing, downloading Q5_1 model...")
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "Model invalid/missing, downloading Q5_1 model...")
+                    }
                     val downloaded = ensureModelDownloaded()
                     if (!downloaded) {
                         return@withContext Result.failure(Exception("Whisper Base Q5 model download failed. Please check network connection."))
@@ -277,7 +338,9 @@ class WhisperEngine @Inject constructor(
                     else -> return@withContext Result.failure(Exception("Unsupported audio format: .$extension"))
                 }
                 val decodeDuration = System.currentTimeMillis() - decodeStart
-                Log.d(PERF_TAG, "Audio Decode & Resample Time: ${decodeDuration}ms (${floatArray.size} samples at 16kHz)")
+                if (BuildConfig.DEBUG) {
+                    Log.d(PERF_TAG, "[Pipeline Profiler] Audio Decode & Resample Time: ${decodeDuration}ms (${floatArray.size} samples at 16kHz)")
+                }
 
                 if (floatArray.isEmpty()) {
                     return@withContext Result.failure(Exception("Audio file contains no decodable frames."))
@@ -304,7 +367,9 @@ class WhisperEngine @Inject constructor(
 
                 // 4. Native Whisper Inference & Real-Time Partial Callback
                 val inferStart = System.currentTimeMillis()
-                Log.d(PERF_TAG, "Starting Whisper inference with $numThreads threads, lang='$targetLang'...")
+                if (BuildConfig.DEBUG) {
+                    Log.d(PERF_TAG, "[Pipeline Profiler] Starting Whisper inference with $numThreads threads, lang='$targetLang'...")
+                }
                 val rawText = WhisperLib.fullTranscribe(
                     contextPtr = contextPtr,
                     audioSamples = floatArray,
@@ -316,10 +381,14 @@ class WhisperEngine @Inject constructor(
                     }
                 )
                 val inferDuration = System.currentTimeMillis() - inferStart
-                Log.d(PERF_TAG, "Whisper Inference Time: ${inferDuration}ms")
+                if (BuildConfig.DEBUG) {
+                    Log.d(PERF_TAG, "[Pipeline Profiler] Whisper Inference Time: ${inferDuration}ms")
+                }
 
                 val totalDuration = System.currentTimeMillis() - totalStart
-                Log.d(PERF_TAG, "=== TOTAL TRANSCRIPTION TIME: ${totalDuration}ms ===")
+                if (BuildConfig.DEBUG) {
+                    Log.d(PERF_TAG, "[Pipeline Profiler] === TOTAL TRANSCRIPTION TIME: ${totalDuration}ms ===")
+                }
 
                 if (rawText.startsWith("Error:") || rawText.startsWith("Unsupported language detected")) {
                     return@withContext Result.failure(Exception(rawText))
@@ -340,12 +409,27 @@ class WhisperEngine @Inject constructor(
                     )
                 )
             } catch (e: OutOfMemoryError) {
-                Log.e(TAG, "OutOfMemoryError during transcription", e)
-                releaseContext()
+                Log.e(TAG, "OutOfMemoryError during transcription")
+                releaseContextLocked()
                 Result.failure(Exception("Insufficient memory to run transcription."))
             } catch (e: Exception) {
-                Log.e(TAG, "Exception during transcription", e)
+                Log.e(TAG, "Exception during transcription: ${e.javaClass.simpleName}")
                 Result.failure(e)
+            } finally {
+                val transcribeCacheDir = MediaStorageManager.getTranscribeCacheDir(context)
+                val isTempCopy = try {
+                    audioFile.parentFile?.canonicalFile == transcribeCacheDir.canonicalFile
+                } catch (_: Exception) {
+                    audioFile.parentFile == transcribeCacheDir
+                }
+                if (isTempCopy && audioFile.exists()) {
+                    try {
+                        audioFile.delete()
+                    } catch (_: Exception) {}
+                }
+                if (pendingContextRelease) {
+                    releaseContextLocked()
+                }
             }
         }
     }
