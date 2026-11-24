@@ -122,6 +122,11 @@ android {
         }
     }
     packaging {
+        if (isReleaseTaskRequested) {
+            jniLibs {
+                excludes += listOf("**/x86/*.so", "**/x86_64/*.so")
+            }
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
