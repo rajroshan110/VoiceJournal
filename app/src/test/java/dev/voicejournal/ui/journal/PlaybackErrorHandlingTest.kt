@@ -75,13 +75,16 @@ class PlaybackErrorHandlingTest {
             journalRepository = mockk(relaxed = true),
             audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,
-            importManager = mockk(relaxed = true)
+            importManager = mockk(relaxed = true),
+            defaultDispatcher = testDispatcher,
+            ioDispatcher = testDispatcher
         )
 
         // Attempt playback on a non-existent audio track
         val entry = JournalEntry(id = 100L, audioPath = "")
         val nonExistentTrack = AudioTrack(id = "track_1", path = "/non/existent/path/record.wav")
         viewModel.playTrack(entry, nonExistentTrack)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val errorState = viewModel.cardPlaybackState.value
         assertEquals(PlaybackStatus.Error, errorState.status)
@@ -107,11 +110,13 @@ class PlaybackErrorHandlingTest {
             audioPlayerManager = audioPlayerManager,
             userPreferencesManager = userPreferencesManager,
             speechToTextEngine = mockk(relaxed = true),
-            generateTranscriptUseCase = mockk(relaxed = true)
+            generateTranscriptUseCase = mockk(relaxed = true),
+            ioDispatcher = testDispatcher
         )
 
         val nonExistentTrack = AudioTrack(id = "missing_track", path = "/non/existent/track.m4a")
         noteDetailViewModel.togglePlaybackForTrack(nonExistentTrack)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val uiState = noteDetailViewModel.uiState.value
         assertEquals("Audio track file unavailable", uiState.errorMessage)
@@ -156,7 +161,8 @@ class PlaybackErrorHandlingTest {
                 audioPlayerManager = mockPlayerManager,
                 userPreferencesManager = userPreferencesManager,
                 speechToTextEngine = mockk(relaxed = true),
-                generateTranscriptUseCase = mockk(relaxed = true)
+                generateTranscriptUseCase = mockk(relaxed = true),
+                ioDispatcher = testDispatcher
             )
 
             noteDetailViewModel.loadEntry(1L)
@@ -164,6 +170,7 @@ class PlaybackErrorHandlingTest {
 
             // Start track 1 and simulate it being played/paused at 5000ms
             noteDetailViewModel.togglePlaybackForTrack(track1)
+            testDispatcher.scheduler.advanceUntilIdle()
             playbackFlow.value = PlayerState.Paused(1L, 5000L, 10000L, tempFile1.absolutePath)
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -172,6 +179,7 @@ class PlaybackErrorHandlingTest {
 
             // Now switch to track 2
             noteDetailViewModel.togglePlaybackForTrack(track2)
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Verify track 2 immediately starts at 0ms with zero residual "shadow" from track 1
             val stateAfterSwitch = noteDetailViewModel.uiState.value
@@ -182,5 +190,33 @@ class PlaybackErrorHandlingTest {
             tempFile1.delete()
             tempFile2.delete()
         }
+    }
+
+    @Test
+    fun testAddImageSurfacesErrorInsteadOfRawContentUriOnFailure() {
+        val mockResolver = mockk<android.content.ContentResolver>(relaxed = true) {
+            every { openInputStream(any()) } throws SecurityException("Access denied")
+        }
+        every { mockContext.contentResolver } returns mockResolver
+
+        val noteDetailViewModel = NoteDetailViewModel(
+            context = mockContext,
+            getEntryByIdUseCase = mockk(relaxed = true),
+            saveEntryUseCase = mockk(relaxed = true),
+            deleteEntryUseCase = mockk(relaxed = true),
+            getAllTagsUseCase = mockk(relaxed = true),
+            audioRecorderManager = mockk(relaxed = true),
+            audioPlayerManager = audioPlayerManager,
+            userPreferencesManager = userPreferencesManager,
+            speechToTextEngine = mockk(relaxed = true),
+            generateTranscriptUseCase = mockk(relaxed = true),
+            ioDispatcher = testDispatcher
+        )
+
+        noteDetailViewModel.addImage("content://media/external/images/media/9999")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(noteDetailViewModel.uiState.value.attachedImages.isEmpty())
+        assertFalse(noteDetailViewModel.uiState.value.errorMessage.isNullOrBlank())
     }
 }

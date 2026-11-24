@@ -1,6 +1,11 @@
 package dev.voicejournal.ui.notedetail
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
@@ -32,18 +37,24 @@ import dev.voicejournal.ui.notedetail.components.MicFabState
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.model.RichTextDocument
 import dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.InputStream
 import javax.inject.Inject
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 data class TrackSelectionState(
     val isSelectionMode: Boolean = false,
@@ -102,7 +113,7 @@ data class NoteDetailUiState(
 )
 
 @HiltViewModel
-class NoteDetailViewModel @Inject constructor(
+class NoteDetailViewModel internal constructor(
     @ApplicationContext private val context: Context,
     private val getEntryByIdUseCase: GetEntryByIdUseCase,
     private val saveEntryUseCase: SaveEntryUseCase,
@@ -112,8 +123,35 @@ class NoteDetailViewModel @Inject constructor(
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
     private val speechToTextEngine: SpeechToTextEngine,
-    private val generateTranscriptUseCase: GenerateTranscriptUseCase
+    private val generateTranscriptUseCase: GenerateTranscriptUseCase,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        getEntryByIdUseCase: GetEntryByIdUseCase,
+        saveEntryUseCase: SaveEntryUseCase,
+        deleteEntryUseCase: DeleteEntryUseCase,
+        getAllTagsUseCase: GetAllTagsUseCase,
+        audioRecorderManager: AudioRecorderManager,
+        audioPlayerManager: AudioPlayerManager,
+        userPreferencesManager: UserPreferencesManager,
+        speechToTextEngine: SpeechToTextEngine,
+        generateTranscriptUseCase: GenerateTranscriptUseCase
+    ) : this(
+        context = context,
+        getEntryByIdUseCase = getEntryByIdUseCase,
+        saveEntryUseCase = saveEntryUseCase,
+        deleteEntryUseCase = deleteEntryUseCase,
+        getAllTagsUseCase = getAllTagsUseCase,
+        audioRecorderManager = audioRecorderManager,
+        audioPlayerManager = audioPlayerManager,
+        userPreferencesManager = userPreferencesManager,
+        speechToTextEngine = speechToTextEngine,
+        generateTranscriptUseCase = generateTranscriptUseCase,
+        ioDispatcher = Dispatchers.IO
+    )
 
     private val _uiState = MutableStateFlow(
         NoteDetailUiState(
@@ -139,59 +177,60 @@ class NoteDetailViewModel @Inject constructor(
 
     private var isInitialized = false
     private var loadedEntryId: Long? = null
-    private var loadJob: kotlinx.coroutines.Job? = null
+    private var loadJob: Job? = null
+    private var playbackPrepJob: Job? = null
 
     init {
         viewModelScope.launch {
             userPreferencesManager.timeFormat.collect { format ->
-                _uiState.value = _uiState.value.copy(timeFormat = format)
+                _uiState.update { it.copy(timeFormat = format) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isMarkdownEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isMarkdownEnabled = enabled)
+                _uiState.update { it.copy(isMarkdownEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isSpeechToTextEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isSpeechToTextEnabled = enabled)
+                _uiState.update { it.copy(isSpeechToTextEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isFolderEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
+                _uiState.update { it.copy(isFolderEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isTopicsEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+                _uiState.update { it.copy(isTopicsEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isPeopleEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+                _uiState.update { it.copy(isPeopleEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isMoodEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
+                _uiState.update { it.copy(isMoodEnabled = enabled) }
             }
         }
         // Observe SpeechToTextEngine model download state and progress
         viewModelScope.launch {
             speechToTextEngine.isModelDownloaded.collect { downloaded ->
-                _uiState.value = _uiState.value.copy(isModelDownloaded = downloaded)
+                _uiState.update { it.copy(isModelDownloaded = downloaded) }
             }
         }
         viewModelScope.launch {
             speechToTextEngine.downloadProgress.collect { progress ->
-                _uiState.value = _uiState.value.copy(modelDownloadProgress = progress)
+                _uiState.update { it.copy(modelDownloadProgress = progress) }
             }
         }
         // Observe all tags in database for suggestion bar
         viewModelScope.launch {
             getAllTagsUseCase().catch { }.collect { tags ->
-                _uiState.value = _uiState.value.copy(allAvailableTags = tags)
+                _uiState.update { it.copy(allAvailableTags = tags) }
             }
         }
 
@@ -200,21 +239,27 @@ class NoteDetailViewModel @Inject constructor(
             audioRecorderManager.state.collect { recState ->
                 when (recState) {
                     is RecordingState.Recording -> {
-                        if (_uiState.value.micFabState != MicFabState.IDLE) {
-                            _uiState.value = _uiState.value.copy(
-                                isRecording = true,
-                                recordingDurationMs = recState.durationMs
-                            )
+                        _uiState.update { state ->
+                            if (state.micFabState != MicFabState.IDLE) {
+                                state.copy(
+                                    isRecording = true,
+                                    recordingDurationMs = recState.durationMs
+                                )
+                            } else {
+                                state
+                            }
                         }
                     }
                     is RecordingState.Stopped -> {
-                        _uiState.value = _uiState.value.copy(isRecording = false)
+                        _uiState.update { it.copy(isRecording = false) }
                     }
                     is RecordingState.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isRecording = false,
-                            micFabState = MicFabState.IDLE
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isRecording = false,
+                                micFabState = MicFabState.IDLE
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -224,51 +269,65 @@ class NoteDetailViewModel @Inject constructor(
         // Observe player state for live playback position & duration updates
         viewModelScope.launch {
             audioPlayerManager.playbackState.collect { playState ->
-                val currentTracks = _uiState.value.audioTracks
                 when (playState) {
                     is PlayerState.Playing -> {
-                        val matchingTrack = findMatchingTrack(playState.audioPath, playState.entryId, currentTracks)
-                        val isMatchingEntry = playState.entryId == _uiState.value.entryId || matchingTrack != null
-                        if (isMatchingEntry && matchingTrack != null) {
-                            _uiState.value = _uiState.value.copy(
-                                isPlaying = true,
-                                playingTrackId = matchingTrack.id,
-                                currentPositionMs = playState.currentPosition
+                        _uiState.update { state ->
+                            val matchingTrack = findMatchingTrack(
+                                playState.audioPath,
+                                playState.entryId,
+                                state.audioTracks,
+                                state.playingTrackId
                             )
+                            val isMatchingEntry = playState.entryId == state.entryId || matchingTrack != null
+                            if (isMatchingEntry && matchingTrack != null) {
+                                state.copy(
+                                    isPlaying = true,
+                                    playingTrackId = matchingTrack.id,
+                                    currentPositionMs = playState.currentPosition
+                                )
+                            } else {
+                                state
+                            }
                         }
                     }
                     is PlayerState.Paused -> {
-                        val matchingTrack = findMatchingTrack(playState.audioPath, playState.entryId, currentTracks)
-                        val isMatchingEntry = playState.entryId == _uiState.value.entryId || matchingTrack != null
-                        if (isMatchingEntry && matchingTrack != null) {
-                            _uiState.value = _uiState.value.copy(
+                        _uiState.update { state ->
+                            val matchingTrack = findMatchingTrack(
+                                playState.audioPath,
+                                playState.entryId,
+                                state.audioTracks,
+                                state.playingTrackId
+                            )
+                            val isMatchingEntry = playState.entryId == state.entryId || matchingTrack != null
+                            if (isMatchingEntry && matchingTrack != null) {
+                                state.copy(
+                                    isPlaying = false,
+                                    playingTrackId = matchingTrack.id,
+                                    currentPositionMs = playState.currentPosition
+                                )
+                            } else {
+                                state
+                            }
+                        }
+                    }
+                    is PlayerState.Ended, is PlayerState.Idle -> {
+                        _uiState.update {
+                            it.copy(
                                 isPlaying = false,
-                                playingTrackId = matchingTrack.id,
-                                currentPositionMs = playState.currentPosition
+                                playingTrackId = null,
+                                currentPositionMs = 0L
                             )
                         }
                     }
-                    is PlayerState.Ended -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            playingTrackId = null,
-                            currentPositionMs = 0L
-                        )
-                    }
-                    is PlayerState.Idle -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            playingTrackId = null,
-                            currentPositionMs = 0L
-                        )
-                    }
                     is PlayerState.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            playingTrackId = null,
-                            currentPositionMs = 0L,
-                            errorMessage = playState.message
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isPlaying = false,
+                                playingTrackId = null,
+                                currentPositionMs = 0L,
+                                errorMessage = playState.message
+                            )
+                        }
                     }
                 }
             }
@@ -386,10 +445,11 @@ class NoteDetailViewModel @Inject constructor(
         }
 
         // 1. Stage audio track deletions
+        val filesToDeleteNow = mutableListOf<String>()
         tracksToDelete.forEach { track ->
             if (track.path in pendingFileAdditions) {
                 pendingFileAdditions.remove(track.path)
-                deletePhysicalFile(track.path)
+                filesToDeleteNow.add(track.path)
             } else {
                 pendingFileDeletions.add(track.path)
             }
@@ -400,11 +460,12 @@ class NoteDetailViewModel @Inject constructor(
         imagesToDelete.forEach { imgPath ->
             if (imgPath in pendingFileAdditions) {
                 pendingFileAdditions.remove(imgPath)
-                deletePhysicalFile(imgPath)
+                filesToDeleteNow.add(imgPath)
             } else {
                 pendingFileDeletions.add(imgPath)
             }
         }
+        deletePhysicalFilesAsync(filesToDeleteNow)
 
         _uiState.value = _uiState.value.copy(
             audioTracks = remainingTracks,
@@ -464,7 +525,12 @@ class NoteDetailViewModel @Inject constructor(
         initialSnapshot = createCurrentSnapshot()
     }
 
-    private fun findMatchingTrack(path: String?, entryId: Long?, tracks: List<AudioTrack>): AudioTrack? {
+    private fun findMatchingTrack(
+        path: String?,
+        entryId: Long?,
+        tracks: List<AudioTrack>,
+        activeTrackId: String? = _uiState.value.playingTrackId
+    ): AudioTrack? {
         if (tracks.isEmpty()) return null
         if (!path.isNullOrEmpty()) {
             val fileName = File(path).name
@@ -473,9 +539,8 @@ class NoteDetailViewModel @Inject constructor(
             }
             if (foundByPath != null) return foundByPath
         }
-        val currentActiveId = _uiState.value.playingTrackId
-        if (currentActiveId != null) {
-            val foundActive = tracks.find { it.id == currentActiveId }
+        if (activeTrackId != null) {
+            val foundActive = tracks.find { it.id == activeTrackId }
             if (foundActive != null) return foundActive
         }
         return tracks.firstOrNull()
@@ -641,71 +706,76 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun togglePlaybackForTrack(track: AudioTrack) {
-        val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
-        val fileToPlay = if (track.path.isNotEmpty() && File(track.path).exists() && File(track.path).length() > 0L) {
-            File(track.path)
-        } else if (resolvedFile.exists() && resolvedFile.length() > 0L) {
-            resolvedFile
-        } else {
-            null
-        }
-
-        if (fileToPlay == null || !fileToPlay.exists() || fileToPlay.length() == 0L) {
-            _uiState.value = _uiState.value.copy(
-                isPlaying = false,
-                playingTrackId = null,
-                currentPositionMs = 0L,
-                errorMessage = "Audio track file unavailable"
-            )
-            return
-        }
-
-        if (fileToPlay.extension.equals("wav", ignoreCase = true)) {
-            AudioFileRepair.repairWavFile(fileToPlay)
-        }
-
-        val path = fileToPlay.absolutePath
         val currentPlayState = audioPlayerManager.playbackState.value
         val isCurrentTrackActive = _uiState.value.playingTrackId == track.id
 
         if (isCurrentTrackActive) {
             when (currentPlayState) {
                 is PlayerState.Playing -> {
+                    playbackPrepJob?.cancel()
                     audioPlayerManager.pause()
+                    return
                 }
                 is PlayerState.Paused -> {
+                    playbackPrepJob?.cancel()
                     audioPlayerManager.resume()
+                    return
                 }
-                else -> {
-                    _uiState.value = _uiState.value.copy(
-                        playingTrackId = track.id,
-                        currentPositionMs = 0L,
-                        isPlaying = true
-                    )
-                    audioPlayerManager.play(path, "Voice Note", _uiState.value.entryId)
-                }
+                else -> {}
             }
-        } else {
-            // Switching tracks or starting a different track:
+        }
+
+        playbackPrepJob?.cancel()
+        playbackPrepJob = viewModelScope.launch {
+            val resolvedPath = withContext(ioDispatcher) {
+                val directFile = if (track.path.isNotEmpty()) File(track.path) else null
+                val fileToPlay = if (directFile != null && directFile.exists() && directFile.length() > 0L) {
+                    directFile
+                } else {
+                    val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
+                    if (resolvedFile.exists() && resolvedFile.length() > 0L) resolvedFile else null
+                }
+
+                if (fileToPlay != null && fileToPlay.extension.equals("wav", ignoreCase = true)) {
+                    AudioFileRepair.repairWavFile(fileToPlay)
+                }
+
+                fileToPlay?.takeIf { it.exists() && it.length() > 0L }?.absolutePath
+            }
+
+            if (resolvedPath == null) {
+                _uiState.update {
+                    it.copy(
+                        isPlaying = false,
+                        playingTrackId = null,
+                        currentPositionMs = 0L,
+                        errorMessage = "Audio track file unavailable"
+                    )
+                }
+                return@launch
+            }
+
             // Immediately reset currentPositionMs to 0L and update playingTrackId so UI has zero stale state
-            _uiState.value = _uiState.value.copy(
-                playingTrackId = track.id,
-                currentPositionMs = 0L,
-                isPlaying = true
-            )
-            audioPlayerManager.play(path, "Voice Note", _uiState.value.entryId)
+            _uiState.update {
+                it.copy(
+                    playingTrackId = track.id,
+                    currentPositionMs = 0L,
+                    isPlaying = true
+                )
+            }
+            audioPlayerManager.play(resolvedPath, "Voice Note", _uiState.value.entryId)
         }
     }
 
     fun onLeaveScreen() {
+        playbackPrepJob?.cancel()
         audioPlayerManager.stop()
         clearErrorMessage()
         // Discard any uncommitted temporary draft files created during unsaved session
-        pendingFileAdditions.forEach { path ->
-            deletePhysicalFile(path)
-        }
+        val filesToDelete = pendingFileAdditions.toList()
         pendingFileAdditions.clear()
         pendingFileDeletions.clear()
+        deletePhysicalFilesAsync(filesToDelete)
     }
 
     fun seekTrackToFraction(track: AudioTrack, fraction: Float) {
@@ -970,43 +1040,202 @@ class NoteDetailViewModel @Inject constructor(
     }
 
     fun addImage(uriString: String) {
-        val current = _uiState.value.attachedImages
-        if (current.size < 4) {
-            val permanentPath = saveImageToInternalStorage(uriString)
+        if (_uiState.value.attachedImages.size >= 4) return
+        viewModelScope.launch {
+            val permanentPath = withContext(ioDispatcher) {
+                saveImageToInternalStorage(uriString)
+            }
             if (permanentPath != null) {
-                pendingFileAdditions.add(permanentPath)
-                _uiState.value = _uiState.value.copy(attachedImages = current + permanentPath)
-                updateUnsavedChangesState()
+                var added = false
+                _uiState.update { state ->
+                    if (state.attachedImages.size < 4 && permanentPath !in state.attachedImages) {
+                        added = true
+                        state.copy(attachedImages = state.attachedImages + permanentPath)
+                    } else {
+                        state
+                    }
+                }
+                if (added) {
+                    pendingFileAdditions.add(permanentPath)
+                    updateUnsavedChangesState()
+                } else {
+                    deletePhysicalFilesAsync(listOf(permanentPath))
+                }
+            } else {
+                _uiState.update {
+                    it.copy(errorMessage = "Failed to add image. The selected image could not be processed.")
+                }
             }
         }
+    }
+
+    fun discardTempImageFile(path: String) {
+        deletePhysicalFilesAsync(listOf(path))
     }
 
     private fun saveImageToInternalStorage(uriString: String): String? {
-        if (MediaStorageManager.isInternalMedia(context, uriString)) {
-            return uriString
+        val isInternal = MediaStorageManager.isInternalMedia(context, uriString)
+        if (isInternal) {
+            val existingFile = File(uriString)
+            if (!existingFile.exists() || existingFile.length() == 0L) {
+                if (existingFile.exists()) {
+                    try { existingFile.delete() } catch (_: Exception) {}
+                }
+                return null
+            }
         }
-        return try {
-            val uri = android.net.Uri.parse(uriString)
-            val destFile = MediaStorageManager.generateImageFile(context, "jpg")
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                destFile.outputStream().use { output ->
-                    input.copyTo(output)
+        val maxDim = 2048
+        var decodedBitmap: Bitmap? = null
+        var scaledBitmap: Bitmap? = null
+        var finalBitmap: Bitmap? = null
+        var destFile: File? = null
+
+        return try {
+            val orientation = readExifOrientation(uriString)
+
+            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            openImageStream(uriString)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, boundsOptions)
+            } ?: return null
+
+            val outWidth = boundsOptions.outWidth
+            val outHeight = boundsOptions.outHeight
+            if (outWidth <= 0 || outHeight <= 0) {
+                if (isInternal) {
+                    try { File(uriString).delete() } catch (_: Exception) {}
+                }
+                return null
+            }
+
+            if (isInternal && max(outWidth, outHeight) <= maxDim && !needsExifTransform(orientation)) {
+                return uriString
+            }
+
+            var inSampleSize = 1
+            val halfHeight = outHeight / 2
+            val halfWidth = outWidth / 2
+            while ((halfHeight / inSampleSize) >= maxDim || (halfWidth / inSampleSize) >= maxDim) {
+                inSampleSize *= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply {
+                this.inSampleSize = inSampleSize
+            }
+            decodedBitmap = openImageStream(uriString)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, decodeOptions)
+            } ?: return null
+
+            val longestSide = max(decodedBitmap.width, decodedBitmap.height)
+            scaledBitmap = if (longestSide > maxDim) {
+                val scale = maxDim.toFloat() / longestSide.toFloat()
+                val targetW = (decodedBitmap.width * scale).roundToInt().coerceAtLeast(1)
+                val targetH = (decodedBitmap.height * scale).roundToInt().coerceAtLeast(1)
+                Bitmap.createScaledBitmap(decodedBitmap, targetW, targetH, true)
+            } else {
+                decodedBitmap
+            }
+            if (scaledBitmap !== decodedBitmap) {
+                decodedBitmap.recycle()
+                decodedBitmap = null
+            }
+
+            finalBitmap = applyExifOrientation(scaledBitmap, orientation)
+            if (finalBitmap !== scaledBitmap) {
+                scaledBitmap = null
+            }
+
+            val outputFile = MediaStorageManager.generateImageFile(context, "jpg")
+            destFile = outputFile
+            outputFile.outputStream().use { out ->
+                if (!finalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)) {
+                    outputFile.delete()
+                    return null
                 }
             }
-            destFile.absolutePath
+
+            if (isInternal) {
+                try { File(uriString).delete() } catch (_: Exception) {}
+            }
+
+            outputFile.absolutePath
         } catch (e: Exception) {
-            if (uriString.startsWith("/")) uriString else uriString
+            runCatching { Log.e("NoteDetailViewModel", "Failed to process image: ${e.message}") }
+            try { destFile?.delete() } catch (_: Exception) {}
+            null
+        } finally {
+            try { finalBitmap?.recycle() } catch (_: Exception) {}
+            try { scaledBitmap?.recycle() } catch (_: Exception) {}
+            try { decodedBitmap?.recycle() } catch (_: Exception) {}
         }
     }
 
-    private fun deletePhysicalFile(path: String) {
+    private fun openImageStream(uriString: String): InputStream? {
+        return if (uriString.startsWith("/")) {
+            val file = File(uriString)
+            if (file.exists() && file.length() > 0L) file.inputStream() else null
+        } else {
+            context.contentResolver.openInputStream(Uri.parse(uriString))
+        }
+    }
+
+    private fun readExifOrientation(uriString: String): Int {
+        return try {
+            openImageStream(uriString)?.use { stream ->
+                ExifInterface(stream).getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+            } ?: ExifInterface.ORIENTATION_NORMAL
+        } catch (_: Exception) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+    }
+
+    private fun needsExifTransform(orientation: Int): Boolean {
+        return orientation != ExifInterface.ORIENTATION_NORMAL &&
+            orientation != ExifInterface.ORIENTATION_UNDEFINED
+    }
+
+    private fun applyExifOrientation(bitmap: Bitmap, orientation: Int): Bitmap {
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
+            else -> return bitmap
+        }
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotated !== bitmap) {
+            bitmap.recycle()
+        }
+        return rotated
+    }
+
+    private fun deletePhysicalFilesAsync(paths: List<String>) {
+        if (paths.isEmpty()) return
+        CoroutineScope(SupervisorJob() + ioDispatcher).launch {
+            paths.forEach { deletePhysicalFileSync(it) }
+        }
+    }
+
+    private fun deletePhysicalFileSync(path: String) {
         if (MediaStorageManager.isInternalMedia(context, path)) {
             val file = File(path)
             if (file.exists()) {
                 try {
                     file.delete()
-                } catch (ignored: Exception) {}
+                } catch (_: Exception) {}
             }
         }
     }
@@ -1014,13 +1243,13 @@ class NoteDetailViewModel @Inject constructor(
     fun removeImage(uriString: String) {
         if (uriString in pendingFileAdditions) {
             pendingFileAdditions.remove(uriString)
-            deletePhysicalFile(uriString)
+            deletePhysicalFilesAsync(listOf(uriString))
         } else {
             pendingFileDeletions.add(uriString)
         }
-        _uiState.value = _uiState.value.copy(
-            attachedImages = _uiState.value.attachedImages.filter { it != uriString }
-        )
+        _uiState.update { state ->
+            state.copy(attachedImages = state.attachedImages.filter { it != uriString })
+        }
         updateUnsavedChangesState()
     }
 
@@ -1103,10 +1332,11 @@ class NoteDetailViewModel @Inject constructor(
             val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
 
-            pendingFileDeletions.forEach { path ->
-                deletePhysicalFile(path)
-            }
+            val filesToDelete = pendingFileDeletions.toList()
             pendingFileDeletions.clear()
+            withContext(ioDispatcher) {
+                filesToDelete.forEach { deletePhysicalFileSync(it) }
+            }
 
             val savedEntry = entryToSave.copy(id = savedId)
 
@@ -1200,10 +1430,11 @@ class NoteDetailViewModel @Inject constructor(
             val savedId = saveEntryUseCase(entryToSave)
             audioPlayerManager.stop()
 
-            pendingFileDeletions.forEach { path ->
-                deletePhysicalFile(path)
-            }
+            val filesToDelete = pendingFileDeletions.toList()
             pendingFileDeletions.clear()
+            withContext(ioDispatcher) {
+                filesToDelete.forEach { deletePhysicalFileSync(it) }
+            }
 
             _uiState.value = _uiState.value.copy(entryId = savedId, isDraft = true, hasUnsavedChanges = false)
             onSuccess()
@@ -1273,10 +1504,11 @@ class NoteDetailViewModel @Inject constructor(
                 )
                 saveEntryUseCase(entryToSave)
             }
-            pendingFileDeletions.forEach { path ->
-                deletePhysicalFile(path)
-            }
+            val filesToDelete = pendingFileDeletions.toList()
             pendingFileDeletions.clear()
+            withContext(ioDispatcher) {
+                filesToDelete.forEach { deletePhysicalFileSync(it) }
+            }
             onSuccess()
         }
     }

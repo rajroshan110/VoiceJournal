@@ -11,13 +11,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import java.io.File
 
@@ -203,7 +207,15 @@ private fun MosaicImageItem(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val modelObj: Any = if (imagePath.startsWith("/")) File(imagePath) else imagePath
+    val context = LocalContext.current
+    val imageRequest = remember(imagePath, context) {
+        val modelObj: Any = if (imagePath.startsWith("/")) File(imagePath) else imagePath
+        ImageRequest.Builder(context)
+            .data(modelObj)
+            .size(800)
+            .crossfade(true)
+            .build()
+    }
     val shape = RoundedCornerShape(12.dp)
 
     Box(
@@ -229,7 +241,7 @@ private fun MosaicImageItem(
             )
     ) {
         AsyncImage(
-            model = modelObj,
+            model = imageRequest,
             contentDescription = "Note image ${index + 1}",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

@@ -50,12 +50,13 @@ data class JournalEntry(
     val timestamp: Long get() = createdAt
     val mood: String get() = moodEmoji ?: "😊"
 
-    val plainUserText: String?
-        get() = userText?.let {
+    val plainUserText: String? by lazy(LazyThreadSafetyMode.NONE) {
+        userText?.let {
             dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.toPlainText(
                 dev.voicejournal.ui.notedetail.editor.serializer.RichTextHtmlSerializer.fromHtml(it)
             )
         }
+    }
 
     // All active audio tracks (Max 3)
     val allAudioTracks: List<AudioTrack> get() {

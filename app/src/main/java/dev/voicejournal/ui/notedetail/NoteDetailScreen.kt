@@ -172,8 +172,13 @@ fun NoteDetailScreen(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         val file = currentPhotoFile
-        if (success && file != null && file.exists() && file.length() > 0L) {
-            viewModel.addImage(file.absolutePath)
+        currentPhotoFile = null
+        if (file != null) {
+            if (success) {
+                viewModel.addImage(file.absolutePath)
+            } else {
+                viewModel.discardTempImageFile(file.absolutePath)
+            }
         }
     }
 
@@ -670,8 +675,10 @@ fun NoteDetailScreen(
         AddItemSheet(
             onDismiss = { showAddItemSheet = false },
             onTakePhotoClick = {
+                var createdFile: File? = null
                 try {
                     val photoFile = MediaStorageManager.generateImageFile(context)
+                    createdFile = photoFile
                     currentPhotoFile = photoFile
                     val photoUri = FileProvider.getUriForFile(
                         context,
@@ -681,6 +688,8 @@ fun NoteDetailScreen(
                     dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                     cameraLauncher.launch(photoUri)
                 } catch (e: Exception) {
+                    currentPhotoFile = null
+                    createdFile?.let { viewModel.discardTempImageFile(it.absolutePath) }
                     Toast.makeText(context, "Failed to launch camera: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             },
@@ -796,11 +805,19 @@ fun NoteDetailScreen(
     // Error Message Dialog
     val currentErrorMessage = uiState.errorMessage
     if (!currentErrorMessage.isNullOrBlank()) {
+        val errorTitle = if (
+            currentErrorMessage.contains("audio", ignoreCase = true) ||
+            currentErrorMessage.contains("playback", ignoreCase = true)
+        ) {
+            "Playback Error"
+        } else {
+            "Error"
+        }
         AlertDialog(
             onDismissRequest = { viewModel.clearErrorMessage() },
             title = {
                 Text(
-                    text = "Playback Error",
+                    text = errorTitle,
                     color = colors.textPrimary,
                     fontWeight = FontWeight.Bold
                 )

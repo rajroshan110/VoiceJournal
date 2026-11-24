@@ -1,8 +1,8 @@
 package dev.voicejournal.domain.model
 
-import androidx.compose.runtime.Stable
+import androidx.compose.runtime.Immutable
 
-@Stable
+@Immutable
 data class AudioTrack(
     val id: String = java.util.UUID.randomUUID().toString(),
     val path: String,

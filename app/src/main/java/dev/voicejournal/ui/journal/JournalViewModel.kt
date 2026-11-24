@@ -1,6 +1,6 @@
 package dev.voicejournal.ui.journal
 
-import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,15 +15,19 @@ import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.DeleteEntryUseCase
+import dev.voicejournal.domain.usecase.ExtractUnifiedTagsUseCase
 import dev.voicejournal.domain.usecase.GetAllEntriesUseCase
 import dev.voicejournal.domain.usecase.GetAllTagsUseCase
 import android.net.Uri
 import dev.voicejournal.data.backup.ImportManager
 import dev.voicejournal.ui.journal.components.SortOption
 import dev.voicejournal.ui.settings.BackupResultDialog
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.voicejournal.audio.AudioFileRepair
@@ -39,6 +43,7 @@ enum class PlaybackStatus {
     Error
 }
 
+@Immutable
 data class CardPlaybackState(
     val activeEntryId: Long? = null,
     val activeTrackId: String? = null,
@@ -49,25 +54,30 @@ data class CardPlaybackState(
     val errorMessage: String? = null
 )
 
+@Immutable
 sealed interface FeedState {
     data object Loading : FeedState
     data object EmptyGlobal : FeedState
     data object EmptyFiltered : FeedState
+    @Immutable
     data class Success(val entries: List<JournalEntry>) : FeedState
     data class Error(val message: String) : FeedState
 }
 
+@Immutable
 data class FilterState(
     val selectedTags: Set<String> = emptySet(),
     val selectedPeople: Set<String> = emptySet(),
     val selectedMoods: Set<String> = emptySet()
 )
 
+@Immutable
 data class SelectionState(
     val isSelectionMode: Boolean = false,
     val selectedEntryIds: Set<Long> = emptySet()
 )
 
+@Immutable
 data class JournalUiState(
     val feedState: FeedState = FeedState.Loading,
     val entries: List<JournalEntry> = emptyList(),
@@ -125,7 +135,8 @@ class JournalViewModel internal constructor(
     private val audioPlayerManager: AudioPlayerManager,
     private val userPreferencesManager: UserPreferencesManager,
     private val importManager: ImportManager,
-    private val defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     @Inject
@@ -151,7 +162,8 @@ class JournalViewModel internal constructor(
         audioPlayerManager = audioPlayerManager,
         userPreferencesManager = userPreferencesManager,
         importManager = importManager,
-        defaultDispatcher = Dispatchers.Default
+        defaultDispatcher = Dispatchers.Default,
+        ioDispatcher = Dispatchers.IO
     )
 
     private val _filterState = MutableStateFlow(FilterState())
@@ -287,7 +299,7 @@ class JournalViewModel internal constructor(
                 val extractedPeople = data.third
 
                 val filtered = rawEntries.filter { entry ->
-                    val textContent = "${entry.title ?: ""} ${entry.userText ?: ""} ${entry.transcript ?: ""}"
+                    val textContent = "${entry.title ?: ""} ${entry.plainUserText ?: ""} ${entry.transcript ?: ""}"
 
                     val matchesQuery = query.isBlank() || textContent.contains(query, ignoreCase = true)
 
@@ -393,55 +405,66 @@ class JournalViewModel internal constructor(
         }
     }
 
+    private var playbackPrepJob: Job? = null
+
     fun playTrack(entry: JournalEntry, track: AudioTrack) {
         val currentPlayback = _cardPlaybackState.value
 
         if (currentPlayback.activeEntryId == entry.id && currentPlayback.activeTrackId == track.id) {
             if (currentPlayback.status == PlaybackStatus.Playing) {
+                playbackPrepJob?.cancel()
                 audioPlayerManager.pause()
             } else if (currentPlayback.status == PlaybackStatus.Paused) {
+                playbackPrepJob?.cancel()
                 audioPlayerManager.resume()
             } else {
                 startPlaybackForTrack(track, entry.id)
             }
         } else {
+            playbackPrepJob?.cancel()
             audioPlayerManager.stop()
             startPlaybackForTrack(track, entry.id)
         }
     }
 
     private fun startPlaybackForTrack(track: AudioTrack, parentEntryId: Long) {
-        val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
-        val fileToPlay = if (track.path.isNotEmpty() && File(track.path).exists() && File(track.path).length() > 0L) {
-            File(track.path)
-        } else if (resolvedFile.exists() && resolvedFile.length() > 0L) {
-            resolvedFile
-        } else {
-            null
-        }
+        playbackPrepJob?.cancel()
+        playbackPrepJob = viewModelScope.launch {
+            val resolvedPath = withContext(ioDispatcher) {
+                val directFile = if (track.path.isNotEmpty()) File(track.path) else null
+                val fileToPlay = if (directFile != null && directFile.exists() && directFile.length() > 0L) {
+                    directFile
+                } else {
+                    val resolvedFile = MediaStorageManager.getAudioFile(context, track.path)
+                    if (resolvedFile.exists() && resolvedFile.length() > 0L) resolvedFile else null
+                }
 
-        if (fileToPlay == null || !fileToPlay.exists() || fileToPlay.length() == 0L) {
+                if (fileToPlay != null && fileToPlay.extension.equals("wav", ignoreCase = true)) {
+                    AudioFileRepair.repairWavFile(fileToPlay)
+                }
+
+                fileToPlay?.takeIf { it.exists() && it.length() > 0L }?.absolutePath
+            }
+
+            if (resolvedPath == null) {
+                _cardPlaybackState.value = CardPlaybackState(
+                    activeEntryId = parentEntryId,
+                    activeTrackId = track.id,
+                    status = PlaybackStatus.Error,
+                    errorMessage = "Audio track file unavailable"
+                )
+                return@launch
+            }
+
             _cardPlaybackState.value = CardPlaybackState(
                 activeEntryId = parentEntryId,
                 activeTrackId = track.id,
-                status = PlaybackStatus.Error,
-                errorMessage = "Audio track file unavailable"
+                status = PlaybackStatus.Buffering,
+                currentPositionMs = 0L
             )
-            return
+
+            audioPlayerManager.play(resolvedPath, "Voice Note Track", parentEntryId)
         }
-
-        if (fileToPlay.extension.equals("wav", ignoreCase = true)) {
-            AudioFileRepair.repairWavFile(fileToPlay)
-        }
-
-        _cardPlaybackState.value = CardPlaybackState(
-            activeEntryId = parentEntryId,
-            activeTrackId = track.id,
-            status = PlaybackStatus.Buffering,
-            currentPositionMs = 0L
-        )
-
-        audioPlayerManager.play(fileToPlay.absolutePath, "Voice Note Track", parentEntryId)
     }
 
     fun clearPlaybackError() {
@@ -621,6 +644,7 @@ class JournalViewModel internal constructor(
     fun stopAudioOnLeave(navigatingToEntryId: Long? = null) {
         val activeId = _cardPlaybackState.value.activeEntryId
         if (navigatingToEntryId == null || activeId == null || navigatingToEntryId != activeId) {
+            playbackPrepJob?.cancel()
             audioPlayerManager.stop()
             _cardPlaybackState.value = CardPlaybackState()
         }

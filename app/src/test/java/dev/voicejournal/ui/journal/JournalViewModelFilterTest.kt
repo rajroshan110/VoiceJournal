@@ -6,6 +6,7 @@ import dev.voicejournal.audio.AudioPlayerManager
 import dev.voicejournal.audio.PlayerState
 import dev.voicejournal.data.backup.ImportManager
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
+import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.domain.repository.JournalRepository
 import dev.voicejournal.domain.usecase.DeleteEntryUseCase
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -154,5 +156,49 @@ class JournalViewModelFilterTest {
         assertTrue(viewModel.uiState.value.filterState.selectedTags.isEmpty())
         assertTrue(viewModel.uiState.value.filterState.selectedPeople.isEmpty())
         assertEquals("", viewModel.uiState.value.searchQuery)
+    }
+
+    @Test
+    fun testPlainTextSearchDoesNotMatchHtmlTagsOrAttributes() {
+        val htmlEntry = JournalEntry(
+            id = 42L,
+            title = "Morning reflection",
+            userText = "<p style=\"text-align:center\"><b>Grateful</b> for <a href=\"https://hidden-link.example\">sunshine</a></p>"
+        )
+        val entriesFlow = MutableStateFlow(listOf(htmlEntry))
+        every { getAllEntriesUseCase.invoke() } returns entriesFlow
+
+        val vm = JournalViewModel(
+            context = mockContext,
+            savedStateHandle = SavedStateHandle(),
+            getAllEntriesUseCase = getAllEntriesUseCase,
+            getAllTagsUseCase = getAllTagsUseCase,
+            deleteEntryUseCase = deleteEntryUseCase,
+            extractUnifiedTagsUseCase = extractUnifiedTagsUseCase,
+            journalRepository = journalRepository,
+            audioPlayerManager = audioPlayerManager,
+            userPreferencesManager = userPreferencesManager,
+            importManager = importManager,
+            defaultDispatcher = testDispatcher,
+            ioDispatcher = testDispatcher
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Visible plain text matches
+        vm.updateSearchQuery("Grateful")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.entries.size)
+
+        vm.updateSearchQuery("sunshine")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.entries.size)
+
+        // HTML tags and href/style attributes must NOT match
+        for (htmlToken in listOf("<b>", "href", "hidden-link.example", "text-align", "</b>")) {
+            vm.updateSearchQuery(htmlToken)
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertFalse("Query '$htmlToken' should not match HTML markup", vm.uiState.value.entries.isNotEmpty())
+            assertTrue(vm.uiState.value.feedState is FeedState.EmptyFiltered)
+        }
     }
 }
