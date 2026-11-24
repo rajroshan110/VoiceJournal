@@ -60,7 +60,7 @@ class BackupRestorer(
                     Log.i("Backup", "Rollback action ${index + 1} succeeded")
                 } catch (e: Exception) {
                     rollbackSuccess = false
-                    Log.e("Backup", "CRITICAL: Rollback action ${index + 1} failed!", e)
+                    Log.e("Backup", "CRITICAL: Rollback action ${index + 1} failed: ${e.javaClass.simpleName}")
                 }
             }
             if (!rollbackSuccess) {
@@ -84,11 +84,6 @@ class BackupRestorer(
         val stagingImagesDir = File(context.filesDir, "images_staging_${System.currentTimeMillis()}")
         val rollbackManager = RestoreRollbackManager()
 
-        // Debug Failure Simulation Flags
-        val simulateFailureAfterDb = false
-        val simulateFailureAfterMedia = false
-        val simulateFailureAfterPrefs = false
-
         try {
             // PHASE 1: Prepare In-Memory Snapshots
             Log.i("Backup", "Phase 1: Preparing snapshots")
@@ -107,23 +102,41 @@ class BackupRestorer(
 
             val attachmentsByEntryUuid = attachments.groupBy { it.entryUuid }
             val mediaPathMap = mutableMapOf<String, String>()
+            val canonicalStagingPrefix = canonicalDirPrefix(stagingDir)
+            val canonicalRecordingsStagingPrefix = canonicalDirPrefix(stagingRecordingsDir)
+            val canonicalImagesStagingPrefix = canonicalDirPrefix(stagingImagesDir)
 
             attachments.forEach { att ->
+                if (!BackupValidator.isValidUuid(att.uuid)) {
+                    throw SecurityException("Invalid attachment UUID")
+                }
+                if (!BackupValidator.isValidArchivePath(att.archivePath)) {
+                    throw SecurityException("Invalid attachment archive path")
+                }
                 val sourceFile = File(stagingDir, att.archivePath)
+                if (!sourceFile.canonicalPath.startsWith(canonicalStagingPrefix)) {
+                    throw SecurityException("Attachment source escapes staging directory")
+                }
                 if (sourceFile.exists()) {
                     val isImage = att.type == "image"
-                    val ext = sourceFile.extension.ifBlank { if (isImage) "jpg" else "wav" }
+                    val defaultExt = if (isImage) "jpg" else "wav"
+                    val rawExt = sourceFile.extension
+                    val ext = if (SAFE_EXT_REGEX.matches(rawExt)) rawExt else defaultExt
                     val targetStagingDir = if (isImage) stagingImagesDir else stagingRecordingsDir
+                    val canonicalTargetPrefix = if (isImage) canonicalImagesStagingPrefix else canonicalRecordingsStagingPrefix
                     val stagingFile = File(targetStagingDir, "${att.uuid}.$ext")
+                    if (!stagingFile.canonicalPath.startsWith(canonicalTargetPrefix)) {
+                        throw SecurityException("Attachment target escapes staging directory")
+                    }
                     sourceFile.copyTo(stagingFile, overwrite = true)
-                    
+
                     val finalActiveDir = if (isImage) MediaStorageManager.getImagesDir(context) else MediaStorageManager.getRecordingsDir(context)
                     val finalActiveFile = File(finalActiveDir, "${att.uuid}.$ext")
                     mediaPathMap[att.uuid] = finalActiveFile.absolutePath
                     copiedMediaFiles.add(stagingFile)
                 }
             }
-            Log.d("Backup", "Media staged: ${copiedMediaFiles.size}")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Media staged: ${copiedMediaFiles.size}")
 
             var entriesCount = 0
             var tagsCount = 0
@@ -273,9 +286,7 @@ class BackupRestorer(
                     if (dbCrossRefsSnapshot.isNotEmpty()) database.journalEntryDao().insertEntryTagCrossRefs(dbCrossRefsSnapshot)
                 }
             }
-            Log.d("Backup", "Database replaced successfully")
-
-            if (simulateFailureAfterDb) throw IOException("Simulated failure after database restore")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Database replaced successfully")
 
             // PHASE 3: Swap Staging Directories to Active atomically
             Log.i("Backup", "Phase 3: Media Swap")
@@ -316,18 +327,14 @@ class BackupRestorer(
                 rollbackManager.register { moveDirSafe(finalImagesDir, stagingImagesDir) }
             }
 
-            if (simulateFailureAfterMedia) throw IOException("Simulated failure after media swap")
-
             // PHASE 4: Restore DataStore Preferences
             Log.i("Backup", "Phase 4: Preferences Replace")
             if (preferences != null) {
                 onProgress?.invoke("Restoring preferences…")
                 restorePreferences(preferences)
                 rollbackManager.register { prefsManager.restoreRawPreferences(prefsSnapshot) }
-                Log.d("Backup", "Preferences replaced successfully")
+                if (BuildConfig.DEBUG) Log.d("Backup", "Preferences replaced successfully")
             }
-
-            if (simulateFailureAfterPrefs) throw IOException("Simulated failure after preferences restore")
 
             // PHASE 5: Cleanup Backups safely
             Log.i("Backup", "Phase 5: Cleanup")
@@ -345,7 +352,7 @@ class BackupRestorer(
                 mediaFilesRestored = copiedMediaFiles.size
             )
         } catch (e: Exception) {
-            Log.e("Backup", "Restore workflow failed, executing rollback saga…", e)
+            Log.e("Backup", "Restore workflow failed (${e.javaClass.simpleName}), executing rollback saga…")
             rollbackManager.executeRollback()
             
             // Cleanup staging directories after successful rollback
@@ -417,6 +424,11 @@ class BackupRestorer(
         prefsManager.setMoodEnabled(p.tagOrganiser.isMoodEnabled)
     }
 
+    private fun canonicalDirPrefix(dir: File): String {
+        val path = dir.canonicalPath
+        return if (path.endsWith(File.separator)) path else path + File.separator
+    }
+
     private fun moveDirSafe(src: File, dest: File): Boolean {
         if (!src.exists()) return true
         return try {
@@ -430,5 +442,9 @@ class BackupRestorer(
                 src.renameTo(dest)
             }
         }
+    }
+
+    companion object {
+        private val SAFE_EXT_REGEX = Regex("^[a-zA-Z0-9]{1,8}$")
     }
 }

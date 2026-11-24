@@ -40,6 +40,7 @@ interface JournalRepository {
     suspend fun getOrCreateTag(name: String, type: TagType): Tag
     suspend fun renameTag(tagId: Long, newName: String, type: TagType)
     suspend fun mergeTags(sourceTagId: Long, targetTagId: Long)
+    suspend fun deleteTag(id: Long)
     
     val audioFormat: Flow<AudioFormat>
     val whisperModel: Flow<String>

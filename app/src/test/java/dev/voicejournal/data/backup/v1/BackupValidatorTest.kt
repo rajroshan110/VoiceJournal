@@ -120,7 +120,12 @@ class BackupValidatorTest {
             createdAt = System.currentTimeMillis(),
             timezoneId = "UTC",
             generator = GeneratorInfo("dev.voicejournal", "1.0.3", 103, "android"),
-            counts = DataCounts(entries = 1, tags = 0, attachments = 1, mediaFiles = mediaDir.listFiles()?.size ?: 0),
+            counts = DataCounts(
+                entries = 1,
+                tags = 0,
+                attachments = 1,
+                mediaFiles = mediaDir.walkTopDown().filter { it.isFile }.count()
+            ),
             features = emptyList(),
             checksums = ChecksumMap(
                 algorithm = "SHA-256",
@@ -229,6 +234,20 @@ class BackupValidatorTest {
         val report = validator.validate(staging)
         assertFalse(report.isValid)
         assertTrue(report.errors.any { it.contains("invalid archivePath") })
+    }
+
+    @Test
+    fun `end-to-end validate counts media files in nested subdirectories recursively`() {
+        val validUuid = UUID.randomUUID().toString()
+        val staging = setupMockValidationEnvironment(
+            attachmentUuid = validUuid,
+            archivePath = "media/nested/sub/$validUuid.jpg"
+        )
+        // Also ensure an empty directory inside media/ is not counted as a media file
+        File(staging, "media/empty_dir").mkdirs()
+
+        val report = validator.validate(staging)
+        assertTrue("Expected valid report for nested media, but errors were: ${report.errors}", report.isValid)
     }
 }
 

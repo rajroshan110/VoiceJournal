@@ -1,5 +1,6 @@
 package dev.voicejournal.data.mapper
 
+import android.util.Log
 import dev.voicejournal.data.local.db.entity.EntryImageEntity
 import dev.voicejournal.data.local.db.entity.JournalEntryEntity
 import dev.voicejournal.data.local.db.entity.TagEntity
@@ -54,7 +55,7 @@ fun String.toAudioTracks(): List<AudioTrack> {
         }
         list
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.w("EntryMapper", "Failed to parse audioTracksJson: ${e.javaClass.simpleName}")
         emptyList()
     }
 }

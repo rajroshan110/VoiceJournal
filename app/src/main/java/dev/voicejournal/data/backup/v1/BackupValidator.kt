@@ -122,7 +122,7 @@ class BackupValidator(
         // 5. Manifest Counts Validation
         val mediaDir = File(stagingDir, "media")
         val mediaFilesCount = if (mediaDir.exists() && mediaDir.isDirectory) {
-            mediaDir.listFiles()?.size ?: 0
+            mediaDir.walkTopDown().filter { it.isFile }.count()
         } else 0
 
         if (manifest.counts.entries != entries.size) {

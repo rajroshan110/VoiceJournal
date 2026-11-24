@@ -1,7 +1,9 @@
 package dev.voicejournal.data.backup.v1
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.BuildConfig
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.data.local.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
@@ -13,8 +15,6 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
-
-import android.util.Log
 
 @Singleton
 class BackupExporter @Inject constructor(
@@ -37,7 +37,7 @@ class BackupExporter @Inject constructor(
         onProgress: ((String) -> Unit)? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        Log.d("Backup", "Export started")
+        if (BuildConfig.DEBUG) Log.d("Backup", "Export started")
         onProgress?.invoke("Preparing backup…")
 
         runCatching {
@@ -45,8 +45,10 @@ class BackupExporter @Inject constructor(
             onProgress?.invoke("Reading notes…")
             val entries = database.journalEntryDao().getAllEntriesForBackup()
             val tags = database.tagDao().getAllTagsSync()
-            Log.d("Backup", "Entries exported: ${entries.size}")
-            Log.d("Backup", "Tags exported: ${tags.size}")
+            if (BuildConfig.DEBUG) {
+                Log.d("Backup", "Entries exported: ${entries.size}")
+                Log.d("Backup", "Tags exported: ${tags.size}")
+            }
 
             // 2. Collect media & construct attachment DTOs
             val collectedMedia = mediaCollector.collectMediaForEntries(entries)
@@ -54,8 +56,10 @@ class BackupExporter @Inject constructor(
                 .map { it.attachment }
                 .groupBy { it.entryUuid }
 
-            Log.d("Backup", "Attachments exported: ${collectedMedia.size}")
-            Log.d("Backup", "Media copied: ${collectedMedia.size}")
+            if (BuildConfig.DEBUG) {
+                Log.d("Backup", "Attachments exported: ${collectedMedia.size}")
+                Log.d("Backup", "Media copied: ${collectedMedia.size}")
+            }
             onProgress?.invoke("Copying media (${collectedMedia.size} / ${collectedMedia.size})…")
 
             // 3. Collect DataStore preferences
@@ -141,15 +145,15 @@ class BackupExporter @Inject constructor(
                 preferencesJsonBytes = preferencesJsonBytes,
                 collectedMedia = collectedMedia
             )
-            Log.d("Backup", "Archive created")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Archive created")
 
             onProgress?.invoke("Finalizing backup…")
             val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
-            Log.d("Backup", "Export completed in ${"%.1f".format(elapsedSec)} s")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Export completed in ${"%.1f".format(elapsedSec)} s")
             onProgress?.invoke("Backup completed.")
             Unit
         }.onFailure { e ->
-            Log.e("Backup", "Export failed: ${e.message}", e)
+            Log.e("Backup", "Export failed: ${e.javaClass.simpleName}")
         }
     }
 
