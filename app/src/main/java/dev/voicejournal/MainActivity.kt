@@ -1,10 +1,13 @@
 package dev.voicejournal
 
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -65,16 +68,17 @@ class MainActivity : FragmentActivity() {
         setContent {
             val appThemeMode by userPreferencesManager.appThemeMode.collectAsState(initial = AppThemeMode.SYSTEM)
             val isScreenPrivacyEnabled by userPreferencesManager.isScreenPrivacyEnabled.collectAsState(initial = false)
-            val appLockModeState = userPreferencesManager.appLockMode.collectAsState(initial = null)
-            val appLockTimeout by userPreferencesManager.appLockTimeout.collectAsState(initial = AppLockTimeout.IMMEDIATELY)
-            val customPin by userPreferencesManager.customPin.collectAsState(initial = null)
+            val appLockConfig by userPreferencesManager.appLockConfig.collectAsState(initial = null)
             val securityRecoveryReason by userPreferencesManager.securityRecoveryReason.collectAsState(initial = SecurityRecoveryReason.NONE)
             val scope = rememberCoroutineScope()
 
-            val appLockMode = appLockModeState.value
+            val currentConfig = appLockConfig
+            val appLockMode = currentConfig?.appLockMode
             var isAppUnlocked by rememberSaveable { mutableStateOf(false) }
             var isInitialCheckDone by rememberSaveable { mutableStateOf(false) }
+            var biometricErrorMessage by remember { mutableStateOf<String?>(null) }
             val lifecycleOwner = LocalLifecycleOwner.current
+            val latestConfig by rememberUpdatedState(currentConfig)
 
             LaunchedEffect(isScreenPrivacyEnabled) {
                 if (isScreenPrivacyEnabled) {
@@ -91,22 +95,26 @@ class MainActivity : FragmentActivity() {
                     isAppUnlocked = (currentMode == AppLockMode.NONE)
                 } else if (currentMode == AppLockMode.NONE) {
                     isAppUnlocked = true
+                    biometricErrorMessage = null
                 }
             }
 
-            DisposableEffect(lifecycleOwner, appLockMode, appLockTimeout) {
+            DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_PAUSE) {
+                    if (event == Lifecycle.Event.ON_STOP) {
                         if (!isChangingConfigurations) {
                             lastStopTimestamp = android.os.SystemClock.elapsedRealtime()
                         }
-                    } else if (event == Lifecycle.Event.ON_RESUME) {
-                        val currentMode = appLockMode ?: AppLockMode.NONE
+                    } else if (event == Lifecycle.Event.ON_START) {
+                        val config = latestConfig
+                        val currentMode = config?.appLockMode ?: AppLockMode.NONE
+                        val timeout = config?.appLockTimeout ?: AppLockTimeout.IMMEDIATELY
                         val wasPicker = dev.voicejournal.ui.util.AppLockStateManager.consumeTransientPicker()
                         if (currentMode != AppLockMode.NONE && lastStopTimestamp > 0L) {
                             val elapsed = android.os.SystemClock.elapsedRealtime() - lastStopTimestamp
-                            if (!wasPicker && elapsed >= appLockTimeout.timeoutMillis) {
+                            if (!wasPicker && elapsed >= timeout.timeoutMillis) {
                                 isAppUnlocked = false
+                                biometricErrorMessage = null
                             }
                             lastStopTimestamp = 0L
                         }
@@ -145,44 +153,62 @@ class MainActivity : FragmentActivity() {
 
                 val colors = AppTheme.colors
 
-                if (appLockMode == null) {
+                if (currentConfig == null) {
                     // Awaiting security & lock preferences on initial cold frame:
                     // Render a clean background surface to prevent layout jumping or premature route mounting
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = colors.background
                     ) {}
-                } else if (appLockMode != AppLockMode.NONE && !isAppUnlocked) {
+                } else if (currentConfig.appLockMode != AppLockMode.NONE && !isAppUnlocked) {
                     // Lock Screen Overlay
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = colors.background
                     ) {
-                        if (appLockMode == AppLockMode.BIOMETRIC) {
+                        if (currentConfig.appLockMode == AppLockMode.BIOMETRIC) {
                             BiometricLockScreen(
-                                onAuthenticateClick = { triggerBiometricAuth { isAppUnlocked = true } },
-                                onAutoAuthNeeded = { triggerBiometricAuth { isAppUnlocked = true } }
-                            )
-                        } else if (appLockMode == AppLockMode.CUSTOM_PIN) {
-                            val pinFailedAttempts by userPreferencesManager.pinFailedAttempts.collectAsState(initial = 0)
-                            val pinLockoutEndTime by userPreferencesManager.pinLockoutEndTime.collectAsState(initial = 0L)
-                            
-                            CustomPinLockScreen(
-                                correctPin = customPin ?: "",
-                                failedAttempts = pinFailedAttempts,
-                                lockoutEndTime = pinLockoutEndTime,
-                                onUnlocked = { _ ->
-                                    lifecycleScope.launch {
-                                        userPreferencesManager.clearFailedPinAttempts()
-                                    }
-                                    isAppUnlocked = true 
+                                errorMessage = biometricErrorMessage,
+                                onAuthenticateClick = {
+                                    biometricErrorMessage = null
+                                    triggerBiometricAuth(
+                                        onUnlocked = {
+                                            biometricErrorMessage = null
+                                            isAppUnlocked = true
+                                        },
+                                        onError = { message -> biometricErrorMessage = message }
+                                    )
                                 },
-                                onFailedAttempt = {
-                                    lifecycleScope.launch {
-                                        userPreferencesManager.registerFailedPinAttempt()
-                                    }
+                                onAutoAuthNeeded = {
+                                    triggerBiometricAuth(
+                                        onUnlocked = {
+                                            biometricErrorMessage = null
+                                            isAppUnlocked = true
+                                        },
+                                        onError = { message -> biometricErrorMessage = message }
+                                    )
                                 }
                             )
+                        } else if (currentConfig.appLockMode == AppLockMode.CUSTOM_PIN) {
+                            val correctPin = currentConfig.customPin
+                            if (!correctPin.isNullOrBlank()) {
+                                CustomPinLockScreen(
+                                    correctPin = correctPin,
+                                    failedAttempts = currentConfig.pinFailedAttempts,
+                                    lockoutEndTime = currentConfig.pinLockoutEndTime,
+                                    onUnlocked = { _ ->
+                                        lifecycleScope.launch {
+                                            userPreferencesManager.clearFailedPinAttempts()
+                                        }
+                                        isAppUnlocked = true
+                                    },
+                                    onFailedAttempt = {
+                                        lifecycleScope.launch {
+                                            userPreferencesManager.registerFailedPinAttempt()
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 } else {
@@ -231,31 +257,60 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun triggerBiometricAuth(onUnlocked: () -> Unit) {
+    private fun triggerBiometricAuth(
+        onUnlocked: () -> Unit,
+        onError: (String?) -> Unit
+    ) {
         val executor = ContextCompat.getMainExecutor(this)
         val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
+                onError(null)
                 onUnlocked()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                Log.w("BiometricAuth", "Biometric authentication error: code=$errorCode")
+                val isUserCancel = errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                    errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                    errorCode == BiometricPrompt.ERROR_CANCELED
+                if (!isUserCancel) {
+                    onError(errString.toString().ifBlank { "Biometric authentication unavailable. Please try again." })
+                }
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                Log.w("BiometricAuth", "Biometric authentication failed: credential not recognized")
+                onError("Authentication not recognized. Please try again.")
             }
         })
 
+        val authenticators = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        }
+
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Unlock Voice Journal")
-            .setSubtitle("Use your biometric credential to access your journal")
-            .setNegativeButtonText("Cancel")
+            .setSubtitle("Use your biometric or device credential to access your journal")
+            .setAllowedAuthenticators(authenticators)
             .build()
 
         try {
             biometricPrompt.authenticate(promptInfo)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BiometricAuth", "Failed to launch biometric prompt", e)
+            onError("Unable to start biometric authentication.")
         }
     }
 }
 
 @Composable
 fun BiometricLockScreen(
+    errorMessage: String? = null,
     onAuthenticateClick: () -> Unit,
     onAutoAuthNeeded: () -> Unit
 ) {
@@ -291,8 +346,8 @@ fun BiometricLockScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Authenticate to access your private journal notes.",
-            color = colors.textSecondary,
+            text = errorMessage ?: "Authenticate to access your private journal notes.",
+            color = if (errorMessage != null) colors.error else colors.textSecondary,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )

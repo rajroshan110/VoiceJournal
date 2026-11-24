@@ -21,11 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import dev.voicejournal.data.security.KeystoreInvalidatedException
-import kotlinx.coroutines.flow.catch
 import android.util.Log
 
 import javax.inject.Inject
@@ -36,6 +36,14 @@ enum class SecurityRecoveryReason {
     KEYSTORE_INVALIDATED,
     RESTORE_INCONSISTENT_SECURITY_STATE
 }
+
+data class AppLockConfig(
+    val appLockMode: AppLockMode = AppLockMode.NONE,
+    val appLockTimeout: AppLockTimeout = AppLockTimeout.IMMEDIATELY,
+    val customPin: String? = null,
+    val pinFailedAttempts: Int = 0,
+    val pinLockoutEndTime: Long = 0L
+)
 
 @Singleton
 class UserPreferencesManager @Inject constructor(
@@ -151,39 +159,98 @@ class UserPreferencesManager @Inject constructor(
         }
     }
 
-    val appLockMode: Flow<AppLockMode> = dataStore.data.map { prefs ->
-        val lockStr = prefs[APP_LOCK_MODE] ?: AppLockMode.NONE.name
-        try {
-            AppLockMode.valueOf(lockStr)
-        } catch (e: Exception) {
+    private fun parseAppLockMode(value: String?): AppLockMode {
+        return try {
+            AppLockMode.valueOf(value ?: AppLockMode.NONE.name)
+        } catch (_: Exception) {
             AppLockMode.NONE
         }
     }
 
-    val appLockTimeout: Flow<AppLockTimeout> = dataStore.data.map { prefs ->
-        val timeoutStr = prefs[APP_LOCK_TIMEOUT] ?: AppLockTimeout.IMMEDIATELY.name
-        try {
-            AppLockTimeout.valueOf(timeoutStr)
-        } catch (e: Exception) {
+    private fun parseAppLockTimeout(value: String?): AppLockTimeout {
+        return try {
+            AppLockTimeout.valueOf(value ?: AppLockTimeout.IMMEDIATELY.name)
+        } catch (_: Exception) {
             AppLockTimeout.IMMEDIATELY
         }
     }
 
+    val appLockMode: Flow<AppLockMode> = dataStore.data.map { prefs ->
+        parseAppLockMode(prefs[APP_LOCK_MODE])
+    }
+
+    val appLockTimeout: Flow<AppLockTimeout> = dataStore.data.map { prefs ->
+        parseAppLockTimeout(prefs[APP_LOCK_TIMEOUT])
+    }
+
     val customPin: Flow<String?> = dataStore.data.map { prefs ->
         val encrypted = prefs[CUSTOM_PIN_ENCRYPTED]
-        if (encrypted != null) {
-            KeyStoreHelper.decrypt(encrypted)
+        if (!encrypted.isNullOrBlank()) {
+            try {
+                KeyStoreHelper.decrypt(encrypted)
+            } catch (_: KeystoreInvalidatedException) {
+                resetSecurityState(SecurityRecoveryReason.KEYSTORE_INVALIDATED)
+                null
+            }
         } else {
             null
         }
-    }.catch { e ->
-        if (e is KeystoreInvalidatedException) {
-            resetSecurityState(SecurityRecoveryReason.KEYSTORE_INVALIDATED)
-            emit(null)
-        } else {
-            throw e
-        }
     }
+
+    val appLockConfig: Flow<AppLockConfig> = dataStore.data.map { prefs ->
+        val lockMode = parseAppLockMode(prefs[APP_LOCK_MODE])
+        val lockTimeout = parseAppLockTimeout(prefs[APP_LOCK_TIMEOUT])
+        val failedAttempts = prefs[PIN_FAILED_ATTEMPTS] ?: 0
+        val lockoutEndTime = prefs[PIN_LOCKOUT_END_TIME] ?: 0L
+        val encryptedPin = prefs[CUSTOM_PIN_ENCRYPTED]
+
+        if (lockMode == AppLockMode.CUSTOM_PIN && encryptedPin.isNullOrBlank()) {
+            resetSecurityState(SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE)
+            AppLockConfig(
+                appLockMode = AppLockMode.NONE,
+                appLockTimeout = lockTimeout,
+                customPin = null,
+                pinFailedAttempts = 0,
+                pinLockoutEndTime = 0L
+            )
+        } else {
+            val decryptedPin = if (!encryptedPin.isNullOrBlank()) {
+                try {
+                    KeyStoreHelper.decrypt(encryptedPin)
+                } catch (_: KeystoreInvalidatedException) {
+                    resetSecurityState(SecurityRecoveryReason.KEYSTORE_INVALIDATED)
+                    return@map AppLockConfig(
+                        appLockMode = AppLockMode.NONE,
+                        appLockTimeout = lockTimeout,
+                        customPin = null,
+                        pinFailedAttempts = 0,
+                        pinLockoutEndTime = 0L
+                    )
+                }
+            } else {
+                null
+            }
+
+            if (lockMode == AppLockMode.CUSTOM_PIN && decryptedPin.isNullOrBlank()) {
+                resetSecurityState(SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE)
+                AppLockConfig(
+                    appLockMode = AppLockMode.NONE,
+                    appLockTimeout = lockTimeout,
+                    customPin = null,
+                    pinFailedAttempts = 0,
+                    pinLockoutEndTime = 0L
+                )
+            } else {
+                AppLockConfig(
+                    appLockMode = lockMode,
+                    appLockTimeout = lockTimeout,
+                    customPin = decryptedPin,
+                    pinFailedAttempts = failedAttempts,
+                    pinLockoutEndTime = lockoutEndTime
+                )
+            }
+        }
+    }.distinctUntilChanged()
 
     val isScreenPrivacyEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_SCREEN_PRIVACY_ENABLED] ?: false
@@ -205,7 +272,7 @@ class UserPreferencesManager @Inject constructor(
     }
 
     val isNotesOrganisationEnabledState: StateFlow<Boolean> = isNotesOrganisationEnabled
-        .stateIn(scope, SharingStarted.Eagerly, false)
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), false)
 
     val isTopicsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[IS_TOPICS_ENABLED] ?: true

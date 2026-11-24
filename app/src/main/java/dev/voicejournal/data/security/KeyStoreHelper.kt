@@ -23,7 +23,9 @@ object KeyStoreHelper {
     private const val IV_LENGTH = 12
     private const val TAG_LENGTH = 128
 
-    private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+    private val keyStore: KeyStore by lazy {
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+    }
 
     fun deleteKey() {
         try {
@@ -68,22 +70,30 @@ object KeyStoreHelper {
     }
 
     fun decrypt(encryptedBase64: String): String? {
+        if (encryptedBase64.isBlank()) return null
+
         return try {
             val combined = Base64.decode(encryptedBase64, Base64.DEFAULT)
-            if (combined.size <= IV_LENGTH) return null
-            
+            if (combined.size <= IV_LENGTH) {
+                Log.e("Security", "Encrypted payload too short; deleting Keystore key")
+                deleteKey()
+                throw KeystoreInvalidatedException("Corrupted encrypted payload length: ${combined.size}")
+            }
+
             val iv = ByteArray(IV_LENGTH)
             System.arraycopy(combined, 0, iv, 0, IV_LENGTH)
-            
+
             val cipherText = ByteArray(combined.size - IV_LENGTH)
             System.arraycopy(combined, IV_LENGTH, cipherText, 0, cipherText.size)
-            
+
             val cipher = Cipher.getInstance(TRANSFORMATION)
             val spec = GCMParameterSpec(TAG_LENGTH, iv)
             cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), spec)
-            
+
             val decryptedBytes = cipher.doFinal(cipherText)
             String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: KeystoreInvalidatedException) {
+            throw e
         } catch (e: KeyPermanentlyInvalidatedException) {
             Log.e("Security", "Keystore key permanently invalidated", e)
             deleteKey()
@@ -100,9 +110,14 @@ object KeyStoreHelper {
             Log.e("Security", "General security exception during decryption", e)
             deleteKey()
             throw KeystoreInvalidatedException("General security exception", e)
+        } catch (e: IllegalArgumentException) {
+            Log.e("Security", "Failed to Base64 decode encrypted payload", e)
+            deleteKey()
+            throw KeystoreInvalidatedException("Base64 decode failed", e)
         } catch (e: Exception) {
-            Log.e("Security", "Unknown exception during decryption", e)
-            null
+            Log.e("Security", "Unexpected exception during decryption", e)
+            deleteKey()
+            throw KeystoreInvalidatedException("Unexpected exception during decryption", e)
         }
     }
 }
