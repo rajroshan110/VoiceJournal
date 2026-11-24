@@ -50,3 +50,15 @@
 # Biometric Authentication
 # ==============================================================================
 -dontwarn androidx.biometric.**
+
+# ==============================================================================
+# Release Logging
+# ==============================================================================
+# Strip verbose, debug, and info log calls in release builds while preserving
+# Log.w and Log.e for sanitized error reporting.
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

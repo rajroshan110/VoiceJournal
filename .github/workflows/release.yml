@@ -203,7 +203,7 @@ jobs:
       - name: Run unit tests
         run: ./gradlew test
 
-      - name: Build release APK
+      - name: Build release APKs
         env:
           RELEASE_STORE_FILE: ${{ runner.temp }}/voicejournal-release.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
@@ -211,29 +211,62 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
-      - name: Verify signed release APK
-        shell: bash
+      - name: Verify Play Store AAB build readiness
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/voicejournal-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          set -euo pipefail
-          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' ! -name '*unsigned*.apk' | head -n 1)"
-          if [[ -z "$apk" ]]; then
-            echo "No signed release APK was produced" >&2
-            exit 1
-          fi
-          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort | tail -n 1)"
-          "$apksigner" verify --verbose "$apk"
+          ./gradlew bundleRelease
+          test -f app/build/outputs/bundle/release/app-release.aab
 
-      - name: Rename APK with release version
+      - name: Verify signed release APKs
         shell: bash
         run: |
           set -euo pipefail
-          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' ! -name '*unsigned*.apk' | head -n 1)"
-          if [[ -z "$apk" ]]; then
-            echo "No signed release APK was produced" >&2
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort | tail -n 1)"
+          if [[ -z "$apksigner" ]]; then
+            echo "apksigner not found under $ANDROID_HOME/build-tools" >&2
             exit 1
           fi
-          cp "$apk" "VoiceJournal-${{ steps.version.outputs.name }}.apk"
-          sha256sum "VoiceJournal-${{ steps.version.outputs.name }}.apk" > "VoiceJournal-${{ steps.version.outputs.name }}.apk.sha256"
+          unsigned_apks="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*unsigned*.apk')"
+          if [[ -n "$unsigned_apks" ]]; then
+            echo "Found unexpected unsigned APK(s):" >&2
+            echo "$unsigned_apks" >&2
+            exit 1
+          fi
+          mapfile -t apks < <(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | sort)
+          if [[ "${#apks[@]}" -eq 0 ]]; then
+            echo "No signed release APKs were produced" >&2
+            exit 1
+          fi
+          for abi in universal arm64-v8a armeabi-v7a; do
+            if ! printf '%s\n' "${apks[@]}" | grep -q -- "-${abi}-release\.apk$"; then
+              echo "Missing expected ${abi} release APK in app/build/outputs/apk/release/" >&2
+              exit 1
+            fi
+          done
+          for apk in "${apks[@]}"; do
+            echo "Verifying $apk..."
+            "$apksigner" verify --verbose "$apk"
+          done
+
+      - name: Rename APKs with release version and generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.name }}"
+          for abi in universal arm64-v8a armeabi-v7a; do
+            apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*-${abi}-release.apk" | head -n 1)"
+            if [[ -z "$apk" ]]; then
+              echo "Missing ${abi} release APK" >&2
+              exit 1
+            fi
+            target="VoiceJournal-${version}-${abi}.apk"
+            cp "$apk" "$target"
+            sha256sum "$target" > "${target}.sha256"
+          done
 
       - name: Create private GitHub Release
         uses: softprops/action-gh-release@v2
@@ -243,5 +276,9 @@ jobs:
           prerelease: ${{ steps.version.outputs.prerelease }}
           body_path: release-notes.md
           files: |
-            VoiceJournal-${{ steps.version.outputs.name }}.apk
-            VoiceJournal-${{ steps.version.outputs.name }}.apk.sha256
+            VoiceJournal-${{ steps.version.outputs.name }}-universal.apk
+            VoiceJournal-${{ steps.version.outputs.name }}-universal.apk.sha256
+            VoiceJournal-${{ steps.version.outputs.name }}-arm64-v8a.apk
+            VoiceJournal-${{ steps.version.outputs.name }}-arm64-v8a.apk.sha256
+            VoiceJournal-${{ steps.version.outputs.name }}-armeabi-v7a.apk
+            VoiceJournal-${{ steps.version.outputs.name }}-armeabi-v7a.apk.sha256
