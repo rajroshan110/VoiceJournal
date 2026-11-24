@@ -1,6 +1,7 @@
 package dev.voicejournal.transcription
 
 import android.util.Log
+import dev.voicejournal.BuildConfig
 
 object AudioResampler {
     private const val TAG = "WhisperProfile"
@@ -12,7 +13,9 @@ object AudioResampler {
     fun resampleTo16kHz(samples: FloatArray, srcSampleRate: Int): FloatArray {
         val start = System.currentTimeMillis()
         if (srcSampleRate == 16000 || samples.isEmpty()) {
-            Log.i(TAG, "[Pipeline Profiler] Audio Resampling: 0ms (already 16000 Hz, ${samples.size} samples)")
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[Pipeline Profiler] Audio Resampling: 0ms (already 16000 Hz, ${samples.size} samples)")
+            }
             return samples
         }
         val ratio = srcSampleRate.toDouble() / 16000.0
@@ -29,7 +32,9 @@ object AudioResampler {
         }
 
         val duration = System.currentTimeMillis() - start
-        Log.i(TAG, "[Pipeline Profiler] Audio Resampling: ${duration}ms (resampled ${samples.size} @ ${srcSampleRate}Hz -> ${resampled.size} @ 16000Hz)")
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "[Pipeline Profiler] Audio Resampling: ${duration}ms (resampled ${samples.size} @ ${srcSampleRate}Hz -> ${resampled.size} @ 16000Hz)")
+        }
         return resampled
     }
 }

@@ -16,8 +16,8 @@ android {
         applicationId = "dev.voicejournal"
         minSdk = 29
         targetSdk = 35
-        versionCode = 107
-        versionName = "1.0.5"
+        versionCode = 108
+        versionName = "1.0.5-dev1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,6 +57,9 @@ android {
     val isReleaseTaskRequested = gradle.startParameter.taskNames.any {
         it.contains("release", ignoreCase = true)
     }
+    val isBundleTaskRequested = gradle.startParameter.taskNames.any {
+        it.contains("bundle", ignoreCase = true)
+    }
 
     if (hasReleaseSigning) {
         signingConfigs {
@@ -72,6 +75,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             if (isReleaseTaskRequested) {
                 check(hasReleaseSigning) {
                     "Release signing is not configured. Set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD or create signing.properties."
@@ -80,10 +84,25 @@ android {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            if (isBundleTaskRequested) {
+                ndk {
+                    abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+                }
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // Enable per-ABI + universal APKs for release APK builds; disable for AAB bundles and debug emulator builds.
+    splits {
+        abi {
+            isEnable = isReleaseTaskRequested && !isBundleTaskRequested
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
     compileOptions {
@@ -103,6 +122,11 @@ android {
         }
     }
     packaging {
+        if (isReleaseTaskRequested) {
+            jniLibs {
+                excludes += listOf("**/x86/*.so", "**/x86_64/*.so")
+            }
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
@@ -132,14 +156,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.ui)
     implementation("androidx.media:media:1.7.0")
 
     implementation(libs.coil.compose)
-
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.vico.core)
 
     implementation(libs.androidx.datastore.preferences)
 

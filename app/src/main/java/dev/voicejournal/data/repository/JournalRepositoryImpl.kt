@@ -2,6 +2,7 @@ package dev.voicejournal.data.repository
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.data.local.db.dao.EntryImageDao
@@ -266,7 +267,7 @@ class JournalRepositoryImpl @Inject constructor(
             try {
                 MediaStorageManager.clearAllMedia(context)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to clear media during wipeAllData: ${e.javaClass.simpleName}")
             }
         }
     }
@@ -329,6 +330,13 @@ class JournalRepositoryImpl @Inject constructor(
         tagDao.mergeTags(sourceTagId, targetTagId)
     }
 
+    override suspend fun deleteTag(id: Long) {
+        appDatabase.withTransaction {
+            tagDao.deleteTagCrossRefsByTagId(id)
+            tagDao.deleteTagInternal(id)
+        }
+    }
+
     override val audioFormat: Flow<AudioFormat> = prefs.audioFormat
     override val whisperModel: Flow<String> = prefs.whisperModel
 
@@ -375,11 +383,12 @@ class JournalRepositoryImpl @Inject constructor(
         // 1. Repair WAV file headers with corrupt/zero sizes
         AudioFileRepair.forceRepair(context)
 
+        val oneHourAgo = System.currentTimeMillis() - 3600_000L
+
         // 2. Clean up stale transcribe cache files (> 1 hour old)
         try {
             val cacheDir = MediaStorageManager.getTranscribeCacheDir(context)
             if (cacheDir.exists()) {
-                val oneHourAgo = System.currentTimeMillis() - 3600_000L
                 cacheDir.listFiles()?.forEach { file ->
                     if (file.lastModified() < oneHourAgo) {
                         file.delete()
@@ -388,10 +397,12 @@ class JournalRepositoryImpl @Inject constructor(
             }
         } catch (_: Exception) {}
 
-        // 3. Purge expired trash entries (> 7 days retention)
+        // 2b. Sweep orphaned backup/restore staging & backup directories (> 1 hour old)
+        cleanupOrphanedBackupDirs(oneHourAgo)
+
+        // 3. Purge expired trash entries (> 7 days retention), including disk media
         try {
-            val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000L)
-            journalEntryDao.deleteExpiredTrashEntries(sevenDaysAgo)
+            purgeExpiredTrashEntries(7)
         } catch (_: Exception) {}
 
         // 4. Database & Media reconciliation
@@ -503,5 +514,30 @@ class JournalRepositoryImpl @Inject constructor(
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    private fun cleanupOrphanedBackupDirs(olderThanMs: Long) {
+        try {
+            listOf(context.filesDir, context.cacheDir).forEach { rootDir ->
+                rootDir.listFiles()?.forEach { child ->
+                    if (child.isDirectory &&
+                        ORPHAN_BACKUP_DIR_PREFIXES.any { prefix -> child.name.startsWith(prefix) } &&
+                        child.lastModified() < olderThanMs
+                    ) {
+                        child.deleteRecursively()
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    companion object {
+        private const val TAG = "JournalRepository"
+        private val ORPHAN_BACKUP_DIR_PREFIXES = listOf(
+            "recordings_staging_",
+            "images_staging_",
+            "recordings_backup_",
+            "images_backup_"
+        )
     }
 }

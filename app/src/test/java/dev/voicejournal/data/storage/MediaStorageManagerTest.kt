@@ -68,4 +68,24 @@ class MediaStorageManagerTest {
         
         externalDir.deleteRecursively()
     }
+
+    @Test
+    fun `test sibling prefix directory rejection`() {
+        val siblingFilesDir = File(tempFilesDir.parentFile, "${tempFilesDir.name}_evil")
+        val siblingCacheDir = File(tempCacheDir.parentFile, "${tempCacheDir.name}_evil")
+        siblingFilesDir.mkdirs()
+        siblingCacheDir.mkdirs()
+        try {
+            val siblingFilesMedia = File(siblingFilesDir, "audio.m4a").apply { createNewFile() }
+            val siblingCacheMedia = File(siblingCacheDir, "temp.wav").apply { createNewFile() }
+
+            assertFalse(MediaStorageManager.isInternalMedia(mockContext, siblingFilesMedia.absolutePath))
+            assertFalse(MediaStorageManager.isInternalMedia(mockContext, siblingCacheMedia.absolutePath))
+            assertFalse(MediaStorageManager.isInternalMedia(mockContext, tempFilesDir.absolutePath))
+            assertFalse(MediaStorageManager.isInternalMedia(mockContext, ""))
+        } finally {
+            siblingFilesDir.deleteRecursively()
+            siblingCacheDir.deleteRecursively()
+        }
+    }
 }

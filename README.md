@@ -130,7 +130,7 @@ Your recordings, notes, and transcripts remain strictly on your device unless yo
 | **Preferences** | Jetpack DataStore | Encrypted PIN, theme mode & audio settings |
 | **Speech Recognition** | Whisper.cpp | Native C++ inference via JNI with ARM NEON |
 | **Audio Engine** | Media3 ExoPlayer & AudioRecord | Foreground playback service & PCM capture |
-| **Charts & Insights** | Vico Compose | Mood trends & recording activity metrics |
+| **Charts & Insights** | Jetpack Compose Canvas | Custom-drawn mood trends & recording activity metrics |
 | **Image Loading** | Coil Compose | Asynchronous image loading & memory caching |
 
 ---
@@ -177,9 +177,9 @@ app/src/main/
 ## Requirements
 
 ### Target Device
-- **Operating System**: Android 10+ (`API 29+`) and all newer versions (fully compatible with Android 15, Android 16+)
+- **Operating System**: Android 10+ (`API 29+`) and all newer versions (`targetSdk = 35`, forward-compatible with Android 15/16+)
 - **Permissions**: Zero storage permissions required (uses Android Photo Picker via `PickVisualMedia` and local sandbox storage)
-- **Architecture**: 64-bit ARM (`arm64-v8a`) recommended for real-time inference speed
+- **Architecture**: `arm64-v8a` (64-bit ARM, recommended for real-time inference) and `armeabi-v7a` (32-bit ARM) for release builds (`x86_64` supported for local emulator debug builds)
 - **Memory**: 3GB+ RAM recommended (~200–300MB allocated during Whisper model execution)
 - **Storage**: ~150MB free space (app binary + ~59.7MB Whisper model file)
 
@@ -215,6 +215,12 @@ app/src/main/
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
 
+5. **Build release APKs or Play Store AAB** (requires release signing env vars or `signing.properties`):
+   ```bash
+   ./gradlew assembleRelease   # Outputs universal, arm64-v8a, and armeabi-v7a APKs
+   ./gradlew bundleRelease     # Outputs app-release.aab with ABI splits auto-disabled
+   ```
+
 ---
 
 ## Privacy & Offline Architecture
@@ -246,7 +252,7 @@ To keep the repository lightweight and allow flexible updates:
 - [x] Hardware-backed Keystore PIN lock and biometric app protection
 - [x] Zip-Slip and Zip-Bomb protected full-fidelity Backup Import & Export
 - [x] Dynamic folders, tag taxonomy, drafts, and multi-state trash/archive
-- [x] Vico-backed habit consistency and mood distribution analytics
+- [x] Custom Compose Canvas habit consistency and mood distribution analytics
 - [ ] Multi-language transcription model options (Spanish, French, German, Japanese)
 - [ ] Selective individual note export to Markdown (`.md`) and audio package
 
@@ -279,7 +285,6 @@ VoiceJournal is licensed under the **GNU General Public License v3.0 with the Co
 - [whisper.cpp](https://github.com/ggerganov/whisper.cpp) by Georgi Gerganov — High-performance C++ implementation of OpenAI's Whisper model.
 - [OpenAI Whisper](https://github.com/openai/whisper) — Robust speech recognition neural network architecture.
 - [Android Open Source Project](https://source.android.com/) — Jetpack Compose, Room, and Material 3 design system.
-- [Vico](https://github.com/patrykandpatrick/vico) — Extensible charting library for Jetpack Compose.
 - [Coil](https://github.com/coil-kt/coil) — Kotlin-first image loading framework for Android.
 
 ---

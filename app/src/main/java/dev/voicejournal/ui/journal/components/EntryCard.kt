@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import dev.voicejournal.domain.model.AudioTrack
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.Tag
@@ -148,10 +150,17 @@ fun EntryCard(
                     ) {
                         val imagesToShow = entry.mediaThumbnails.take(4)
                         imagesToShow.forEach { imagePath ->
-                            val modelObj: Any = if (imagePath.startsWith("/")) File(imagePath) else imagePath
+                            val imageRequest = remember(imagePath, context) {
+                                val modelObj: Any = if (imagePath.startsWith("/")) File(imagePath) else imagePath
+                                ImageRequest.Builder(context)
+                                    .data(modelObj)
+                                    .size(160)
+                                    .crossfade(true)
+                                    .build()
+                            }
                             Box(modifier = Modifier.size(44.dp)) {
                                 AsyncImage(
-                                    model = modelObj,
+                                    model = imageRequest,
                                     contentDescription = "Media Preview",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

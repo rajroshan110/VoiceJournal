@@ -604,6 +604,11 @@ fun JournalScreen(
                                     cardPlaybackState.activeEntryId == entry.id && cardPlaybackState.status == PlaybackStatus.Buffering
                                 }
                             }
+                            val isAudioError by remember(entry.id) {
+                                derivedStateOf {
+                                    cardPlaybackState.activeEntryId == entry.id && cardPlaybackState.status == PlaybackStatus.Error
+                                }
+                            }
                             val currentPos by remember(entry.id) {
                                 derivedStateOf {
                                     if (cardPlaybackState.activeEntryId == entry.id) cardPlaybackState.currentPositionMs else 0L
@@ -617,7 +622,7 @@ fun JournalScreen(
                                 activeTrackId = cardPlaybackState.activeTrackId,
                                 isPlaying = isPlaying,
                                 isBuffering = isBuffering,
-                                isAudioError = false,
+                                isAudioError = isAudioError,
                                 currentPositionMs = currentPos,
                                 timeFormat = uiState.timeFormat,
                                 isMoodEnabled = uiState.isMoodEnabled,

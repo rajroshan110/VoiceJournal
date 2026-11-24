@@ -2,7 +2,9 @@ package dev.voicejournal.data.backup.v1
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.voicejournal.BuildConfig
 import dev.voicejournal.data.backup.v1.dto.ImportResult
 import dev.voicejournal.data.local.datastore.UserPreferencesManager
 import dev.voicejournal.data.local.db.AppDatabase
@@ -13,8 +15,6 @@ import java.io.FileInputStream
 import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
-
-import android.util.Log
 
 @Singleton
 class BackupImporter @Inject constructor(
@@ -35,7 +35,7 @@ class BackupImporter @Inject constructor(
         onProgress: ((String) -> Unit)? = null
     ): ImportResult = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        Log.d("Backup", "Restore started")
+        if (BuildConfig.DEBUG) Log.d("Backup", "Restore started")
         onProgress?.invoke("Validating backup…")
 
         var stagingDir: File? = null
@@ -47,15 +47,17 @@ class BackupImporter @Inject constructor(
             val report = validator.validate(stagingDir)
             if (!report.isValid) {
                 unpacker.cleanup(stagingDir)
-                Log.d("Backup", "Validation failed")
-                report.errors.forEach { err -> Log.d("Backup", err) }
-                Log.d("Backup", "Restore aborted")
+                if (BuildConfig.DEBUG) {
+                    Log.d("Backup", "Validation failed")
+                    report.errors.forEach { err -> Log.d("Backup", err) }
+                    Log.d("Backup", "Restore aborted")
+                }
                 return@withContext ImportResult(
                     success = false,
                     validationErrors = report.errors
                 )
             }
-            Log.d("Backup", "Backup validated")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Backup validated")
 
             // 3. Perform Atomic Restore
             onProgress?.invoke("Reading backup…")
@@ -73,7 +75,7 @@ class BackupImporter @Inject constructor(
             unpacker.cleanup(stagingDir)
 
             val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
-            Log.d("Backup", "Restore completed in ${"%.1f".format(elapsedSec)} s")
+            if (BuildConfig.DEBUG) Log.d("Backup", "Restore completed in ${"%.1f".format(elapsedSec)} s")
             onProgress?.invoke("Restore completed.")
 
             ImportResult(
@@ -82,7 +84,7 @@ class BackupImporter @Inject constructor(
             )
         } catch (e: Exception) {
             unpacker.cleanup(stagingDir)
-            Log.e("Backup", "Restore failed: ${e.message}", e)
+            Log.e("Backup", "Restore failed: ${e.javaClass.simpleName}")
             ImportResult(
                 success = false,
                 validationErrors = listOf(e.localizedMessage ?: "Import failed due to an unexpected error.")

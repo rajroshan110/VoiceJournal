@@ -67,7 +67,7 @@ class BackupMediaCollector(
                             fileSizeBytes = file.length(),
                             displayOrder = displayOrder++,
                             createdAt = entryEntity.createdAt,
-                            originalUri = file.absolutePath,
+                            originalUri = file.name,
                             metadataVersion = 1,
                             metadata = audioMetadata.toJson()
                         )
@@ -111,7 +111,7 @@ class BackupMediaCollector(
                         fileSizeBytes = file.length(),
                         displayOrder = displayOrder++,
                         createdAt = entryEntity.createdAt,
-                        originalUri = file.absolutePath,
+                        originalUri = file.name,
                         metadataVersion = 1,
                         metadata = audioMetadata.toJson()
                     )
@@ -143,7 +143,7 @@ class BackupMediaCollector(
                         fileSizeBytes = file.length(),
                         displayOrder = displayOrder++,
                         createdAt = entryEntity.createdAt,
-                        originalUri = file.absolutePath,
+                        originalUri = file.name,
                         metadataVersion = 1,
                         metadata = imageMetadata.toJson()
                     )

@@ -1,11 +1,15 @@
 package dev.voicejournal.transcription
 
+import android.util.Log
+
 object WhisperLib {
+    private const val TAG = "WhisperLib"
+
     init {
-        try { 
-            System.loadLibrary("whisper_jni") 
-        } catch (e: Throwable) { 
-            e.printStackTrace() 
+        try {
+            System.loadLibrary("whisper_jni")
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to load whisper_jni native library: ${e.javaClass.simpleName}")
         }
     }
 

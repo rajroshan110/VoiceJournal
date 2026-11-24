@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,7 +41,7 @@ class AudioRecorderManager(private val context: Context) {
     @Volatile var isPaused: Boolean = false
         private set
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun startRecording(format: AudioFormat): File {
         activeFormat = format
@@ -67,6 +68,7 @@ class AudioRecorderManager(private val context: Context) {
             )
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                releaseAudioRecordSafely()
                 _state.value = RecordingState.Error("Failed to initialize AudioRecord")
                 return file
             }
@@ -79,20 +81,20 @@ class AudioRecorderManager(private val context: Context) {
                 var wavWriter: WavFileWriter? = null
                 var m4aEncoder: M4aEncoder? = null
 
-                if (format == AudioFormat.WAV_16KHZ) {
-                    wavWriter = WavFileWriter().apply { start(file) }
-                } else {
-                    m4aEncoder = M4aEncoder().apply { start(file) }
-                }
-
                 try {
+                    if (format == AudioFormat.WAV_16KHZ) {
+                        wavWriter = WavFileWriter().apply { start(file) }
+                    } else {
+                        m4aEncoder = M4aEncoder().apply { start(file) }
+                    }
+
                     while (!isStopRequested.get()) {
                         val read = audioRecord?.read(buffer, 0, minBufferSize) ?: 0
                         if (read > 0) {
                             if (!isPaused) {
                                 wavWriter?.writePcmChunk(buffer, read)
                                 m4aEncoder?.encodePcmChunk(buffer, read)
-    
+
                                 val activeSegment = if (segmentStartTimeMs > 0L) {
                                     (System.currentTimeMillis() - segmentStartTimeMs).coerceAtLeast(0L)
                                 } else 0L
@@ -104,20 +106,40 @@ class AudioRecorderManager(private val context: Context) {
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    _state.value = RecordingState.Error(e.message ?: "Recording failed")
+                    releaseAudioRecordSafely()
                 } finally {
                     withContext(NonCancellable) {
-                        wavWriter?.finish()
-                        m4aEncoder?.finish()
+                        try { wavWriter?.finish() } catch (_: Exception) {}
+                        try { m4aEncoder?.finish() } catch (_: Exception) {}
                     }
                 }
             }
         } catch (e: SecurityException) {
+            releaseAudioRecordSafely()
             _state.value = RecordingState.Error("Permission denied: ${e.message}")
         } catch (e: Exception) {
+            releaseAudioRecordSafely()
             _state.value = RecordingState.Error(e.message ?: "Unknown error")
         }
 
         return file
+    }
+
+    private fun releaseAudioRecordSafely() {
+        val record = audioRecord
+        audioRecord = null
+        if (record != null) {
+            try {
+                if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                    record.stop()
+                }
+            } catch (_: Exception) {}
+            try {
+                record.release()
+            } catch (_: Exception) {}
+        }
     }
 
     fun pauseRecording() {
@@ -143,12 +165,12 @@ class AudioRecorderManager(private val context: Context) {
         }
         isPaused = false
 
-        audioRecord?.stop()
         isStopRequested.set(true)
+        try {
+            audioRecord?.stop()
+        } catch (_: Exception) {}
         recordingJob?.join()
-        
-        audioRecord?.release()
-        audioRecord = null
+        releaseAudioRecordSafely()
 
         val file = outputFile
         if (file != null) {
@@ -161,12 +183,12 @@ class AudioRecorderManager(private val context: Context) {
 
     suspend fun cancelRecording() {
         isPaused = false
-        audioRecord?.stop()
         isStopRequested.set(true)
+        try {
+            audioRecord?.stop()
+        } catch (_: Exception) {}
         recordingJob?.join()
-        
-        audioRecord?.release()
-        audioRecord = null
+        releaseAudioRecordSafely()
         outputFile?.delete()
         _state.value = RecordingState.Idle
     }

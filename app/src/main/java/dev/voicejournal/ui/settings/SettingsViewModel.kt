@@ -25,6 +25,7 @@ import dev.voicejournal.ui.theme.AppThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -49,7 +50,7 @@ data class SettingsUiState(
     val startOfWeek: StartOfWeek = StartOfWeek.SYSTEM_DEFAULT,
     val appLockMode: AppLockMode = AppLockMode.NONE,
     val appLockTimeout: AppLockTimeout = AppLockTimeout.IMMEDIATELY,
-    val customPin: String? = null,
+    val hasCustomPin: Boolean = false,
     val isScreenPrivacyEnabled: Boolean = false,
     val isSpeechToTextEnabled: Boolean = true,
     val isFolderEnabled: Boolean = false,
@@ -86,105 +87,111 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             userPreferencesManager.audioFormat.collect { format ->
-                _uiState.value = _uiState.value.copy(audioFormat = format)
+                _uiState.update { it.copy(audioFormat = format) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.appThemeMode.collect { mode ->
-                _uiState.value = _uiState.value.copy(appThemeMode = mode)
+                _uiState.update { it.copy(appThemeMode = mode) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.insightDateRangeMode.collect { mode ->
-                _uiState.value = _uiState.value.copy(insightDateRangeMode = mode)
+                _uiState.update { it.copy(insightDateRangeMode = mode) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.whisperModel.collect { model ->
-                _uiState.value = _uiState.value.copy(whisperModel = model)
+                _uiState.update { it.copy(whisperModel = model) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isMarkdownEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isMarkdownEnabled = enabled)
+                _uiState.update { it.copy(isMarkdownEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.timeFormat.collect { format ->
-                _uiState.value = _uiState.value.copy(timeFormat = format)
+                _uiState.update { it.copy(timeFormat = format) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.startOfWeek.collect { start ->
-                _uiState.value = _uiState.value.copy(startOfWeek = start)
+                _uiState.update { it.copy(startOfWeek = start) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.appLockMode.collect { lockMode ->
-                _uiState.value = _uiState.value.copy(appLockMode = lockMode)
+                _uiState.update { it.copy(appLockMode = lockMode) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.appLockTimeout.collect { timeout ->
-                _uiState.value = _uiState.value.copy(appLockTimeout = timeout)
+                _uiState.update { it.copy(appLockTimeout = timeout) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.customPin.collect { pin ->
-                _uiState.value = _uiState.value.copy(customPin = pin)
+                _uiState.update { it.copy(hasCustomPin = !pin.isNullOrBlank()) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isScreenPrivacyEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isScreenPrivacyEnabled = enabled)
+                _uiState.update { it.copy(isScreenPrivacyEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isSpeechToTextEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isSpeechToTextEnabled = enabled)
+                _uiState.update { it.copy(isSpeechToTextEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isFolderEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isFolderEnabled = enabled)
+                _uiState.update { it.copy(isFolderEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isNotesOrganisationEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isNotesOrganisationEnabled = enabled)
+                _uiState.update { it.copy(isNotesOrganisationEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isTopicsEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isTopicsEnabled = enabled)
+                _uiState.update { it.copy(isTopicsEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isPeopleEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isPeopleEnabled = enabled)
+                _uiState.update { it.copy(isPeopleEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             userPreferencesManager.isMoodEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(isMoodEnabled = enabled)
+                _uiState.update { it.copy(isMoodEnabled = enabled) }
             }
         }
         viewModelScope.launch {
             whisperManager.isModelDownloaded.collect { downloaded ->
                 val state = if (downloaded) ModelDownloadState.Downloaded else ModelDownloadState.Idle
-                _uiState.value = _uiState.value.copy(
-                    isModelDownloaded = downloaded,
-                    sttModelDownloadState = state
-                )
+                _uiState.update {
+                    it.copy(
+                        isModelDownloaded = downloaded,
+                        sttModelDownloadState = state
+                    )
+                }
             }
         }
         viewModelScope.launch {
             whisperManager.downloadProgress.collect { progress ->
-                _uiState.value = _uiState.value.copy(downloadProgress = progress)
-                if (progress != null && progress < 1.0f) {
-                    _uiState.value = _uiState.value.copy(
-                        sttModelDownloadState = ModelDownloadState.Downloading(progress)
-                    )
+                _uiState.update { state ->
+                    if (progress != null && progress < 1.0f) {
+                        state.copy(
+                            downloadProgress = progress,
+                            sttModelDownloadState = ModelDownloadState.Downloading(progress)
+                        )
+                    } else {
+                        state.copy(downloadProgress = progress)
+                    }
                 }
             }
         }
@@ -267,22 +274,18 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setAppLockMode(mode: AppLockMode) {
+        if (mode == AppLockMode.CUSTOM_PIN) {
+            _uiState.update { it.copy(showPinSetupDialog = true) }
+            return
+        }
         viewModelScope.launch {
-            if (mode == AppLockMode.NONE || mode == AppLockMode.BIOMETRIC) {
-                userPreferencesManager.setCustomPin(null)
-                userPreferencesManager.setAppLockMode(mode)
-            } else if (mode == AppLockMode.CUSTOM_PIN) {
-                userPreferencesManager.setCustomPin(null)
-                _uiState.value = _uiState.value.copy(showPinSetupDialog = true)
-            }
+            userPreferencesManager.setAppLockMode(mode)
+            userPreferencesManager.setCustomPin(null)
         }
     }
 
     fun modifyCustomPin() {
-        viewModelScope.launch {
-            userPreferencesManager.setCustomPin(null)
-            _uiState.value = _uiState.value.copy(showPinSetupDialog = true)
-        }
+        _uiState.update { it.copy(showPinSetupDialog = true) }
     }
 
     fun setAppLockTimeout(timeout: AppLockTimeout) {
@@ -295,13 +298,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesManager.setCustomPin(pin)
             userPreferencesManager.setAppLockMode(AppLockMode.CUSTOM_PIN)
-            _uiState.value = _uiState.value.copy(showPinSetupDialog = false)
+            _uiState.update { it.copy(showPinSetupDialog = false) }
         }
     }
 
     fun dismissPinSetupDialog() {
-        _uiState.value = _uiState.value.copy(showPinSetupDialog = false)
-        if (_uiState.value.customPin.isNullOrBlank() && _uiState.value.appLockMode == AppLockMode.CUSTOM_PIN) {
+        _uiState.update { it.copy(showPinSetupDialog = false) }
+        val current = _uiState.value
+        if (!current.hasCustomPin && current.appLockMode == AppLockMode.CUSTOM_PIN) {
             viewModelScope.launch {
                 userPreferencesManager.setAppLockMode(AppLockMode.NONE)
             }

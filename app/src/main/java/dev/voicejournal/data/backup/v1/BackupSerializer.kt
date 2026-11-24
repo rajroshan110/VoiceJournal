@@ -65,7 +65,7 @@ class BackupSerializer {
 
             jsonArray.put(backupEntry.toJson())
         }
-        return jsonArray.toString(2)
+        return jsonArray.toString()
     }
 
     fun serializeTags(tags: List<TagEntity>): String {
@@ -78,7 +78,7 @@ class BackupSerializer {
             )
             jsonArray.put(backupTag.toJson())
         }
-        return jsonArray.toString(2)
+        return jsonArray.toString()
     }
 
     fun serializeAttachments(attachments: List<BackupAttachment>): String {
@@ -86,7 +86,7 @@ class BackupSerializer {
         attachments.forEach { a ->
             jsonArray.put(a.toJson())
         }
-        return jsonArray.toString(2)
+        return jsonArray.toString()
     }
 
     fun serializePreferences(
@@ -155,6 +155,6 @@ class BackupSerializer {
             )
         )
 
-        return prefs.toJson().toString(2)
+        return prefs.toJson().toString()
     }
 }

@@ -10,6 +10,7 @@ interface SpeechToTextEngine {
     fun isModelDownloadedSync(): Boolean
     suspend fun ensureModelDownloaded(): Boolean
     fun deleteModel(): Boolean
+    fun releaseContext() {}
     suspend fun transcribe(
         audioFile: File,
         language: String? = null,

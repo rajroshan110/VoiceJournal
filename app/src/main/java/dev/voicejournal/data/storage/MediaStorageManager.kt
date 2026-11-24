@@ -106,12 +106,17 @@ object MediaStorageManager {
     
     // Check if path is internal and strictly within app storage
     fun isInternalMedia(context: Context, path: String): Boolean {
+        if (path.isBlank()) return false
         return try {
             val file = File(path)
             val canonicalPath = file.canonicalPath
-            val filesCanonical = context.filesDir.canonicalPath
-            val cacheCanonical = context.cacheDir.canonicalPath
-            canonicalPath.startsWith(filesCanonical) || canonicalPath.startsWith(cacheCanonical)
+            val filesPrefix = context.filesDir.canonicalPath.let {
+                if (it.endsWith(File.separator)) it else it + File.separator
+            }
+            val cachePrefix = context.cacheDir.canonicalPath.let {
+                if (it.endsWith(File.separator)) it else it + File.separator
+            }
+            canonicalPath.startsWith(filesPrefix) || canonicalPath.startsWith(cachePrefix)
         } catch (e: Exception) {
             false
         }
