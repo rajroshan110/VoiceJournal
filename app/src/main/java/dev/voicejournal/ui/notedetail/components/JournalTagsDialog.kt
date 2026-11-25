@@ -20,19 +20,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.TagChip
+import dev.voicejournal.ui.designsystem.components.buttons.AppCompactPillButton
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +129,7 @@ fun JournalTagsDialog(
                         Text(
                             text = "Manage Tags",
                             color = colors.textPrimary,
-                            fontSize = 20.sp,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                     },
@@ -141,22 +147,24 @@ fun JournalTagsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(colors.background)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceXs)
                 ) {
                     // Static Suggestion Bar (above footer add bar)
                     if (suggestions.isNotEmpty()) {
                         Text(
                             text = "Suggestions",
                             color = colors.textSecondary,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
+                            modifier = Modifier.padding(bottom = Spacing.SpaceX2s, start = Spacing.SpaceX2s)
                         )
                         LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 10.dp)
+                                .padding(bottom = Spacing.SpaceMd)
                         ) {
                             items(suggestions) { suggestionTag ->
                                 TagChip(
@@ -175,13 +183,13 @@ fun JournalTagsDialog(
                     // Add Tags Input Card (Footer anchored)
                     Card(
                         colors = CardDefaults.cardColors(containerColor = colors.surface),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(Radius.RadiusLg),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val isInputAllowed = isTopicsEnabled || isPeopleEnabled || isFolderEnabled
@@ -202,7 +210,7 @@ fun JournalTagsDialog(
                                             else -> "Add tag..."
                                         },
                                         color = colors.textSecondary,
-                                        fontSize = 14.sp
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 },
                                 modifier = Modifier
@@ -230,24 +238,23 @@ fun JournalTagsDialog(
                                 singleLine = true
                             )
 
-                            Button(
+                            AppCompactPillButton(
                                 onClick = handleAddTag,
                                 enabled = isInputAllowed,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.primary,
-                                    disabledContainerColor = colors.surfaceVariant
-                                ),
-                                shape = RoundedCornerShape(16.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                containerColor = if (isInputAllowed) colors.primary else colors.surfaceVariant,
+                                contentColor = if (isInputAllowed) colors.onPrimary else colors.textSecondary,
+                                contentPadding = PaddingValues(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceXs)
                             ) {
                                 Icon(
-                                    Icons.Default.Add, 
-                                    contentDescription = null, 
-                                    tint = if (isInputAllowed) colors.onPrimary else colors.textSecondary
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(IconSize.IconSm)
                                 )
+                                Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
                                 Text(
-                                    "Add", 
-                                    color = if (isInputAllowed) colors.onPrimary else colors.textSecondary
+                                    text = "Add",
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -260,8 +267,8 @@ fun JournalTagsDialog(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(Spacing.SpaceLg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceLg)
             ) {
                 // Category Tabs Selector
                 val categoryList = buildList {
@@ -273,29 +280,34 @@ fun JournalTagsDialog(
                 if (categoryList.isNotEmpty()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
                     ) {
                         categoryList.forEach { (type, label) ->
                             val isSelected = activeCategory == type
+                            val pillShape = RoundedCornerShape(Radius.RadiusPill)
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .defaultMinSize(minHeight = 44.dp)
+                                    .clip(pillShape)
                                     .background(
                                         color = if (isSelected) colors.primary else colors.surfaceVariant,
-                                        shape = RoundedCornerShape(20.dp)
+                                        shape = pillShape
                                     )
                                     .clickable {
                                         activeCategory = type
                                         tagInput = TextFieldValue("", selection = TextRange(0))
                                     }
-                                    .padding(vertical = 10.dp),
+                                    .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceXs),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = label,
                                     color = if (isSelected) colors.onPrimary else colors.textPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -331,14 +343,14 @@ fun JournalTagsDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No tag categories are currently enabled.\nEnable them in Settings → Tag Organiser → Choose Tags.",
                             color = colors.textSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            fontSize = 14.sp
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -357,25 +369,28 @@ private fun TagCategoryCard(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Radius.RadiusLg),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.SpaceLg)) {
             Text(
                 text = title,
                 color = colors.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
             if (tags.isEmpty()) {
-                Text("No tags in this category yet", color = colors.textSecondary, fontSize = 13.sp)
+                Text(
+                    text = "No tags in this category yet",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
             } else {
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     tags.forEach { tag ->

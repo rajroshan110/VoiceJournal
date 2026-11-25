@@ -28,10 +28,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.calendar.CalendarUtils
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -186,12 +189,15 @@ private fun MonthNavigationHeader(
         Text(
             text = displayedYearMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
             color = colors.textPrimary,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .weight(1f, fill = false)
+                .clip(RoundedCornerShape(Radius.RadiusSm))
                 .clickable { onTitleClick() }
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX2s)
         )
         IconButton(
             onClick = onNext,
@@ -223,7 +229,7 @@ private fun WeekdayHeaderRow() {
                 Text(
                     text = dayName,
                     color = colors.textSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -306,7 +312,7 @@ private fun CalendarGridDays(
                                         isToday -> colors.primary
                                         else -> colors.textPrimary
                                     },
-                                    fontSize = 14.sp,
+                                    style = MaterialTheme.typography.bodyMedium.tabularNumbers(),
                                     fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
@@ -349,15 +355,15 @@ private fun YearPickerGrid(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = if (isLandscape) 2.dp else 4.dp),
+                .padding(horizontal = Spacing.SpaceXs, vertical = if (isLandscape) Spacing.SpaceX3s else Spacing.SpaceX2s),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Select Year",
                 color = colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
             )
             IconButton(
                 onClick = onDismiss,
@@ -376,14 +382,14 @@ private fun YearPickerGrid(
             state = gridState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isLandscape) 205.dp else 250.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                .height((AppTheme.windowInfo.normalizedHeightDp * 0.30f).dp.coerceIn(180.dp, 260.dp)),
+            contentPadding = PaddingValues(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX3s)
         ) {
             items(years) { y ->
                 val isCurrentSel = y == selectedYear
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 4.dp, vertical = 3.dp)
+                        .padding(horizontal = Spacing.SpaceX2s, vertical = 3.dp)
                         .height(36.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(if (isCurrentSel) colors.primary else Color.Transparent)
@@ -393,8 +399,8 @@ private fun YearPickerGrid(
                     Text(
                         text = y.toString(),
                         color = if (isCurrentSel) colors.onPrimary else colors.textPrimary,
-                        fontWeight = if (isCurrentSel) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 15.sp
+                        style = MaterialTheme.typography.bodyMedium.tabularNumbers(),
+                        fontWeight = if (isCurrentSel) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }

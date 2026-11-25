@@ -7,8 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -16,10 +14,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.components.dialogs.AppModalBottomSheet
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -31,6 +34,7 @@ fun TopicFilterBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val colors = AppTheme.colors
+    val maxListHeight = (AppTheme.windowInfo.normalizedHeightDp * 0.42f).dp.coerceIn(200.dp, 360.dp)
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     val distinctTags = remember(availableTags) {
@@ -58,15 +62,14 @@ fun TopicFilterBottomSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        containerColor = colors.surface,
-        contentColor = colors.textPrimary
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.SpaceXl, vertical = Spacing.SpaceMd)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -81,12 +84,16 @@ fun TopicFilterBottomSheet(
                 )
                 if (selectedTagNames.isNotEmpty()) {
                     TextButton(onClick = onClearAll) {
-                        Text("Clear", color = colors.primary)
+                        Text(
+                            text = "Clear",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.primary
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
             // Search field for fast filtering when topic count > 4
             if (availableTags.size > 4) {
@@ -97,79 +104,53 @@ fun TopicFilterBottomSheet(
                     requestFocusOnLaunch = false,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = Spacing.SpaceMd)
                 )
             }
 
             if (availableTags.isEmpty()) {
                 Text(
                     text = "No topics found in notes",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = Spacing.SpaceLg)
                 )
             } else if (filteredTags.isEmpty()) {
                 Text(
                     text = "No topics matching \"$searchQuery\"",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = Spacing.SpaceLg)
                 )
             } else {
                 // High-density FlowRow layout with compact packing
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp)
+                        .heightIn(max = maxListHeight)
                         .verticalScroll(rememberScrollState())
                 ) {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
                     ) {
                         filteredTags.forEach { tag ->
                             val cleanName = tag.name.trim().trimStart('#', '@').trim()
                             val isSelected = selectedTagNames.any { it.equals(cleanName, ignoreCase = true) }
-                            val displayName = cleanName
-                            
-                            Surface(
-                                onClick = { onTagToggle(cleanName) },
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (isSelected) colors.primary.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                border = if (isSelected) BorderStroke(1.dp, colors.primary) else null
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = colors.primary,
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .padding(end = 4.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = displayName,
-                                        fontSize = 14.sp,
-                                        color = if (isSelected) colors.primary else colors.textPrimary,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            }
+                            FilterOptionPill(
+                                label = cleanName,
+                                isSelected = isSelected,
+                                onClick = { onTagToggle(cleanName) }
+                            )
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXl))
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -181,6 +162,7 @@ fun PeopleFilterBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val colors = AppTheme.colors
+    val maxListHeight = (AppTheme.windowInfo.normalizedHeightDp * 0.42f).dp.coerceIn(200.dp, 360.dp)
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     val distinctPeople = remember(availablePeople) {
@@ -210,15 +192,14 @@ fun PeopleFilterBottomSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        containerColor = colors.surface,
-        contentColor = colors.textPrimary
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.SpaceXl, vertical = Spacing.SpaceMd)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -233,12 +214,16 @@ fun PeopleFilterBottomSheet(
                 )
                 if (selectedPeople.isNotEmpty()) {
                     TextButton(onClick = onClearAll) {
-                        Text("Clear", color = colors.primary)
+                        Text(
+                            text = "Clear",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.primary
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
             // Search field for fast filtering when people count > 4
             if (availablePeople.size > 4) {
@@ -249,75 +234,87 @@ fun PeopleFilterBottomSheet(
                     requestFocusOnLaunch = false,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = Spacing.SpaceMd)
                 )
             }
 
             if (availablePeople.isEmpty()) {
                 Text(
                     text = "No people found in notes",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = Spacing.SpaceLg)
                 )
             } else if (filteredPeople.isEmpty()) {
                 Text(
                     text = "No people matching \"$searchQuery\"",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = Spacing.SpaceLg)
                 )
             } else {
                 // High-density FlowRow layout with compact packing
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp)
+                        .heightIn(max = maxListHeight)
                         .verticalScroll(rememberScrollState())
                 ) {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
                     ) {
                         filteredPeople.forEach { person ->
                             val cleanPerson = person.trim().trimStart('#', '@').trim()
                             val isSelected = selectedPeople.any { it.equals(cleanPerson, ignoreCase = true) }
-                            val displayName = cleanPerson
-
-                            Surface(
-                                onClick = { onPersonToggle(cleanPerson) },
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (isSelected) colors.primary.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                border = if (isSelected) BorderStroke(1.dp, colors.primary) else null
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = colors.primary,
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .padding(end = 4.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = displayName,
-                                        fontSize = 14.sp,
-                                        color = if (isSelected) colors.primary else colors.textPrimary,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            }
+                            FilterOptionPill(
+                                label = cleanPerson,
+                                isSelected = isSelected,
+                                onClick = { onPersonToggle(cleanPerson) }
+                            )
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXl))
+        }
+    }
+}
+
+@Composable
+private fun FilterOptionPill(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AppTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(Radius.RadiusPill),
+        color = if (isSelected) colors.primary.copy(alpha = 0.2f) else colors.surfaceVariant,
+        border = if (isSelected) BorderStroke(Border.WidthThin, colors.primary) else null,
+        modifier = Modifier.defaultMinSize(minHeight = ComponentDimens.ChipMinHeight)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(IconSize.IconXs)
+                )
+                Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isSelected) colors.primary else colors.textPrimary,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            )
         }
     }
 }
@@ -333,15 +330,14 @@ fun MoodFilterBottomSheet(
 ) {
     val colors = AppTheme.colors
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        containerColor = colors.surface,
-        contentColor = colors.textPrimary
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.SpaceXl, vertical = Spacing.SpaceMd)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -356,36 +352,47 @@ fun MoodFilterBottomSheet(
                 )
                 if (selectedMoods.isNotEmpty()) {
                     TextButton(onClick = onClearAll) {
-                        Text("Clear", color = colors.primary)
+                        Text(
+                            text = "Clear",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.primary
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(vertical = Spacing.SpaceXs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
             ) {
                 availableMoods.take(5).forEach { mood ->
                     val isSelected = selectedMoods.contains(mood)
                     Surface(
                         onClick = { onMoodToggle(mood) },
-                        shape = MaterialTheme.shapes.medium,
+                        shape = RoundedCornerShape(Radius.RadiusMd),
                         color = if (isSelected) colors.primary.copy(alpha = 0.3f) else colors.surfaceVariant,
-                        border = if (isSelected) BorderStroke(1.dp, colors.primary) else null
+                        border = if (isSelected) BorderStroke(Border.WidthThin, colors.primary) else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = ComponentDimens.ButtonMinHeight)
                     ) {
-                        Text(
-                            text = mood,
-                            fontSize = 28.sp,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(vertical = Spacing.SpaceMd)
+                        ) {
+                            Text(
+                                text = mood,
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXl))
         }
     }
 }

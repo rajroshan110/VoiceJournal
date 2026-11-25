@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,9 +16,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.PersonMetric
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 @Composable
 fun PeopleMentionedCard(
@@ -31,18 +34,18 @@ fun PeopleMentionedCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .background(colors.surface)
-            .padding(16.dp)
+            .padding(Spacing.SpaceLg)
     ) {
         Text(
             text = "People Mentioned",
             color = colors.textPrimary,
-            fontSize = 18.sp,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
         if (displayedPeople.isEmpty()) {
             Box(
@@ -54,7 +57,7 @@ fun PeopleMentionedCard(
                 Text(
                     text = "No people tagged yet",
                     color = colors.textSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         } else {
@@ -62,29 +65,29 @@ fun PeopleMentionedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(vertical = Spacing.SpaceX2s),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceLg)
             ) {
                 displayedPeople.forEach { person ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .width(64.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .widthIn(min = 64.dp, max = 80.dp)
+                            .clip(RoundedCornerShape(Radius.RadiusMd))
                             .clickable { onPersonClick(person.name) }
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = Spacing.SpaceX2s, horizontal = Spacing.SpaceX2s)
                     ) {
                         // Avatar Circle
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(Spacing.Space3Xl)
                                 .background(colors.primary, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = person.name.take(1).uppercase(),
                                 color = colors.onPrimary,
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -94,7 +97,7 @@ fun PeopleMentionedCard(
                         Text(
                             text = "@${person.name}",
                             color = colors.textPrimary,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -103,7 +106,8 @@ fun PeopleMentionedCard(
                         Text(
                             text = "${person.count} ${if (person.count == 1) "time" else "times"}",
                             color = colors.textSecondary,
-                            fontSize = 11.sp
+                            style = MaterialTheme.typography.labelSmall.tabularNumbers(),
+                            maxLines = 1
                         )
                     }
                 }

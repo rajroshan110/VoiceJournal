@@ -13,10 +13,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
@@ -37,21 +38,24 @@ fun SettingsScreen(
 
     // Modal Progress Overlay during Database Wipe
     if (uiState.isWipingData) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = {},
-            containerColor = colors.surface,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(color = colors.error, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Wiping Journal Data", color = colors.textPrimary, fontSize = 16.sp)
+                    Text(
+                        text = "Wiping Journal Data",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.textPrimary
+                    )
                 }
             },
             text = {
                 Text(
                     text = "Wiping database and local media files...",
-                    color = colors.textSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
                 )
             },
             confirmButton = {}
@@ -64,13 +68,23 @@ fun SettingsScreen(
         var confirmInput by rememberSaveable { mutableStateOf("") }
         var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.dismissPinSetupDialog() },
-            containerColor = colors.surface,
-            title = { Text("Set Custom PIN", color = colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Set Custom PIN",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column {
-                    Text("Enter a 4-digit security PIN for locking your journal.", color = colors.textSecondary, fontSize = 13.sp)
+                    Text(
+                        text = "Enter a 4-digit security PIN for locking your journal.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = pinInput,
@@ -105,12 +119,16 @@ fun SettingsScreen(
                     )
                     if (errorMessage != null) {
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = errorMessage!!, color = colors.error, fontSize = 12.sp)
+                        Text(
+                            text = errorMessage!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.error
+                        )
                     }
                 }
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = {
                         if (pinInput.length < 4) {
                             errorMessage = "PIN must be 4 digits"
@@ -119,8 +137,7 @@ fun SettingsScreen(
                         } else {
                             viewModel.saveCustomPin(pinInput)
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                    }
                 ) {
                     Text("Save PIN")
                 }
@@ -138,14 +155,13 @@ fun SettingsScreen(
         var inputCode by rememberSaveable { mutableStateOf("") }
         val isConfirmEnabled = inputCode.trim() == "DELETE"
 
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.dismissDeleteConfirmation() },
-            containerColor = colors.surface,
             title = {
                 Text(
                     text = "Delete All Journal Entries?",
+                    style = MaterialTheme.typography.titleMedium,
                     color = colors.error,
-                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -153,14 +169,14 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "This action will permanently erase all journal entries, tags, cross-references, and local audio recordings from storage.",
-                        color = colors.textSecondary,
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "Type \"DELETE\" below to confirm:",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = colors.textPrimary,
-                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -180,12 +196,14 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = { viewModel.confirmDeleteAllJournals() },
                     enabled = isConfirmEnabled,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.error,
-                        disabledContainerColor = colors.error.copy(alpha = 0.3f)
+                        contentColor = colors.onPrimary,
+                        disabledContainerColor = colors.error.copy(alpha = 0.3f),
+                        disabledContentColor = colors.onPrimary.copy(alpha = 0.5f)
                     )
                 ) {
                     Text("Permanently Wipe All Data")

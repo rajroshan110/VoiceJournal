@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.TimePeriod
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 
 @Composable
 fun PeriodSelector(
@@ -30,8 +34,8 @@ fun PeriodSelector(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surfaceVariant, RoundedCornerShape(22.dp))
-            .padding(2.dp),
+            .background(colors.surfaceVariant, RoundedCornerShape(Radius.RadiusPill))
+            .padding(Spacing.SpaceX3s),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -58,24 +62,28 @@ fun PeriodSelector(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .defaultMinSize(minHeight = 48.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .physicalMinTouchTarget()
+                    .clip(RoundedCornerShape(Radius.RadiusPill))
                     .clickable { onPeriodSelect(period) },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(backgroundColor),
+                        .defaultMinSize(minHeight = 40.dp)
+                        .clip(RoundedCornerShape(Radius.RadiusPill))
+                        .background(backgroundColor)
+                        .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX2s),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = label,
                         color = textColor,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.designsystem.theme.AppTheme
@@ -96,7 +95,6 @@ fun TrashNoteCard(
                     text = formattedDateTimeText,
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.textSecondary,
-                    fontSize = 11.sp,
                     fontWeight = FontWeight.Normal
                 )
 
@@ -110,7 +108,6 @@ fun TrashNoteCard(
                             text = badgeText,
                             style = MaterialTheme.typography.labelSmall,
                             color = badgeColor,
-                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
@@ -147,7 +144,6 @@ fun TrashNoteCard(
                 text = snippetText,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary,
-                fontSize = 13.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )

@@ -9,11 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.ui.calendar.CalendarDayItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
@@ -44,14 +43,20 @@ fun CalendarGrid(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (showWeekHeader) Modifier.padding(horizontal = 12.dp, vertical = 2.dp) else Modifier)
+            .then(
+                if (showWeekHeader) {
+                    Modifier.padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX3s)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         // Header Row: Days of Week (Mon, Tue, Wed...)
         if (showWeekHeader) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = Spacing.SpaceX3s),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 dayLabels.forEach { label ->
@@ -60,7 +65,6 @@ fun CalendarGrid(
                         style = MaterialTheme.typography.labelMedium,
                         color = colors.textSecondary,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )

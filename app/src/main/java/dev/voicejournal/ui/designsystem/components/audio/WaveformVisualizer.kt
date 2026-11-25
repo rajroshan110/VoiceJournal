@@ -36,7 +36,7 @@ fun WaveformVisualizer(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(36.dp)
             .semantics {
                 contentDescription = "Audio Waveform Visualizer"
                 stateDescription = "${(currentFraction * 100).toInt()}% played"

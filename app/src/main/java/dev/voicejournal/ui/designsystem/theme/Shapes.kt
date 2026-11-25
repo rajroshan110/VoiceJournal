@@ -5,9 +5,9 @@ import androidx.compose.material3.Shapes
 import dev.voicejournal.ui.designsystem.tokens.Radius
 
 val Shapes = Shapes(
-    extraSmall = RoundedCornerShape(Radius.RadiusXs),
+    extraSmall = RoundedCornerShape(Radius.RadiusSm),
     small = RoundedCornerShape(Radius.RadiusSm),
     medium = RoundedCornerShape(Radius.RadiusMd),
     large = RoundedCornerShape(Radius.RadiusLg),
-    extraLarge = RoundedCornerShape(Radius.RadiusPill)
+    extraLarge = RoundedCornerShape(Radius.RadiusSheet)
 )

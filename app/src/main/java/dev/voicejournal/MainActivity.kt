@@ -12,8 +12,9 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
@@ -25,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -41,8 +41,13 @@ import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
 import dev.voicejournal.ui.theme.AppThemeMode
 import dev.voicejournal.ui.navigation.AppNavHost
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.designsystem.theme.VoiceTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.audio.AudioPlayerManager
 import javax.inject.Inject
 
@@ -128,24 +133,32 @@ class MainActivity : FragmentActivity() {
 
             VoiceTheme(themeMode = appThemeMode) {
                 if (securityRecoveryReason != SecurityRecoveryReason.NONE) {
-                    AlertDialog(
-                        onDismissRequest = { 
+                    AppAlertDialog(
+                        onDismissRequest = {
                             scope.launch { userPreferencesManager.clearSecurityRecoveryReason() }
                         },
-                        title = { Text("Security Reset") },
-                        text = { 
-                            val message = when(securityRecoveryReason) {
+                        title = {
+                            Text(
+                                text = "Security Reset",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        },
+                        text = {
+                            val message = when (securityRecoveryReason) {
                                 SecurityRecoveryReason.KEYSTORE_INVALIDATED -> "Your device's biometric or secure lock screen settings changed. For your protection, your app lock has been reset."
                                 SecurityRecoveryReason.RESTORE_INCONSISTENT_SECURITY_STATE -> "The restored backup contained an invalid security configuration. App Lock has been reset to protect your data."
                                 else -> "A security error occurred and your app lock has been reset."
                             }
-                            Text(message)
+                            Text(
+                                text = message,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         },
                         confirmButton = {
-                            TextButton(onClick = { 
+                            TextButton(onClick = {
                                 scope.launch { userPreferencesManager.clearSecurityRecoveryReason() }
                             }) {
-                                Text("Got it")
+                                Text("Got it", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     )
@@ -323,7 +336,10 @@ fun BiometricLockScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.background)
-            .padding(24.dp),
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(Spacing.SpaceXl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -331,36 +347,40 @@ fun BiometricLockScreen(
             imageVector = Icons.Default.Lock,
             contentDescription = "Locked",
             tint = colors.primary,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(IconSize.IconHero)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceXl))
 
         Text(
             text = "Voice Journal Locked",
+            style = MaterialTheme.typography.titleLarge,
             color = colors.textPrimary,
-            fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceXs))
 
         Text(
             text = errorMessage ?: "Authenticate to access your private journal notes.",
+            style = MaterialTheme.typography.bodyMedium,
             color = if (errorMessage != null) colors.error else colors.textSecondary,
-            fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.Space2Xl))
 
-        Button(
+        AppPrimaryButton(
             onClick = onAuthenticateClick,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(0.8f).height(48.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .widthIn(max = 320.dp)
         ) {
-            Text("Unlock with Biometrics", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = "Unlock with Biometrics",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -374,6 +394,8 @@ fun CustomPinLockScreen(
     onFailedAttempt: () -> Unit
 ) {
     val colors = AppTheme.colors
+    val windowInfo = AppTheme.windowInfo
+    val keySize = if (windowInfo.isCompactHeight || windowInfo.isCompactLandscape) 54.dp else 64.dp
     var enteredPin by rememberSaveable { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var remainingLockout by remember { mutableStateOf(0L) }
@@ -392,7 +414,10 @@ fun CustomPinLockScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.background)
-            .padding(24.dp),
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(Spacing.SpaceXl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -400,43 +425,43 @@ fun CustomPinLockScreen(
             imageVector = Icons.Default.Lock,
             contentDescription = "Locked",
             tint = if (isError) colors.error else colors.primary,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(IconSize.IconHero)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceXl))
 
         Text(
             text = "Enter Custom PIN",
+            style = MaterialTheme.typography.titleLarge,
             color = colors.textPrimary,
-            fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceXs))
 
         val attemptsLeft = 5 - failedAttempts
         Text(
-            text = if (isLockedOut) "Too many attempts. Try again in ${remainingLockout / 1000}s" 
-                   else if (isError) "Incorrect PIN. $attemptsLeft attempts left." 
+            text = if (isLockedOut) "Too many attempts. Try again in ${remainingLockout / 1000}s"
+                   else if (isError) "Incorrect PIN. $attemptsLeft attempts left."
                    else if (failedAttempts > 0) "$attemptsLeft attempts left."
                    else "Enter your 4-digit security PIN",
+            style = MaterialTheme.typography.bodyMedium,
             color = if (isError || isLockedOut) colors.error else colors.textSecondary,
-            fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceXl))
 
         // PIN Indicator Dots
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceLg),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 0 until 4) {
                 val filled = i < enteredPin.length
                 Box(
                     modifier = Modifier
-                        .size(16.dp)
+                        .size(Spacing.SpaceLg)
                         .background(
                             color = if (filled) (if (isError) colors.error else colors.primary) else colors.surfaceVariant,
                             shape = CircleShape
@@ -445,7 +470,7 @@ fun CustomPinLockScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.Space2Xl))
 
         // Custom Numeric Keypad
         val keys = listOf(
@@ -455,17 +480,17 @@ fun CustomPinLockScreen(
             listOf("", "0", "⌫")
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)) {
             keys.forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceLg)) {
                     row.forEach { key ->
                         if (key.isEmpty()) {
-                            Spacer(modifier = Modifier.size(64.dp))
+                            Spacer(modifier = Modifier.size(keySize))
                         } else {
                             Surface(
                                 onClick = {
                                     if (isLockedOut) return@Surface
-                                    
+
                                     if (key == "⌫") {
                                         if (enteredPin.isNotEmpty()) {
                                             enteredPin = enteredPin.dropLast(1)
@@ -487,12 +512,12 @@ fun CustomPinLockScreen(
                                 },
                                 shape = CircleShape,
                                 color = colors.surface,
-                                modifier = Modifier.size(64.dp)
+                                modifier = Modifier.size(keySize)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = key,
-                                        fontSize = 22.sp,
+                                        style = MaterialTheme.typography.titleLarge.tabularNumbers(),
                                         fontWeight = FontWeight.SemiBold,
                                         color = colors.textPrimary
                                     )

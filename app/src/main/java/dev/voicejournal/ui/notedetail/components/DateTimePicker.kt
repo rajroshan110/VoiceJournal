@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.notedetail.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -9,8 +10,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
@@ -19,19 +22,28 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import dev.voicejournal.ui.calendar.CalendarUtils
 import dev.voicejournal.ui.calendar.components.CalendarMonthPicker
+import dev.voicejournal.ui.designsystem.components.buttons.AppCompactPillButton
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Calendar
@@ -82,8 +94,9 @@ fun DateTimePicker(
     var selectedMinute by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MINUTE)) }
     var isMinuteMode by rememberSaveable { mutableStateOf(false) }
 
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val configuration = LocalConfiguration.current
+    val windowInfo = AppTheme.windowInfo
+    val isLandscape = windowInfo.isCompactLandscape || configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val onConfirm = {
         val currentNow = System.currentTimeMillis()
@@ -111,13 +124,14 @@ fun DateTimePicker(
                 val isSelected = selectedTab == index
                 Box(
                     modifier = Modifier
-                        .height(32.dp)
-                        .width(72.dp)
+                        .defaultMinSize(minWidth = 72.dp, minHeight = 32.dp)
+                        .clip(CircleShape)
                         .background(
                             color = if (isSelected) colors.primary else Color.Transparent,
                             shape = CircleShape
                         )
-                        .clickable { selectedTab = index },
+                        .clickable { selectedTab = index }
+                        .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,14 +139,16 @@ fun DateTimePicker(
                             imageVector = if (index == 0) Icons.Default.DateRange else Icons.Default.Info,
                             contentDescription = null,
                             tint = if (isSelected) colors.onPrimary else colors.textSecondary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(IconSize.IconXs)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
                         Text(
                             text = label,
                             color = if (isSelected) colors.onPrimary else colors.textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -142,22 +158,22 @@ fun DateTimePicker(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(
+        properties = DialogProperties(
             usePlatformDefaultWidth = false
         )
     ) {
         if (isLandscape) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(ComponentDimens.DialogCornerRadius),
                 color = colors.surface,
                 modifier = Modifier
-                    .widthIn(min = 390.dp, max = 420.dp)
+                    .widthIn(max = (windowInfo.normalizedWidthDp * 0.85f).dp.coerceAtMost(460.dp))
                     .wrapContentHeight()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceXs)
                 ) {
                     // Top Bar: Tabs on the left, Cancel/OK on the right
                     Row(
@@ -170,29 +186,32 @@ fun DateTimePicker(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
                                 onClick = onDismiss,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX2s)
                             ) {
-                                Text("Cancel", color = colors.textSecondary, fontSize = 13.sp)
+                                Text("Cancel", color = colors.textSecondary, style = MaterialTheme.typography.labelLarge)
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Button(
+                            Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
+                            AppCompactPillButton(
                                 onClick = onConfirm,
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                                shape = RoundedCornerShape(8.dp)
+                                contentPadding = PaddingValues(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
                             ) {
-                                Text("OK", color = colors.onPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(
+                                    text = "OK",
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
 
                     // Content Area: Calendar or Time Picker matching length/width
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(260.dp),
+                            .heightIn(max = (windowInfo.normalizedHeightDp * 0.76f).dp.coerceAtMost(280.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (selectedTab == 0) {
@@ -221,20 +240,22 @@ fun DateTimePicker(
         } else {
             // Portrait mode
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(ComponentDimens.DialogCornerRadius),
                 color = colors.surface,
                 modifier = Modifier
+                    .widthIn(max = 360.dp)
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = Spacing.SpaceLg)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .verticalScroll(rememberScrollState())
+                        .padding(Spacing.SpaceLg),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     tabSwitcher()
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -284,21 +305,26 @@ fun DateTimePicker(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Spacing.SpaceLg))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel", color = colors.textSecondary)
+                            Text("Cancel", color = colors.textSecondary, style = MaterialTheme.typography.labelLarge)
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
+                        Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                        AppPrimaryButton(
                             onClick = onConfirm,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                            contentPadding = PaddingValues(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceXs)
                         ) {
-                            Text("OK", color = colors.onPrimary, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "OK",
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 }
@@ -337,6 +363,7 @@ private fun LandscapeTimePicker(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val windowInfo = AppTheme.windowInfo
     val isMinute = isMinuteMode
     val isAfternoon = selectedHour >= 12
     val displayHour = remember(selectedHour) {
@@ -354,11 +381,11 @@ private fun LandscapeTimePicker(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(end = 16.dp)
+            modifier = Modifier.padding(end = Spacing.SpaceLg)
         ) {
             // Hour Box
             Surface(
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(Radius.RadiusMd),
                 color = if (!isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
@@ -367,7 +394,7 @@ private fun LandscapeTimePicker(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = displayHour.toString().padStart(2, '0'),
-                        fontSize = 22.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = if (!isMinute) colors.onPrimary else colors.textPrimary
                     )
@@ -376,15 +403,15 @@ private fun LandscapeTimePicker(
 
             Text(
                 text = ":",
-                fontSize = 18.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary,
-                modifier = Modifier.padding(vertical = 2.dp)
+                modifier = Modifier.padding(vertical = Spacing.SpaceX3s)
             )
 
             // Minute Box
             Surface(
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(Radius.RadiusMd),
                 color = if (isMinute) colors.primary else colors.surfaceVariant,
                 modifier = Modifier
                     .size(width = 58.dp, height = 46.dp)
@@ -393,30 +420,31 @@ private fun LandscapeTimePicker(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = displayMinute.toString().padStart(2, '0'),
-                        fontSize = 22.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = if (isMinute) colors.onPrimary else colors.textPrimary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXs))
 
             // AM / PM Toggle Stack
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(Radius.RadiusSm),
                 color = colors.surface,
-                border = BorderStroke(1.dp, colors.divider),
+                border = BorderStroke(Border.WidthThin, colors.divider),
                 modifier = Modifier.width(58.dp)
             ) {
-                Column(modifier = Modifier.padding(2.dp)) {
+                Column(modifier = Modifier.padding(Spacing.SpaceX3s)) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(24.dp)
+                            .clip(RoundedCornerShape(Radius.RadiusXs))
                             .background(
                                 color = if (!isAfternoon) colors.primaryContainer else Color.Transparent,
-                                shape = RoundedCornerShape(6.dp)
+                                shape = RoundedCornerShape(Radius.RadiusXs)
                             )
                             .clickable {
                                 if (isAfternoon) {
@@ -427,19 +455,20 @@ private fun LandscapeTimePicker(
                     ) {
                         Text(
                             text = "AM",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (!isAfternoon) colors.primary else colors.textSecondary
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(Spacing.SpaceX3s))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(24.dp)
+                            .clip(RoundedCornerShape(Radius.RadiusXs))
                             .background(
                                 color = if (isAfternoon) colors.primaryContainer else Color.Transparent,
-                                shape = RoundedCornerShape(6.dp)
+                                shape = RoundedCornerShape(Radius.RadiusXs)
                             )
                             .clickable {
                                 if (!isAfternoon) {
@@ -450,7 +479,7 @@ private fun LandscapeTimePicker(
                     ) {
                         Text(
                             text = "PM",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (isAfternoon) colors.primary else colors.textSecondary
                         )
@@ -459,13 +488,15 @@ private fun LandscapeTimePicker(
             }
         }
 
-        // Analog Clock Face (Round, fits inside dial with no clipping)
-        val dialSize = 232.dp
+        // Analog Clock Face (Round, proportional to screen height, never clipped)
+        val dialSize = (windowInfo.normalizedHeightDp * 0.56f).dp.coerceIn(176.dp, 232.dp)
         val density = LocalDensity.current
         val dialSizePx = with(density) { dialSize.toPx() }
         val centerOffsetPx = dialSizePx / 2f
-        val numbersRadiusPx = with(density) { ((dialSize / 2) - 24.dp).toPx() }
-        val selectorRadiusPx = with(density) { 17.dp.toPx() }
+        val numbersRadiusPx = dialSizePx * 0.396f
+        val selectorRadiusPx = dialSizePx * 0.073f
+        val numberBoxSize = dialSize * 0.146f
+        val numberBoxHalfPx = with(density) { (numberBoxSize / 2f).toPx() }
         val centerDotRadiusPx = with(density) { 4.dp.toPx() }
         val handStrokeWidthPx = with(density) { 2.dp.toPx() }
         val smallDotRadiusPx = with(density) { 2.5f.dp.toPx() }
@@ -581,18 +612,18 @@ private fun LandscapeTimePicker(
 
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(numberBoxSize)
                             .offset {
                                 IntOffset(
-                                    x = (nx - with(density) { 17.dp.toPx() }).roundToInt(),
-                                    y = (ny - with(density) { 17.dp.toPx() }).roundToInt()
+                                    x = (nx - numberBoxHalfPx).roundToInt(),
+                                    y = (ny - numberBoxHalfPx).roundToInt()
                                 )
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = h.toString(),
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) colors.onPrimary else colors.textPrimary
                         )
@@ -608,18 +639,18 @@ private fun LandscapeTimePicker(
 
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(numberBoxSize)
                             .offset {
                                 IntOffset(
-                                    x = (nx - with(density) { 17.dp.toPx() }).roundToInt(),
-                                    y = (ny - with(density) { 17.dp.toPx() }).roundToInt()
+                                    x = (nx - numberBoxHalfPx).roundToInt(),
+                                    y = (ny - numberBoxHalfPx).roundToInt()
                                 )
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = m.toString().padStart(2, '0'),
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) colors.onPrimary else colors.textPrimary
                         )

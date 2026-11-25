@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -134,7 +133,7 @@ fun EntryCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceXs))
 
             // 2. Body Layout (Column)
             Column(
@@ -143,10 +142,10 @@ fun EntryCard(
                 // Image Preview Row (render up to 4 thumbnails in fixed 44dp square horizontal row)
                 if (entry.mediaThumbnails.isNotEmpty()) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 6.dp)
+                            .padding(bottom = Spacing.SpaceXs)
                     ) {
                         val imagesToShow = entry.mediaThumbnails.take(4)
                         imagesToShow.forEach { imagePath ->
@@ -165,7 +164,7 @@ fun EntryCard(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(RoundedCornerShape(Radius.RadiusSm))
                                         .background(colors.surfaceVariant)
                                         .clickable { onImageClick(imagePath) }
                                 )
@@ -183,10 +182,9 @@ fun EntryCard(
                         color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 18.sp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 4.dp)
+                            .padding(bottom = Spacing.SpaceX2s)
                     )
                 }
 
@@ -194,10 +192,10 @@ fun EntryCard(
                 val tracksToRender = entry.allAudioTracks.take(3)
                 if (tracksToRender.isNotEmpty()) {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 2.dp)
+                            .padding(top = Spacing.SpaceX3s)
                     ) {
                         tracksToRender.forEach { track ->
                             val isTrackActive = activeTrackId == track.id

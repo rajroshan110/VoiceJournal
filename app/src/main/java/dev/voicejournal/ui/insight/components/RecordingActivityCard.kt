@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,15 +15,19 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.DailyActivityCount
 import dev.voicejournal.domain.usecase.TimePeriod
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.util.Locale
 
 @Composable
@@ -37,15 +42,16 @@ fun RecordingActivityCard(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val labelFontSize = MaterialTheme.typography.labelSmall.fontSize
     val periodLabel = if (period == TimePeriod.WEEK) "this week" else "this month"
     val accessibilityDesc = "Bar chart showing recording frequency. Total $totalEntries entries $periodLabel, highest activity on $peakDay with $peakCount entries."
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .background(colors.surface)
-            .padding(16.dp)
+            .padding(Spacing.SpaceLg)
             .semantics { contentDescription = accessibilityDesc }
     ) {
         // Header
@@ -57,27 +63,33 @@ fun RecordingActivityCard(
             Text(
                 text = "Recording Activity",
                 color = colors.textPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
+
+            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
 
             // Total Badge
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Radius.RadiusMd))
                     .background(colors.primaryContainer)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
             ) {
                 Text(
                     text = "$totalEntries entries",
                     color = colors.primary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelMedium.tabularNumbers(),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
         // Chart Area: Custom Canvas Graph without Gridlines
         if (dailyCounts.isEmpty() || totalEntries == 0) {
@@ -90,14 +102,14 @@ fun RecordingActivityCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp),
+                    .background(colors.surfaceVariant, RoundedCornerShape(Radius.RadiusMd))
+                    .padding(horizontal = Spacing.SpaceLg),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = emptyMessage,
                     color = colors.textSecondary,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
             }
@@ -111,7 +123,7 @@ fun RecordingActivityCard(
             ) {
                 val primaryColor = colors.primary
                 val surfaceVariant = colors.surfaceVariant
-                val textSecondary = colors.textSecondary
+                val textSecondaryArgb = colors.textSecondary.toArgb()
 
                 Canvas(
                     modifier = Modifier.fillMaxSize()
@@ -151,8 +163,8 @@ fun RecordingActivityCard(
                         if (item.count == maxCount && item.count > 0 && period == TimePeriod.WEEK) {
                             drawIntoCanvas { canvas ->
                                 val paint = android.graphics.Paint().apply {
-                                    color = textSecondary.hashCode()
-                                    textSize = 10.sp.toPx()
+                                    color = textSecondaryArgb
+                                    textSize = labelFontSize.toPx()
                                     textAlign = android.graphics.Paint.Align.CENTER
                                     isAntiAlias = true
                                     isFakeBoldText = true
@@ -175,8 +187,8 @@ fun RecordingActivityCard(
                         if (showLabel) {
                             drawIntoCanvas { canvas ->
                                 val paint = android.graphics.Paint().apply {
-                                    color = textSecondary.hashCode()
-                                    textSize = 10.sp.toPx()
+                                    color = textSecondaryArgb
+                                    textSize = labelFontSize.toPx()
                                     textAlign = android.graphics.Paint.Align.CENTER
                                     isAntiAlias = true
                                 }
@@ -193,14 +205,14 @@ fun RecordingActivityCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
         // Footer
         val avgText = String.format(Locale.US, "%.1f", averagePerDay)
         Text(
             text = "Average: $avgText per day · Streak: $activeStreak days 🔥",
             color = colors.textSecondary,
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.bodySmall.tabularNumbers(),
             fontWeight = FontWeight.Medium
         )
     }

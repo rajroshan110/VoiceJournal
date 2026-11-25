@@ -7,22 +7,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.insight.components.*
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
-import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -31,13 +32,14 @@ fun InsightScreen(
     viewModel: InsightViewModel = hiltViewModel()
 ) {
     val colors = AppTheme.colors
+    val windowInfo = AppTheme.windowInfo
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val configuration = LocalConfiguration.current
-    val isWideLayout = configuration.screenWidthDp >= 600
-    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+    val isWideLayout = windowInfo.isWideLayout
+    val isCompactLandscape = windowInfo.isCompactLandscape
 
     Scaffold(
         containerColor = colors.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = { BottomNavBar(navController = navController) }
     ) { paddingValues ->
         Box(
@@ -49,8 +51,10 @@ fun InsightScreen(
             when (val contentState = uiState.contentState) {
                 is InsightsContentState.Loading -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        modifier = Modifier.fillMaxSize()
+                        contentPadding = PaddingValues(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceMd),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .statusBarsPadding()
                     ) {
                         item {
                             InsightsShimmerSkeleton()
@@ -62,41 +66,41 @@ fun InsightScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp),
+                            .statusBarsPadding()
+                            .padding(Spacing.SpaceXl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(Radius.RadiusLg))
                                 .background(colors.surface)
-                                .padding(20.dp),
+                                .padding(Spacing.SpaceLg),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = "Unable to load insights",
                                     color = MaterialTheme.colorScheme.error,
-                                    fontSize = 16.sp,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
                                 Text(
                                     text = contentState.message,
                                     color = colors.textSecondary,
-                                    fontSize = 13.sp
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = { viewModel.retry() },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.primary,
-                                        contentColor = colors.onPrimary
-                                    ),
-                                    modifier = Modifier.height(48.dp)
+                                Spacer(modifier = Modifier.height(Spacing.SpaceLg))
+                                AppPrimaryButton(
+                                    onClick = { viewModel.retry() }
                                 ) {
-                                    Text(text = "Retry", fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = "Retry",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
@@ -108,8 +112,8 @@ fun InsightScreen(
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        contentPadding = PaddingValues(bottom = Spacing.SpaceLg),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)
                     ) {
                         // Minimalistic Sticky Header: Period Selector starts right at top
                         stickyHeader {
@@ -117,18 +121,19 @@ fun InsightScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(colors.background)
+                                    .statusBarsPadding()
                                     .padding(
-                                        start = 16.dp,
-                                        top = if (isCompactLandscape) 2.dp else 6.dp,
-                                        end = 16.dp,
-                                        bottom = if (isCompactLandscape) 2.dp else 4.dp
+                                        start = Spacing.SpaceLg,
+                                        top = if (isCompactLandscape) Spacing.SpaceX3s else 6.dp,
+                                        end = Spacing.SpaceLg,
+                                        bottom = if (isCompactLandscape) Spacing.SpaceX3s else Spacing.SpaceX2s
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 PeriodSelector(
                                     selectedPeriod = uiState.period,
                                     onPeriodSelect = { viewModel.setPeriod(it) },
-                                    modifier = Modifier.widthIn(max = if (isCompactLandscape) 280.dp else androidx.compose.ui.unit.Dp.Unspecified)
+                                    modifier = Modifier.widthIn(max = if (isCompactLandscape) 280.dp else Dp.Unspecified)
                                 )
                             }
                         }

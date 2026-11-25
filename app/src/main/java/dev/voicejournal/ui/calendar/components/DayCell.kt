@@ -5,8 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,9 +16,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.calendar.CalendarDayItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -40,48 +42,55 @@ fun DayCell(
         else -> colors.textPrimary
     }
 
-    val visualSize = if (isCompact) 40.dp else 48.dp
+    val maxVisualSize = if (isCompact) 40.dp else 48.dp
 
     Box(
         modifier = modifier
-            .minimumInteractiveComponentSize()
-            .size(visualSize)
-            .padding(2.dp)
+            .physicalMinTouchTarget()
             .clip(CircleShape)
-            .background(
-                color = if (dayItem.isSelected) colors.primary else Color.Transparent,
-                shape = CircleShape
-            )
-            .border(
-                width = if (dayItem.isToday && !dayItem.isSelected) 1.5.dp else 0.dp,
-                color = if (dayItem.isToday) colors.primary else Color.Transparent,
-                shape = CircleShape
-            )
             .clickable { onClick() }
             .semantics {
                 contentDescription = accessibilityDescription
             },
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = dayItem.date.dayOfMonth.toString(),
-                color = textColor,
-                fontSize = 13.sp,
-                fontWeight = if (dayItem.isToday || dayItem.isSelected) FontWeight.Bold else FontWeight.Normal
-            )
-
-            // Single Entry Indicator Dot
-            if (count > 0 && !dayItem.isSelected) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .background(colors.primary, CircleShape)
+        Box(
+            modifier = Modifier
+                .sizeIn(minWidth = 36.dp, minHeight = 36.dp, maxWidth = maxVisualSize, maxHeight = maxVisualSize)
+                .aspectRatio(1f)
+                .padding(Spacing.SpaceX3s)
+                .clip(CircleShape)
+                .background(
+                    color = if (dayItem.isSelected) colors.primary else Color.Transparent,
+                    shape = CircleShape
                 )
+                .border(
+                    width = if (dayItem.isToday && !dayItem.isSelected) 1.5.dp else 0.dp,
+                    color = if (dayItem.isToday) colors.primary else Color.Transparent,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = dayItem.date.dayOfMonth.toString(),
+                    color = textColor,
+                    style = MaterialTheme.typography.bodySmall.tabularNumbers(),
+                    fontWeight = if (dayItem.isToday || dayItem.isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+
+                // Single Entry Indicator Dot
+                if (count > 0 && !dayItem.isSelected) {
+                    Spacer(modifier = Modifier.height(Spacing.SpaceX3s))
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(colors.primary, CircleShape)
+                    )
+                }
             }
         }
     }

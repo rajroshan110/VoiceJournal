@@ -10,13 +10,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.ui.calendar.CalendarDayItem
 import dev.voicejournal.ui.calendar.CalendarUtils
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -52,13 +51,13 @@ fun CalendarMonthPager(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp)
+            .padding(vertical = Spacing.SpaceX3s)
     ) {
         // Header Row: Days of Week (Mon, Tue, Wed...) - Fixed at top of calendar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 2.dp),
+                .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX3s),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             dayLabels.forEach { label ->
@@ -67,7 +66,6 @@ fun CalendarMonthPager(
                     style = MaterialTheme.typography.labelMedium,
                     color = colors.textSecondary,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
@@ -79,7 +77,7 @@ fun CalendarMonthPager(
             state = pagerState,
             modifier = Modifier.fillMaxWidth(),
             key = { page -> page },
-            pageSpacing = 16.dp,
+            pageSpacing = Spacing.SpaceLg,
             beyondViewportPageCount = 1
         ) { page ->
             val pageYearMonth = remember(page) {
@@ -109,7 +107,7 @@ fun CalendarMonthPager(
                 showWeekHeader = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = Spacing.SpaceMd)
             )
         }
     }

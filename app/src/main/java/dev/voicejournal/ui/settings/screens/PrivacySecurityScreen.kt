@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
@@ -92,7 +91,6 @@ fun PrivacySecurityScreen(
                             Text(
                                 text = "App Lock",
                                 color = colors.textPrimary,
-                                fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.titleMedium
                             )
@@ -100,7 +98,6 @@ fun PrivacySecurityScreen(
                             Text(
                                 text = appLockSubtitle,
                                 color = colors.textSecondary,
-                                fontSize = 13.sp,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -142,7 +139,6 @@ fun PrivacySecurityScreen(
                             Text(
                                 text = "Screen Privacy",
                                 color = colors.textPrimary,
-                                fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.titleMedium
                             )
@@ -150,7 +146,6 @@ fun PrivacySecurityScreen(
                             Text(
                                 text = "Prevent screenshots and hide app content in recents",
                                 color = colors.textSecondary,
-                                fontSize = 13.sp,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

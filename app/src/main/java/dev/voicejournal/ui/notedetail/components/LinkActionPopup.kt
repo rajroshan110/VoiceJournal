@@ -17,8 +17,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.components.buttons.AppCircleIconButton
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
 
@@ -73,22 +76,22 @@ fun LinkActionPopup(
 
             Surface(
                 color = colors.surfaceVariant,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Radius.RadiusMd),
                 shadowElevation = 4.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX2s)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = url,
                         color = colors.primary,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -97,29 +100,34 @@ fun LinkActionPopup(
                             .clickable { openExternalLink(context, url) }
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.SpaceXs))
 
-                    IconButton(
+                    AppCircleIconButton(
                         onClick = { openExternalLink(context, url) },
-                        modifier = Modifier.size(32.dp)
+                        visualSize = 32.dp,
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        contentColor = colors.primary,
+                        contentDescription = "Open Link"
                     ) {
                         Text(
                             text = "↗",
                             color = colors.primary,
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    IconButton(
+                    AppCircleIconButton(
                         onClick = onEditLink,
-                        modifier = Modifier.size(32.dp)
+                        visualSize = 32.dp,
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        contentColor = colors.textPrimary,
+                        contentDescription = "Edit Link"
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Link",
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = null,
+                            modifier = Modifier.size(IconSize.IconSm)
                         )
                     }
                 }

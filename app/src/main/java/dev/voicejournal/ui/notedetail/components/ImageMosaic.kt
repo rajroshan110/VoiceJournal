@@ -23,6 +23,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.io.File
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -36,11 +39,18 @@ fun ImageMosaic(
 ) {
     if (images.isEmpty()) return
 
+    val windowInfo = AppTheme.windowInfo
+    val mosaicHeight = if (windowInfo.isCompactLandscape) {
+        (windowInfo.normalizedHeightDp * 0.42f).dp.coerceIn(140.dp, 200.dp)
+    } else {
+        (windowInfo.normalizedHeightDp * 0.28f).dp.coerceIn(170.dp, 260.dp)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(mosaicHeight)
+            .clip(RoundedCornerShape(Radius.RadiusLg))
     ) {
         when (images.size) {
             1 -> {

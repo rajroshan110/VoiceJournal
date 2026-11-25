@@ -1,31 +1,36 @@
 package dev.voicejournal.ui.journal.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
-import dev.voicejournal.domain.model.Tag
-import dev.voicejournal.domain.model.TagType
-import dev.voicejournal.ui.components.getFolderIcon
-import dev.voicejournal.ui.components.getTagIcon
-import dev.voicejournal.ui.designsystem.theme.AppTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.voicejournal.domain.model.Tag
+import dev.voicejournal.domain.model.TagType
+import dev.voicejournal.ui.components.getFolderIcon
+import dev.voicejournal.ui.components.getTagIcon
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppModalBottomSheet
+import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -43,6 +48,7 @@ fun BatchCategorizeSheet(
     onDismissRequest: () -> Unit
 ) {
     val colors = AppTheme.colors
+    val maxListHeight = (AppTheme.windowInfo.normalizedHeightDp * 0.40f).dp.coerceIn(200.dp, 340.dp)
 
     val enabledTabs = remember(isFolderEnabled, isTopicsEnabled, isPeopleEnabled) {
         buildList {
@@ -88,26 +94,27 @@ fun BatchCategorizeSheet(
     }
     var newPersonInput by rememberSaveable { mutableStateOf("") }
 
-    ModalBottomSheet(
+    AppModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        containerColor = colors.secondaryBackground,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        containerColor = colors.secondaryBackground
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp)
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = Spacing.SpaceLg)
+                .padding(bottom = Spacing.SpaceXl)
         ) {
             // Header Title & Close
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = Spacing.SpaceMd),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Organise Notes",
                         style = MaterialTheme.typography.titleMedium,
@@ -120,8 +127,15 @@ fun BatchCategorizeSheet(
                         color = colors.textSecondary
                     )
                 }
-                IconButton(onClick = onDismissRequest) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary)
+                IconButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.physicalMinTouchTarget()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = colors.textSecondary
+                    )
                 }
             }
 
@@ -132,20 +146,28 @@ fun BatchCategorizeSheet(
                     selectedTabIndex = selectedTabIndex,
                     containerColor = colors.surfaceVariant,
                     contentColor = colors.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = Spacing.SpaceLg)
                 ) {
                     enabledTabs.forEach { (tabIndex, title) ->
                         val isSelected = activeTab == tabIndex
                         Tab(
                             selected = isSelected,
                             onClick = { activeTab = tabIndex },
-                            text = { Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
+                            text = {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
                             icon = {
                                 val iconColor = if (isSelected) colors.primary else colors.textSecondary
                                 when (tabIndex) {
-                                    0 -> Icon(getFolderIcon(iconColor), contentDescription = null, modifier = Modifier.size(18.dp))
-                                    1 -> Icon(getTagIcon(iconColor), contentDescription = null, modifier = Modifier.size(18.dp))
-                                    else -> Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    0 -> Icon(getFolderIcon(iconColor), contentDescription = null, modifier = Modifier.size(IconSize.IconSm))
+                                    1 -> Icon(getTagIcon(iconColor), contentDescription = null, modifier = Modifier.size(IconSize.IconSm))
+                                    else -> Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(IconSize.IconSm))
                                 }
                             }
                         )
@@ -157,21 +179,21 @@ fun BatchCategorizeSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 300.dp)
+                    .heightIn(max = maxListHeight)
                     .verticalScroll(rememberScrollState())
             ) {
                 if (enabledTabs.isEmpty() || activeTab == -1) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No tag categories are currently enabled.\nEnable Folders, Topics, or People in Settings → Tag Organiser.",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = colors.textSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            fontSize = 14.sp
+                            textAlign = TextAlign.Center
                         )
                     }
                 } else {
@@ -182,278 +204,266 @@ fun BatchCategorizeSheet(
                                 text = "Assign to Folder",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = colors.textSecondary,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                modifier = Modifier.padding(bottom = Spacing.SpaceXs)
                             )
 
                             // Folder List
-                        availableFolders.distinct().forEach { folderName ->
-                            val isSelected = selectedFolder == folderName
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) colors.primary.copy(alpha = 0.15f) else colors.surface,
-                                border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.divider),
+                            availableFolders.distinct().forEach { folderName ->
+                                val isSelected = selectedFolder == folderName
+                                Surface(
+                                    onClick = {
+                                        selectedFolder = if (isSelected) null else folderName
+                                    },
+                                    shape = RoundedCornerShape(Radius.RadiusMd),
+                                    color = if (isSelected) colors.primary.copy(alpha = 0.15f) else colors.surface,
+                                    border = BorderStroke(Border.WidthThin, if (isSelected) colors.primary else colors.divider),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = Spacing.SpaceX2s)
+                                        .defaultMinSize(minHeight = ComponentDimens.ButtonMinHeight)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceMd),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                getFolderIcon(if (isSelected) colors.primary else colors.textSecondary),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(IconSize.IconMd)
+                                            )
+                                            Spacer(modifier = Modifier.width(Spacing.SpaceMd))
+                                            Text(
+                                                text = folderName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = colors.textPrimary,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        }
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = colors.primary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add Custom Folder Input
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clickable {
-                                        selectedFolder = if (isSelected) null else folderName
-                                    }
+                                    .padding(top = Spacing.SpaceMd),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            getFolderIcon(if (isSelected) colors.primary else colors.textSecondary),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
+                                OutlinedTextField(
+                                    value = customFolderInput,
+                                    onValueChange = { customFolderInput = it },
+                                    placeholder = {
                                         Text(
-                                            text = folderName,
-                                            color = colors.textPrimary,
-                                            fontSize = 14.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            text = "New folder name...",
+                                            style = MaterialTheme.typography.bodyMedium
                                         )
-                                    }
-                                    if (isSelected) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = colors.primary)
-                                    }
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = colors.primary,
+                                        unfocusedBorderColor = colors.divider
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                                AppPrimaryButton(
+                                    onClick = {
+                                        if (customFolderInput.isNotBlank()) {
+                                            selectedFolder = customFolderInput.trim()
+                                            customFolderInput = ""
+                                        }
+                                    },
+                                    enabled = customFolderInput.isNotBlank()
+                                ) {
+                                    Text(
+                                        text = "Add",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
                                 }
                             }
                         }
 
-                        // Add Custom Folder Input
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = customFolderInput,
-                                onValueChange = { customFolderInput = it },
-                                placeholder = { Text("New folder name...", fontSize = 13.sp) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = colors.primary,
-                                    unfocusedBorderColor = colors.divider
-                                ),
-                                modifier = Modifier.weight(1f)
+                        // TAB 1: TOPICS (#tags)
+                        1 -> {
+                            Text(
+                                text = "Add Topic Tags",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(bottom = Spacing.SpaceXs)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    if (customFolderInput.isNotBlank()) {
-                                        selectedFolder = customFolderInput.trim()
-                                        customFolderInput = ""
-                                    }
-                                },
-                                enabled = customFolderInput.isNotBlank()
+
+                            // Existing Topic Chips (Compact Fit)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Add")
-                            }
-                        }
-                    }
+                                availableTags.filter { it.type == TagType.TOPIC }
+                                    .distinctBy { it.name.trim().trimStart('#', '@').trim().lowercase() }
+                                    .forEach { tag ->
+                                        val cleanName = tag.name.trim().trimStart('#', '@').trim()
+                                        val isSelected = selectedTopics.any { it.equals(cleanName, ignoreCase = true) }
 
-                    // TAB 1: TOPICS (#tags)
-                    1 -> {
-                        Text(
-                            text = "Add Topic Tags",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.textSecondary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        // Existing Topic Chips (Compact Fit)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            availableTags.filter { it.type == TagType.TOPIC }
-                                .distinctBy { it.name.trim().trimStart('#', '@').trim().lowercase() }
-                                .forEach { tag ->
-                                val cleanName = tag.name.trim().trimStart('#', '@').trim()
-                                val isSelected = selectedTopics.any { it.equals(cleanName, ignoreCase = true) }
-
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = if (isSelected) colors.primary else colors.surface,
-                                    border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.divider),
-                                    modifier = Modifier
-                                        .clickable {
-                                            val existing = selectedTopics.firstOrNull { it.equals(cleanName, ignoreCase = true) }
-                                            if (existing != null) {
-                                                selectedTopics.removeAll { it.equals(cleanName, ignoreCase = true) }
-                                            } else {
-                                                selectedTopics.add(cleanName)
+                                        BatchTagSelectionChip(
+                                            label = cleanName,
+                                            isSelected = isSelected,
+                                            onClick = {
+                                                val existing = selectedTopics.firstOrNull { it.equals(cleanName, ignoreCase = true) }
+                                                if (existing != null) {
+                                                    selectedTopics.removeAll { it.equals(cleanName, ignoreCase = true) }
+                                                } else {
+                                                    selectedTopics.add(cleanName)
+                                                }
                                             }
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (isSelected) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = colors.onPrimary,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                        }
-                                        Text(
-                                            text = cleanName,
-                                            fontSize = 13.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) colors.onPrimary else colors.textPrimary
                                         )
                                     }
+                            }
+
+                            // Add Custom Topic Tag Input
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = Spacing.SpaceMd),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = newTopicInput,
+                                    onValueChange = { newTopicInput = it },
+                                    placeholder = {
+                                        Text(
+                                            text = "New topic...",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = colors.primary,
+                                        unfocusedBorderColor = colors.divider
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                                AppPrimaryButton(
+                                    onClick = {
+                                        val clean = newTopicInput.trim().trimStart('#', '@').trim()
+                                        if (clean.isNotBlank()) {
+                                            val existing = selectedTopics.firstOrNull { it.equals(clean, ignoreCase = true) }
+                                            if (existing == null) selectedTopics.add(clean)
+                                            newTopicInput = ""
+                                        }
+                                    },
+                                    enabled = newTopicInput.isNotBlank()
+                                ) {
+                                    Text(
+                                        text = "Add",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
                                 }
                             }
                         }
 
-                        // Add Custom Topic Tag Input
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = newTopicInput,
-                                onValueChange = { newTopicInput = it },
-                                placeholder = { Text("New topic...", fontSize = 13.sp) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = colors.primary,
-                                    unfocusedBorderColor = colors.divider
-                                ),
-                                modifier = Modifier.weight(1f)
+                        // TAB 2: PEOPLE (@mentions)
+                        2 -> {
+                            Text(
+                                text = "Tag People",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(bottom = Spacing.SpaceXs)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    val clean = newTopicInput.trim().trimStart('#', '@').trim()
-                                    if (clean.isNotBlank()) {
-                                        val existing = selectedTopics.firstOrNull { it.equals(clean, ignoreCase = true) }
-                                        if (existing == null) selectedTopics.add(clean)
-                                        newTopicInput = ""
-                                    }
-                                },
-                                enabled = newTopicInput.isNotBlank()
+
+                            // Existing People Chips (Compact Fit)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Add")
-                            }
-                        }
-                    }
+                                availablePeople
+                                    .map { it.trim().trimStart('#', '@').trim() }
+                                    .filter { it.isNotBlank() }
+                                    .distinctBy { it.lowercase() }
+                                    .forEach { cleanName ->
+                                        val isSelected = selectedPeople.any { it.equals(cleanName, ignoreCase = true) }
 
-                    // TAB 2: PEOPLE (@mentions)
-                    2 -> {
-                        Text(
-                            text = "Tag People",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.textSecondary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        // Existing People Chips (Compact Fit)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            availablePeople
-                                .map { it.trim().trimStart('#', '@').trim() }
-                                .filter { it.isNotBlank() }
-                                .distinctBy { it.lowercase() }
-                                .forEach { cleanName ->
-                                val isSelected = selectedPeople.any { it.equals(cleanName, ignoreCase = true) }
-
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = if (isSelected) colors.primary else colors.surface,
-                                    border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.divider),
-                                    modifier = Modifier
-                                        .clickable {
-                                            val existing = selectedPeople.firstOrNull { it.equals(cleanName, ignoreCase = true) }
-                                            if (existing != null) {
-                                                selectedPeople.removeAll { it.equals(cleanName, ignoreCase = true) }
-                                            } else {
-                                                selectedPeople.add(cleanName)
+                                        BatchTagSelectionChip(
+                                            label = cleanName,
+                                            isSelected = isSelected,
+                                            onClick = {
+                                                val existing = selectedPeople.firstOrNull { it.equals(cleanName, ignoreCase = true) }
+                                                if (existing != null) {
+                                                    selectedPeople.removeAll { it.equals(cleanName, ignoreCase = true) }
+                                                } else {
+                                                    selectedPeople.add(cleanName)
+                                                }
                                             }
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (isSelected) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = colors.onPrimary,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                        }
-                                        Text(
-                                            text = cleanName,
-                                            fontSize = 13.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) colors.onPrimary else colors.textPrimary
                                         )
                                     }
-                                }
                             }
-                        }
 
-                        // Add Custom Person Input
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = newPersonInput,
-                                onValueChange = { newPersonInput = it },
-                                placeholder = { Text("New person...", fontSize = 13.sp) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = colors.primary,
-                                    unfocusedBorderColor = colors.divider
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    val clean = newPersonInput.trim().trimStart('#', '@').trim()
-                                    if (clean.isNotBlank()) {
-                                        val existing = selectedPeople.firstOrNull { it.equals(clean, ignoreCase = true) }
-                                        if (existing == null) selectedPeople.add(clean)
-                                        newPersonInput = ""
-                                    }
-                                },
-                                enabled = newPersonInput.isNotBlank()
+                            // Add Custom Person Input
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = Spacing.SpaceMd),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Add")
+                                OutlinedTextField(
+                                    value = newPersonInput,
+                                    onValueChange = { newPersonInput = it },
+                                    placeholder = {
+                                        Text(
+                                            text = "New person...",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = colors.primary,
+                                        unfocusedBorderColor = colors.divider
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                                AppPrimaryButton(
+                                    onClick = {
+                                        val clean = newPersonInput.trim().trimStart('#', '@').trim()
+                                        if (clean.isNotBlank()) {
+                                            val existing = selectedPeople.firstOrNull { it.equals(clean, ignoreCase = true) }
+                                            if (existing == null) selectedPeople.add(clean)
+                                            newPersonInput = ""
+                                        }
+                                    },
+                                    enabled = newPersonInput.isNotBlank()
+                                ) {
+                                    Text(
+                                        text = "Add",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
             // Action Apply Button
-            Button(
+            AppPrimaryButton(
                 onClick = {
                     val topicTagsToAssign = if (isTopicsEnabled) selectedTopics.map { Tag(name = it, type = TagType.TOPIC) } else emptyList()
                     val personTagsToAssign = if (isPeopleEnabled) selectedPeople.map { Tag(name = it, type = TagType.PERSON) } else emptyList()
@@ -487,18 +497,53 @@ fun BatchCategorizeSheet(
                     )
                 },
                 enabled = enabledTabs.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "Apply Changes to $selectedCount Note${if (selectedCount > 1) "s" else ""}",
-                    color = colors.onPrimary,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BatchTagSelectionChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AppTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(Radius.RadiusPill),
+        color = if (isSelected) colors.primary else colors.surface,
+        border = BorderStroke(Border.WidthThin, if (isSelected) colors.primary else colors.divider),
+        modifier = Modifier.defaultMinSize(minHeight = ComponentDimens.ChipMinHeight)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colors.onPrimary,
+                    modifier = Modifier.size(IconSize.IconXs)
+                )
+                Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) colors.onPrimary else colors.textPrimary
+            )
         }
     }
 }

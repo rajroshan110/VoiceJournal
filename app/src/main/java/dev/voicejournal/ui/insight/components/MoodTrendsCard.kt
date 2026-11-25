@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,16 +16,19 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.DailyMoodPoint
 import dev.voicejournal.domain.usecase.MoodMetric
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.util.Locale
 
 // 5 Canonical Emojis used in VoiceJournal filter & note detail (ordered top to bottom: 5 to 1)
@@ -47,6 +51,7 @@ private fun emojiToScore(emoji: String): Float {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MoodTrendsCard(
     dominantMood: MoodMetric?,
@@ -55,6 +60,8 @@ fun MoodTrendsCard(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val emojiFontSize = MaterialTheme.typography.bodyMedium.fontSize
+    val labelFontSize = MaterialTheme.typography.labelSmall.fontSize
 
     val dominantMoodName = dominantMood?.name ?: "No Data"
     val percentageStr = if (dominantMood != null) String.format(Locale.US, "%.0f", dominantMood.percentage) else "0"
@@ -63,9 +70,9 @@ fun MoodTrendsCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .background(colors.surface)
-            .padding(16.dp)
+            .padding(Spacing.SpaceLg)
             .semantics { contentDescription = accessibilityDesc }
     ) {
         // Header
@@ -77,29 +84,34 @@ fun MoodTrendsCard(
             Text(
                 text = "Mood Over Time",
                 color = colors.textPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
 
             // Dominant Chip Header
             dominantMood?.let { mood ->
+                Spacer(modifier = Modifier.width(Spacing.SpaceXs))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Radius.RadiusMd))
                         .background(colors.primaryContainer)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
                 ) {
                     Text(
                         text = "${mood.emoji} ${mood.name}",
                         color = colors.primary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
 
         // Daily Weighted Average Curve Graph Area
         val activePoints = dailyMoodPoints.filter { it.entryEmojis.isNotEmpty() }
@@ -108,13 +120,15 @@ fun MoodTrendsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp)),
+                    .background(colors.surfaceVariant, RoundedCornerShape(Radius.RadiusMd)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "No mood data recorded for this period",
                     color = colors.textSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = Spacing.SpaceLg)
                 )
             }
         } else {
@@ -124,7 +138,7 @@ fun MoodTrendsCard(
                     .height(140.dp)
             ) {
                 val primaryColor = colors.primary
-                val textSecondary = colors.textSecondary
+                val textSecondaryArgb = colors.textSecondary.toArgb()
 
                 Canvas(
                     modifier = Modifier.fillMaxSize()
@@ -146,7 +160,7 @@ fun MoodTrendsCard(
                         val y = topPadding + (idx * levelStep)
                         drawIntoCanvas { canvas ->
                             val paint = android.graphics.Paint().apply {
-                                textSize = 14.sp.toPx()
+                                textSize = emojiFontSize.toPx()
                                 textAlign = android.graphics.Paint.Align.CENTER
                                 isAntiAlias = true
                             }
@@ -250,8 +264,8 @@ fun MoodTrendsCard(
                         if (showLabel) {
                             drawIntoCanvas { canvas ->
                                 val paint = android.graphics.Paint().apply {
-                                    color = textSecondary.hashCode()
-                                    textSize = 10.sp.toPx()
+                                    color = textSecondaryArgb
+                                    textSize = labelFontSize.toPx()
                                     textAlign = android.graphics.Paint.Align.CENTER
                                     isAntiAlias = true
                                 }
@@ -268,31 +282,31 @@ fun MoodTrendsCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
         // Distribution summary chips or placeholder footer
         if (moodDistribution.isNotEmpty()) {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
             ) {
                 moodDistribution.take(3).forEach { mood ->
                     val pct = String.format(Locale.US, "%.0f", mood.percentage)
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .defaultMinSize(minHeight = 28.dp)
+                            .clip(RoundedCornerShape(Radius.RadiusSm))
                             .background(colors.surfaceVariant)
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX2s)
                     ) {
                         Text(
                             text = "${mood.emoji} ${mood.name} $pct%",
                             color = colors.textSecondary,
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall.tabularNumbers(),
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
-                            softWrap = false,
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center
                         )
@@ -303,7 +317,7 @@ fun MoodTrendsCard(
             Text(
                 text = "Track your moods daily with voice notes 🎙️",
                 color = colors.textSecondary,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
             )
         }

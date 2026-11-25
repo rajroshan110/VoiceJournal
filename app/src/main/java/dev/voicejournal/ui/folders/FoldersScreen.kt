@@ -17,19 +17,20 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import dev.voicejournal.ui.components.getCreateNewFolderIcon
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getGridViewIcon
-import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.components.buttons.AppFab
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.folders.components.FolderCardGrid
 import dev.voicejournal.ui.folders.components.FolderCardList
 import dev.voicejournal.ui.components.getListViewIcon
@@ -46,6 +47,7 @@ fun FoldersScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
+    val isWideLayout = AppTheme.windowInfo.isWideLayout
 
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -91,14 +93,20 @@ fun FoldersScreen(
                             modifier = Modifier.weight(1f)
                         )
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {
-                                if (uiState.selectedFolder != null) {
-                                    viewModel.selectFolder(null)
-                                } else {
-                                    navController.popBackStack()
-                                }
-                            }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (uiState.selectedFolder != null) {
+                                        viewModel.selectFolder(null)
+                                    } else {
+                                        navController.popBackStack()
+                                    }
+                                },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
@@ -112,13 +120,19 @@ fun FoldersScreen(
                                 text = uiState.selectedFolder?.name ?: "Folder Manager",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.selectedFolder == null) {
-                                IconButton(onClick = { isSearchVisible = true }) {
+                                IconButton(
+                                    onClick = { isSearchVisible = true },
+                                    modifier = Modifier.physicalMinTouchTarget()
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = "Search Folders",
@@ -126,7 +140,10 @@ fun FoldersScreen(
                                     )
                                 }
 
-                                IconButton(onClick = { viewModel.toggleViewMode() }) {
+                                IconButton(
+                                    onClick = { viewModel.toggleViewMode() },
+                                    modifier = Modifier.physicalMinTouchTarget()
+                                ) {
                                     Icon(
                                         imageVector = if (uiState.isGridView) getListViewIcon(colors.textSecondary) else getGridViewIcon(colors.textSecondary),
                                         contentDescription = "Toggle view mode",
@@ -141,7 +158,7 @@ fun FoldersScreen(
         },
         floatingActionButton = {
             val selectedFolder = uiState.selectedFolder
-            FloatingActionButton(
+            AppFab(
                 onClick = {
                     if (selectedFolder == null) {
                         viewModel.setCreateFolderDialogOpen(true)
@@ -149,8 +166,6 @@ fun FoldersScreen(
                         navController.navigate(Screen.NoteDetail.createRoute(-1L, initialFolder = selectedFolder.name))
                     }
                 },
-                containerColor = colors.primary,
-                contentColor = Color.White,
                 modifier = Modifier.padding(bottom = 8.dp, end = 8.dp)
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = if (selectedFolder == null) "New Folder" else "New Note")
@@ -174,7 +189,7 @@ fun FoldersScreen(
                         modifier = Modifier.fillMaxSize().padding(32.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("📁", fontSize = 48.sp)
+                            Text("📁", style = MaterialTheme.typography.displayMedium)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "No notes in '${selectedFolder.name}'",
@@ -252,7 +267,7 @@ fun FoldersScreen(
                         modifier = Modifier.fillMaxSize().padding(32.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("📁", fontSize = 48.sp)
+                            Text("📁", style = MaterialTheme.typography.displayMedium)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = if (uiState.searchQuery.isBlank()) "No folders created yet" else "No matching folders",
@@ -271,9 +286,8 @@ fun FoldersScreen(
                             )
                             if (uiState.searchQuery.isBlank()) {
                                 Spacer(modifier = Modifier.height(20.dp))
-                                Button(
-                                    onClick = { viewModel.setCreateFolderDialogOpen(true) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                AppPrimaryButton(
+                                    onClick = { viewModel.setCreateFolderDialogOpen(true) }
                                 ) {
                                     Icon(imageVector = Icons.Default.Add, contentDescription = null)
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -284,7 +298,7 @@ fun FoldersScreen(
                     }
                 } else if (uiState.isGridView) {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Fixed(if (isWideLayout) 3 else 2),
                         contentPadding = PaddingValues(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -323,7 +337,7 @@ fun FoldersScreen(
     if (uiState.isCreateFolderDialogOpen) {
         var folderNameInput by rememberSaveable { mutableStateOf("") }
 
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.setCreateFolderDialogOpen(false) },
             title = {
                 Text(
@@ -350,10 +364,9 @@ fun FoldersScreen(
                 )
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = { viewModel.createFolder(folderNameInput) },
-                    enabled = folderNameInput.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                    enabled = folderNameInput.isNotBlank()
                 ) {
                     Text("Create")
                 }
@@ -362,9 +375,7 @@ fun FoldersScreen(
                 TextButton(onClick = { viewModel.setCreateFolderDialogOpen(false) }) {
                     Text("Cancel", color = colors.textSecondary)
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 

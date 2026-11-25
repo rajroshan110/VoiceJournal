@@ -1,5 +1,6 @@
 package dev.voicejournal.ui.designsystem.components
 
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +21,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import kotlinx.coroutines.delay
@@ -89,7 +91,7 @@ fun SearchBar(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
                     tint = colors.textSecondary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSize.IconMd)
                 )
             }
         } else null,
@@ -108,7 +110,7 @@ fun SearchBar(
                         imageVector = Icons.Default.Close,
                         contentDescription = if (textFieldValue.text.isNotEmpty()) "Clear search" else "Close search",
                         tint = colors.textSecondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(IconSize.IconMd)
                     )
                 }
             }
@@ -127,8 +129,9 @@ fun SearchBar(
             focusManager.clearFocus()
             keyboardController?.hide()
         }),
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textPrimary),
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.textPrimary),
         modifier = modifier
+            .defaultMinSize(minHeight = ComponentDimens.SearchBarMinHeight)
             .focusRequester(focusRequester)
             .onFocusChanged { onFocusChanged?.invoke(it.isFocused) }
     )

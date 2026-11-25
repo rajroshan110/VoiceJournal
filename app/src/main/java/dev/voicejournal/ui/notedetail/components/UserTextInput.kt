@@ -11,6 +11,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -26,11 +27,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.renderer.RichTextVisualTransformation
 import kotlinx.coroutines.delay
@@ -122,20 +121,20 @@ fun UserTextInput(
         }
     }
 
+    val responsiveMinHeight = (AppTheme.windowInfo.normalizedHeightDp * 0.38f).dp.coerceIn(200.dp, 350.dp)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 350.dp)
-            .padding(vertical = 4.dp)
+            .defaultMinSize(minHeight = responsiveMinHeight)
+            .padding(vertical = Spacing.SpaceX2s)
             .clipToBounds()
     ) {
         if (richTextState.document.isEmpty) {
             Text(
                 text = "Add your thoughts, questions, or notes...",
                 color = colors.textSecondary,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
-                fontFamily = FontFamily.SansSerif
+                style = MaterialTheme.typography.bodyLarge
             )
         }
         CompositionLocalProvider(
@@ -150,17 +149,14 @@ fun UserTextInput(
                 onTextLayout = { layout ->
                     textLayoutResult = layout
                 },
-                textStyle = TextStyle(
-                    color = colors.textPrimary,
-                    fontSize = 16.sp,
-                    lineHeight = 24.sp,
-                    fontFamily = FontFamily.SansSerif
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = colors.textPrimary
                 ),
                 visualTransformation = visualTransformation,
                 cursorBrush = SolidColor(colors.primary),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = 350.dp)
+                    .defaultMinSize(minHeight = responsiveMinHeight)
                     .bringIntoViewRequester(cursorBringIntoViewRequester)
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState ->

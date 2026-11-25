@@ -14,16 +14,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.motion.MotionSpecs
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 
 /**
  * Circular "Aa" button that triggers transcription for a single audio track.
@@ -42,27 +50,37 @@ fun TranscriptionButton(
 
     Box(
         modifier = modifier
-            .size(34.dp)
-            .background(
-                if (isTranscribing) colors.primary.copy(alpha = 0.5f) else colors.primary,
-                CircleShape
-            )
-            .clickable(enabled = !isTranscribing) { onClick() },
+            .physicalMinTouchTarget()
+            .clip(CircleShape)
+            .semantics {
+                this.contentDescription = if (isTranscribing) "Transcribing audio" else "Toggle or generate transcript"
+            }
+            .clickable(enabled = !isTranscribing, role = Role.Button) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        if (isTranscribing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                color = colors.onPrimary,
-                strokeWidth = 2.dp
-            )
-        } else {
-            Text(
-                text = "Aa",
-                color = colors.onPrimary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(
+                    if (isTranscribing) colors.primary.copy(alpha = 0.5f) else colors.primary,
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isTranscribing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = colors.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = "Aa",
+                    color = colors.onPrimary,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -97,16 +115,16 @@ fun TranscriptSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp)
-                .background(colors.surfaceVariant, RoundedCornerShape(16.dp))
-                .padding(16.dp)
+                .padding(top = Spacing.SpaceXs)
+                .background(colors.surfaceVariant, RoundedCornerShape(Radius.RadiusLg))
+                .padding(Spacing.SpaceLg)
         ) {
             // Top action bar: "Failed in between" (left) & "Regenerate transcript" (right)
             if (onRegenerateClick != null || isTranscriptionFailed) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 6.dp),
+                        .padding(bottom = Spacing.SpaceX2s),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -114,7 +132,7 @@ fun TranscriptSection(
                         Text(
                             text = "Failed in between",
                             color = colors.error,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold
                         )
                     } else {
@@ -124,19 +142,19 @@ fun TranscriptSection(
                     if (onRegenerateClick != null) {
                         TextButton(
                             onClick = onRegenerateClick,
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                            contentPadding = PaddingValues(horizontal = Spacing.SpaceX2s, vertical = Spacing.SpaceX3s)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Regenerate",
                                 tint = colors.primary,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(IconSize.IconXs)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
                             Text(
                                 text = "Regenerate transcript",
                                 color = colors.primary,
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -149,7 +167,7 @@ fun TranscriptSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = Spacing.SpaceXs),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CircularProgressIndicator(
@@ -157,11 +175,11 @@ fun TranscriptSection(
                         color = colors.primary,
                         strokeWidth = 2.dp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.SpaceXs))
                     Text(
                         text = "Generating transcript...",
                         color = colors.textSecondary,
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -171,8 +189,7 @@ fun TranscriptSection(
                 Text(
                     text = transcript,
                     color = colors.textPrimary,
-                    fontSize = 14.sp,
-                    lineHeight = 22.sp
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

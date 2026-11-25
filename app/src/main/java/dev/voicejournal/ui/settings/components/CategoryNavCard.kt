@@ -18,7 +18,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
@@ -76,7 +75,6 @@ fun CategoryNavCard(
                 Text(
                     text = title,
                     color = colors.textPrimary,
-                    fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium
@@ -85,7 +83,6 @@ fun CategoryNavCard(
                 Text(
                     text = subtitle,
                     color = colors.textSecondary,
-                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall

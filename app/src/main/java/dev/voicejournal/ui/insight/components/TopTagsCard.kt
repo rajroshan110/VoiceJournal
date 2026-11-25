@@ -4,16 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.usecase.TagMetric
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 @Composable
 fun TopTagsCard(
@@ -27,18 +31,18 @@ fun TopTagsCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Radius.RadiusLg))
             .background(colors.surface)
-            .padding(16.dp)
+            .padding(Spacing.SpaceLg)
     ) {
         Text(
             text = "Top Tags",
             color = colors.textPrimary,
-            fontSize = 18.sp,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
         if (displayedTags.isEmpty()) {
             Box(
@@ -50,12 +54,12 @@ fun TopTagsCard(
                 Text(
                     text = "No tags recorded yet",
                     color = colors.textSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         } else {
             Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
             ) {
                 displayedTags.forEach { tag ->
                     val plainName = tag.name.removePrefix("#")
@@ -63,45 +67,50 @@ fun TopTagsCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 44.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(Radius.RadiusSm))
                             .clickable { onTagClick(plainName) }
-                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                            .padding(vertical = 6.dp, horizontal = Spacing.SpaceX2s),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = plainName,
                             color = colors.textPrimary,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            modifier = Modifier.widthIn(min = 70.dp, max = 120.dp)
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(0.35f, fill = false)
+                                .widthIn(max = 108.dp)
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.SpaceXs))
 
                         // Progress fill bar
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .height(Spacing.SpaceXs)
+                                .clip(RoundedCornerShape(Radius.RadiusXs))
                                 .background(colors.surfaceVariant)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction = (tag.percentage / 100f).coerceIn(0.05f, 1f))
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(RoundedCornerShape(Radius.RadiusXs))
                                     .background(colors.primary)
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Spacing.SpaceMd))
 
                         Text(
                             text = "${tag.count} ${if (tag.count == 1) "entry" else "entries"}",
                             color = colors.textSecondary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = MaterialTheme.typography.bodySmall.tabularNumbers(),
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
                     }
                 }

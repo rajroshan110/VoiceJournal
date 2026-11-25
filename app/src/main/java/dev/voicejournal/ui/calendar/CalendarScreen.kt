@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,6 +44,8 @@ import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -99,8 +102,8 @@ fun CalendarScreen(
     }
 
 
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+    val windowInfo = AppTheme.windowInfo
+    val isCompactLandscape = windowInfo.isCompactLandscape
 
     var isDatePickerVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -314,8 +317,8 @@ private fun CalendarDatePickerDialog(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val windowInfo = AppTheme.windowInfo
+    val isLandscape = windowInfo.isCompactLandscape || windowInfo.rawWidthDp > windowInfo.rawHeightDp
 
     var selectedEpochDay by rememberSaveable { mutableLongStateOf(initialDate.toEpochDay()) }
     var isYearPickerVisible by rememberSaveable { mutableStateOf(false) }
@@ -345,23 +348,24 @@ private fun CalendarDatePickerDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(ComponentDimens.DialogCornerRadius),
             color = colors.surface,
             tonalElevation = 0.dp,
             shadowElevation = 8.dp,
             modifier = if (isLandscape) {
                 Modifier
-                    .width(520.dp)
-                    .height(316.dp)
-                    .padding(vertical = 4.dp)
+                    .widthIn(max = (windowInfo.normalizedWidthDp * 0.88f).dp.coerceAtMost(540.dp))
+                    .heightIn(max = (windowInfo.normalizedHeightDp * 0.88f).dp.coerceAtMost(340.dp))
+                    .padding(vertical = Spacing.SpaceX2s)
             } else {
                 Modifier
-                    .width(328.dp)
-                    .wrapContentHeight()
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.SpaceLg)
             }
         ) {
             if (isLandscape) {
+                val leftColumnWidth = (windowInfo.normalizedWidthDp * 0.24f).dp.coerceIn(116.dp, 150.dp)
                 // Landscape: Date/Day on LEFT, Calendar on RIGHT simultaneously
                 Row(
                     modifier = Modifier.fillMaxSize()
@@ -369,13 +373,16 @@ private fun CalendarDatePickerDialog(
                     // Left Column: Header (Year + Day/Date)
                     Box(
                         modifier = Modifier
-                            .width(140.dp)
+                            .width(leftColumnWidth)
                             .fillMaxHeight()
                             .background(
                                 colors.surfaceVariant,
-                                RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
+                                RoundedCornerShape(
+                                    topStart = ComponentDimens.DialogCornerRadius,
+                                    bottomStart = ComponentDimens.DialogCornerRadius
+                                )
                             )
-                            .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceMd)
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -384,17 +391,16 @@ private fun CalendarDatePickerDialog(
                             Text(
                                 text = selectedDate.year.toString(),
                                 color = if (isYearPickerVisible) colors.primary else colors.textSecondary,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.clickable { isYearPickerVisible = true }
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
                             Text(
                                 text = selectedDate.format(DateTimeFormatter.ofPattern("EEE,\nd MMM")),
                                 color = if (!isYearPickerVisible) colors.textPrimary else colors.textSecondary,
-                                fontSize = 24.sp,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 30.sp,
                                 modifier = Modifier.clickable { isYearPickerVisible = false }
                             )
                         }
@@ -407,9 +413,12 @@ private fun CalendarDatePickerDialog(
                             .fillMaxHeight()
                             .background(
                                 colors.surface,
-                                RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+                                RoundedCornerShape(
+                                    topEnd = ComponentDimens.DialogCornerRadius,
+                                    bottomEnd = ComponentDimens.DialogCornerRadius
+                                )
                             )
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                            .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceXs),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         CalendarMonthPicker(
@@ -431,30 +440,35 @@ private fun CalendarDatePickerDialog(
             } else {
                 // Portrait: Header on TOP, Calendar in middle, CANCEL / OK at bottom
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
                                 colors.surfaceVariant,
-                                RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                                RoundedCornerShape(
+                                    topStart = ComponentDimens.DialogCornerRadius,
+                                    topEnd = ComponentDimens.DialogCornerRadius
+                                )
                             )
-                            .padding(horizontal = 24.dp, vertical = 18.dp)
+                            .padding(horizontal = Spacing.SpaceXl, vertical = Spacing.SpaceLg)
                     ) {
                         Column {
                             Text(
                                 text = selectedDate.year.toString(),
                                 color = if (isYearPickerVisible) colors.primary else colors.textSecondary,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.clickable { isYearPickerVisible = true }
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
                             Text(
                                 text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM")),
                                 color = if (!isYearPickerVisible) colors.textPrimary else colors.textSecondary,
-                                fontSize = 28.sp,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.clickable { isYearPickerVisible = false }
                             )
@@ -466,9 +480,12 @@ private fun CalendarDatePickerDialog(
                             .fillMaxWidth()
                             .background(
                                 colors.surface,
-                                RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                                RoundedCornerShape(
+                                    bottomStart = ComponentDimens.DialogCornerRadius,
+                                    bottomEnd = ComponentDimens.DialogCornerRadius
+                                )
                             )
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceMd)
                     ) {
                         CalendarMonthPicker(
                             selectedDate = selectedDate,
@@ -480,7 +497,7 @@ private fun CalendarDatePickerDialog(
                             yearGridState = yearGridState
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
                         CalendarActionButtons(
                             onDismiss = onDismiss,
                             onConfirm = onConfirm
@@ -505,25 +522,25 @@ private fun CalendarActionButtons(
     ) {
         TextButton(
             onClick = onDismiss,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
         ) {
             Text(
                 text = "CANCEL",
                 color = colors.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Spacing.SpaceXs))
         TextButton(
             onClick = onConfirm,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX2s)
         ) {
             Text(
                 text = "OK",
                 color = colors.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
         }
     }

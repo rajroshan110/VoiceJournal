@@ -17,11 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -29,6 +28,10 @@ import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.components.getGridViewIcon
 import dev.voicejournal.ui.components.getListViewIcon
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.components.buttons.AppFab
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.folders.components.FolderNoteCard
 import dev.voicejournal.ui.journal.components.LightboxDialog
 import dev.voicejournal.ui.navigation.BottomNavBar
@@ -46,6 +49,7 @@ fun TagsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
+    val isWideLayout = AppTheme.windowInfo.isWideLayout
 
     var selectedLightboxImage by rememberSaveable { mutableStateOf<String?>(null) }
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -96,16 +100,22 @@ fun TagsScreen(
                             modifier = Modifier.weight(1f)
                         )
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {
-                                if (selectedTag != null) {
-                                    viewModel.selectTag(null)
-                                } else if (selectedCategory != null) {
-                                    viewModel.selectCategory(null)
-                                } else {
-                                    navController.popBackStack()
-                                }
-                            }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (selectedTag != null) {
+                                        viewModel.selectTag(null)
+                                    } else if (selectedCategory != null) {
+                                        viewModel.selectCategory(null)
+                                    } else {
+                                        navController.popBackStack()
+                                    }
+                                },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
@@ -126,13 +136,19 @@ fun TagsScreen(
                                 text = headerTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (selectedCategory != null && selectedTag == null) {
-                                IconButton(onClick = { isSearchVisible = true }) {
+                                IconButton(
+                                    onClick = { isSearchVisible = true },
+                                    modifier = Modifier.physicalMinTouchTarget()
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = "Search Tags",
@@ -140,7 +156,10 @@ fun TagsScreen(
                                     )
                                 }
 
-                                IconButton(onClick = { viewModel.toggleViewMode() }) {
+                                IconButton(
+                                    onClick = { viewModel.toggleViewMode() },
+                                    modifier = Modifier.physicalMinTouchTarget()
+                                ) {
                                     Icon(
                                         imageVector = if (uiState.isGridView) getListViewIcon(colors.textSecondary) else getGridViewIcon(colors.textSecondary),
                                         contentDescription = "Toggle view mode",
@@ -155,7 +174,7 @@ fun TagsScreen(
         },
         floatingActionButton = {
             if (selectedCategory != null) {
-                FloatingActionButton(
+                AppFab(
                     onClick = {
                         if (selectedTag != null) {
                             navController.navigate(
@@ -169,8 +188,6 @@ fun TagsScreen(
                             viewModel.setCreateTagDialogOpen(true)
                         }
                     },
-                    containerColor = colors.primary,
-                    contentColor = Color.White,
                     modifier = Modifier.padding(bottom = 8.dp, end = 8.dp)
                 ) {
                     Icon(
@@ -199,7 +216,7 @@ fun TagsScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = if (selectedTag.type == TagType.PERSON) "👤" else "🏷️",
-                                    fontSize = 48.sp
+                                    style = MaterialTheme.typography.displayMedium
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
@@ -235,7 +252,7 @@ fun TagsScreen(
                                     ) {
                                         Text(
                                             text = if (selectedTag.type == TagType.PERSON) "👤" else "🏷️",
-                                            fontSize = 18.sp
+                                            style = MaterialTheme.typography.titleMedium
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
@@ -283,7 +300,7 @@ fun TagsScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = if (selectedCategory == TagType.PERSON) "👤" else "🏷️",
-                                    fontSize = 48.sp
+                                    style = MaterialTheme.typography.displayMedium
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
@@ -303,9 +320,8 @@ fun TagsScreen(
                                 )
                                 if (uiState.searchQuery.isBlank()) {
                                     Spacer(modifier = Modifier.height(20.dp))
-                                    Button(
-                                        onClick = { viewModel.setCreateTagDialogOpen(true) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                    AppPrimaryButton(
+                                        onClick = { viewModel.setCreateTagDialogOpen(true) }
                                     ) {
                                         Icon(imageVector = Icons.Default.Add, contentDescription = null)
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -316,7 +332,7 @@ fun TagsScreen(
                         }
                     } else if (uiState.isGridView) {
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
+                            columns = GridCells.Fixed(if (isWideLayout) 3 else 2),
                             contentPadding = PaddingValues(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -360,9 +376,9 @@ fun TagsScreen(
                         ) {
                             Text(
                                 text = "No tag categories are currently enabled.\nEnable them in Settings → Tag Organiser → Choose Tags.",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = colors.textSecondary,
-                                textAlign = TextAlign.Center,
-                                fontSize = 14.sp
+                                textAlign = TextAlign.Center
                             )
                         }
                     } else {
@@ -406,7 +422,7 @@ fun TagsScreen(
         var tagNameInput by rememberSaveable { mutableStateOf("") }
         val categoryLabel = if (selectedCategory == TagType.TOPIC) "Topic" else "Person"
 
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.setCreateTagDialogOpen(false) },
             title = {
                 Text(
@@ -433,10 +449,9 @@ fun TagsScreen(
                 )
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = { viewModel.createTag(tagNameInput, selectedCategory) },
-                    enabled = tagNameInput.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                    enabled = tagNameInput.isNotBlank()
                 ) {
                     Text("Create")
                 }
@@ -445,9 +460,7 @@ fun TagsScreen(
                 TextButton(onClick = { viewModel.setCreateTagDialogOpen(false) }) {
                     Text("Cancel", color = colors.textSecondary)
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 

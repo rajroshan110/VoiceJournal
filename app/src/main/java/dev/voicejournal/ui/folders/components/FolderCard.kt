@@ -15,10 +15,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.components.getFolderIcon
-import dev.voicejournal.ui.folders.FolderItem
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenu
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenuItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
+import dev.voicejournal.ui.folders.FolderItem
 
 @Composable
 fun FolderCardGrid(
@@ -77,7 +79,6 @@ fun FolderCardGrid(
                             text = "${folderItem.noteCount} ${if (folderItem.noteCount == 1) "note" else "notes"}",
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.textSecondary,
-                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
@@ -87,7 +88,7 @@ fun FolderCardGrid(
                         Box {
                             IconButton(
                                 onClick = { menuExpanded = true },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.physicalMinTouchTarget()
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
@@ -97,13 +98,13 @@ fun FolderCardGrid(
                                 )
                             }
 
-                            DropdownMenu(
+                            AppDropdownMenu(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false }
                             ) {
                                 if (onRename != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Rename Folder") },
+                                    AppDropdownMenuItem(
+                                        text = "Rename Folder",
                                         onClick = {
                                             menuExpanded = false
                                             onRename()
@@ -111,8 +112,8 @@ fun FolderCardGrid(
                                     )
                                 }
                                 if (onMerge != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Merge Folder") },
+                                    AppDropdownMenuItem(
+                                        text = "Merge Folder",
                                         onClick = {
                                             menuExpanded = false
                                             onMerge()
@@ -142,7 +143,6 @@ fun FolderCardGrid(
                     text = folderItem.previewNoteTitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
-                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -209,7 +209,6 @@ fun FolderCardList(
                         text = folderItem.previewNoteTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary,
-                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -226,7 +225,6 @@ fun FolderCardList(
                         style = MaterialTheme.typography.labelMedium,
                         color = colors.primary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -235,7 +233,7 @@ fun FolderCardList(
                     Box {
                         IconButton(
                             onClick = { menuExpanded = true },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.physicalMinTouchTarget()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -245,13 +243,13 @@ fun FolderCardList(
                             )
                         }
 
-                        DropdownMenu(
+                        AppDropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             if (onRename != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Rename Folder") },
+                                AppDropdownMenuItem(
+                                    text = "Rename Folder",
                                     onClick = {
                                         menuExpanded = false
                                         onRename()
@@ -259,8 +257,8 @@ fun FolderCardList(
                                 )
                             }
                             if (onMerge != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Merge Folder") },
+                                AppDropdownMenuItem(
+                                    text = "Merge Folder",
                                     onClick = {
                                         menuExpanded = false
                                         onMerge()

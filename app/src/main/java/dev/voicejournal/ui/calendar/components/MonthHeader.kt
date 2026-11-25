@@ -13,10 +13,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -82,7 +83,7 @@ fun MonthHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp),
+                .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceX3s),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -90,14 +91,18 @@ fun MonthHeader(
                 text = formattedTitle,
                 style = MaterialTheme.typography.titleLarge,
                 color = colors.textPrimary,
-                modifier = Modifier.clickable { onTitleClick() }
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .clickable { onTitleClick() }
             )
 
             if (filterContent != null) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = Spacing.SpaceXs),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     filterContent()
@@ -106,12 +111,12 @@ fun MonthHeader(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
             ) {
                 IconButton(
                     onClick = onPrevious,
                     enabled = !isPreviousDisabled,
-                    modifier = Modifier.minimumInteractiveComponentSize()
+                    modifier = Modifier.physicalMinTouchTarget()
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -122,7 +127,7 @@ fun MonthHeader(
 
                 IconButton(
                     onClick = onDatePickerClick,
-                    modifier = Modifier.minimumInteractiveComponentSize()
+                    modifier = Modifier.physicalMinTouchTarget()
                 ) {
                     Icon(
                         imageVector = getCalendarTodayIcon(colors.primary),
@@ -134,7 +139,7 @@ fun MonthHeader(
                 IconButton(
                     onClick = onNext,
                     enabled = !isNextDisabled,
-                    modifier = Modifier.minimumInteractiveComponentSize()
+                    modifier = Modifier.physicalMinTouchTarget()
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
