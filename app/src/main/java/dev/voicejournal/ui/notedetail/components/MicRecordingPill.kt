@@ -17,11 +17,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -31,9 +31,13 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import dev.voicejournal.ui.designsystem.tokens.TouchTarget
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import java.util.Locale
 
 enum class MicFabState {
@@ -118,14 +122,14 @@ fun MicRecordingPill(
     }
 
     val cornerRadius by animateDpAsState(
-        targetValue = if (state == MicFabState.IDLE) 16.dp else 24.dp,
+        targetValue = if (state == MicFabState.IDLE) 16.dp else Radius.RadiusPill,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "pillCornerRadius"
     )
 
     Surface(
         modifier = modifier
-            .padding(bottom = 8.dp)
+            .padding(bottom = Spacing.SpaceXs)
             .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
         shape = RoundedCornerShape(cornerRadius),
         color = colors.primary,
@@ -143,7 +147,7 @@ fun MicRecordingPill(
                 // 56dp Floating Mic FAB
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(ComponentDimens.FabSize)
                         .semantics {
                             role = Role.Button
                             contentDescription = "Start recording voice note"
@@ -155,17 +159,17 @@ fun MicRecordingPill(
                         imageVector = getMicIcon(colors.onPrimary),
                         contentDescription = null,
                         tint = colors.onPrimary,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(IconSize.IconLg)
                     )
                 }
             } else {
                 // Fixed Minimalist Horizontal Control Pill with Generous Spacing
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceXs),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
                 ) {
-                    // Live / Frozen Duration Timer (Monospace digits with fixed min width prevents jitter)
+                    // Live / Frozen Duration Timer (Tabular digits with fixed min width prevents jitter)
                     Box(
                         modifier = Modifier
                             .widthIn(min = 48.dp)
@@ -178,9 +182,8 @@ fun MicRecordingPill(
                         Text(
                             text = formattedDuration,
                             color = colors.onPrimary,
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.labelLarge.tabularNumbers(),
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             softWrap = false
@@ -191,10 +194,8 @@ fun MicRecordingPill(
                     val pauseResumeDesc = if (state == MicFabState.RECORDING) "Pause Recording" else "Resume Recording"
                     Box(
                         modifier = Modifier
-                            .defaultMinSize(
-                                minWidth = TouchTarget.MinTouchTargetSize,
-                                minHeight = TouchTarget.MinTouchTargetSize
-                            )
+                            .physicalMinTouchTarget()
+                            .clip(CircleShape)
                             .semantics {
                                 role = Role.Button
                                 contentDescription = pauseResumeDesc
@@ -218,7 +219,7 @@ fun MicRecordingPill(
                                 imageVector = if (state == MicFabState.RECORDING) getPauseIcon(colors.onPrimary) else Icons.Default.PlayArrow,
                                 contentDescription = null,
                                 tint = colors.onPrimary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(IconSize.IconMd)
                             )
                         }
                     }
@@ -226,10 +227,8 @@ fun MicRecordingPill(
                     // Save Track Checkmark Button (✓)
                     Box(
                         modifier = Modifier
-                            .defaultMinSize(
-                                minWidth = TouchTarget.MinTouchTargetSize,
-                                minHeight = TouchTarget.MinTouchTargetSize
-                            )
+                            .physicalMinTouchTarget()
+                            .clip(CircleShape)
                             .semantics {
                                 role = Role.Button
                                 contentDescription = "Save Audio Track"
@@ -247,7 +246,7 @@ fun MicRecordingPill(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
                                 tint = colors.primary,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(IconSize.IconMd)
                             )
                         }
                     }
@@ -255,10 +254,8 @@ fun MicRecordingPill(
                     // Cancel Recording Button (X)
                     Box(
                         modifier = Modifier
-                            .defaultMinSize(
-                                minWidth = TouchTarget.MinTouchTargetSize,
-                                minHeight = TouchTarget.MinTouchTargetSize
-                            )
+                            .physicalMinTouchTarget()
+                            .clip(CircleShape)
                             .semantics {
                                 role = Role.Button
                                 contentDescription = "Cancel Recording"
@@ -276,7 +273,7 @@ fun MicRecordingPill(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = null,
                                 tint = colors.onPrimary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(IconSize.IconMd)
                             )
                         }
                     }

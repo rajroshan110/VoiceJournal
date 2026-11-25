@@ -3,6 +3,7 @@ package dev.voicejournal.ui.navigation
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
@@ -15,11 +16,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 
 private val BookIcon: ImageVector = ImageVector.Builder(
         name = "Book",
@@ -133,8 +137,7 @@ fun BottomNavBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val colors = AppTheme.colors
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+    val isCompactLandscape = AppTheme.windowInfo.isCompactLandscape
 
     NavigationBar(
         containerColor = colors.secondaryBackground,
@@ -170,8 +173,22 @@ fun BottomNavBar(
             }
 
             NavigationBarItem(
-                icon = { Icon(icon, contentDescription = label) },
-                label = { Text(label) },
+                icon = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        modifier = Modifier.size(IconSize.IconLg)
+                    )
+                },
+                label = {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 alwaysShowLabel = !isCompactLandscape,
                 selected = isSelected,
                 onClick = {
@@ -193,13 +210,13 @@ fun BottomNavBar(
                         }
                     }
                 },
-                modifier = Modifier.minimumInteractiveComponentSize(),
+                modifier = Modifier.physicalMinTouchTarget(),
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = colors.primary,
                     selectedTextColor = colors.primary,
                     unselectedIconColor = colors.textSecondary,
                     unselectedTextColor = colors.textSecondary,
-                    indicatorColor = colors.primary.copy(alpha = 0.2f)
+                    indicatorColor = colors.primaryContainer
                 )
             )
         }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -28,6 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import dev.voicejournal.ui.designsystem.components.buttons.AppCircleIconButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.io.File
 
 @Composable
@@ -111,50 +114,41 @@ fun LightboxDialog(
                 )
             }
 
-            // Top-Left Corner Delete Button with Confirmation Prompt
-            if (onDelete != null) {
-                IconButton(
-                    onClick = { showDeleteConfirmDialog = true },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(top = 40.dp, start = 20.dp)
-                        .size(48.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
-                        contentAlignment = Alignment.Center
+            // Top Action Bar (Delete + Close)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(top = Spacing.SpaceMd, start = Spacing.SpaceLg, end = Spacing.SpaceLg),
+                horizontalArrangement = if (onDelete != null) Arrangement.SpaceBetween else Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onDelete != null) {
+                    AppCircleIconButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        containerColor = Color.Black.copy(alpha = 0.6f),
+                        contentColor = Color.White,
+                        contentDescription = "Delete image"
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete image",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            contentDescription = null,
+                            modifier = Modifier.size(IconSize.IconLg)
                         )
                     }
                 }
-            }
 
-            // Dedicated 'X' Button on Top-Right Corner to close
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 40.dp, end = 20.dp)
-                    .size(48.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
-                    contentAlignment = Alignment.Center
+                AppCircleIconButton(
+                    onClick = onDismiss,
+                    containerColor = Color.Black.copy(alpha = 0.6f),
+                    contentColor = Color.White,
+                    contentDescription = "Close full-screen image viewer"
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close full-screen image viewer",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        contentDescription = null,
+                        modifier = Modifier.size(IconSize.IconLg)
                     )
                 }
             }
@@ -163,10 +157,21 @@ fun LightboxDialog(
 
     // Confirmation dialog before deleting individual image
     if (showDeleteConfirmDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete image?", fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete this image? This action cannot be undone.") },
+            title = {
+                Text(
+                    text = "Delete image?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this image? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -175,12 +180,17 @@ fun LightboxDialog(
                         onDismiss()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Delete",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", style = MaterialTheme.typography.labelLarge)
                 }
             }
         )

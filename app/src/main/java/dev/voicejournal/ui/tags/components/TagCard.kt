@@ -15,10 +15,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.TagType
-import dev.voicejournal.ui.tags.TagItem
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenu
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenuItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
+import dev.voicejournal.ui.tags.TagItem
 
 @Composable
 fun CategoryFolderCard(
@@ -57,7 +59,7 @@ fun CategoryFolderCard(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(text = iconEmoji, fontSize = 24.sp)
+                        Text(text = iconEmoji, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
 
@@ -67,9 +69,8 @@ fun CategoryFolderCard(
                 ) {
                     Text(
                         text = "$tagCount ${if (tagCount == 1) "tag" else "tags"}",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = colors.primary,
-                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
@@ -91,8 +92,7 @@ fun CategoryFolderCard(
             Text(
                 text = "Explore all $title tags",
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary,
-                fontSize = 12.sp
+                color = colors.textSecondary
             )
         }
     }
@@ -140,7 +140,7 @@ fun TagCardGrid(
                     modifier = Modifier.size(44.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(text = iconEmoji, fontSize = 20.sp)
+                        Text(text = iconEmoji, style = MaterialTheme.typography.titleLarge)
                     }
                 }
 
@@ -153,7 +153,6 @@ fun TagCardGrid(
                             text = "${tagItem.noteCount} ${if (tagItem.noteCount == 1) "note" else "notes"}",
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.textSecondary,
-                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
@@ -162,7 +161,8 @@ fun TagCardGrid(
                     if (onRename != null || onMerge != null) {
                         Box {
                             IconButton(
-                                onClick = { menuExpanded = true }
+                                onClick = { menuExpanded = true },
+                                modifier = Modifier.physicalMinTouchTarget()
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
@@ -172,13 +172,13 @@ fun TagCardGrid(
                                 )
                             }
 
-                            DropdownMenu(
+                            AppDropdownMenu(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false }
                             ) {
                                 if (onRename != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Rename Tag") },
+                                    AppDropdownMenuItem(
+                                        text = "Rename Tag",
                                         onClick = {
                                             menuExpanded = false
                                             onRename()
@@ -186,8 +186,8 @@ fun TagCardGrid(
                                     )
                                 }
                                 if (onMerge != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Merge Tag") },
+                                    AppDropdownMenuItem(
+                                        text = "Merge Tag",
                                         onClick = {
                                             menuExpanded = false
                                             onMerge()
@@ -217,7 +217,6 @@ fun TagCardGrid(
                     text = tagItem.previewNoteTitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
-                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -226,8 +225,7 @@ fun TagCardGrid(
                 Text(
                     text = "Empty tag",
                     style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary.copy(alpha = 0.6f),
-                    fontSize = 12.sp
+                    color = colors.textSecondary.copy(alpha = 0.6f)
                 )
             }
         }
@@ -272,7 +270,7 @@ fun TagCardList(
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = iconEmoji, fontSize = 18.sp)
+                    Text(text = iconEmoji, style = MaterialTheme.typography.titleMedium)
                 }
             }
 
@@ -292,7 +290,6 @@ fun TagCardList(
                         text = tagItem.previewNoteTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textSecondary,
-                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -309,7 +306,6 @@ fun TagCardList(
                         style = MaterialTheme.typography.labelMedium,
                         color = colors.primary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -318,7 +314,7 @@ fun TagCardList(
                     Box {
                         IconButton(
                             onClick = { menuExpanded = true },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.physicalMinTouchTarget()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -328,13 +324,13 @@ fun TagCardList(
                             )
                         }
 
-                        DropdownMenu(
+                        AppDropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             if (onRename != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Rename Tag") },
+                                AppDropdownMenuItem(
+                                    text = "Rename Tag",
                                     onClick = {
                                         menuExpanded = false
                                         onRename()
@@ -342,8 +338,8 @@ fun TagCardList(
                                 )
                             }
                             if (onMerge != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Merge Tag") },
+                                AppDropdownMenuItem(
+                                    text = "Merge Tag",
                                     onClick = {
                                         menuExpanded = false
                                         onMerge()

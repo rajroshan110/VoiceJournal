@@ -24,10 +24,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import dev.voicejournal.ui.settings.model.SearchResultItem
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.settings.model.SearchResultItem
 
 /**
  * Extension modifier that applies a smooth highlight border and automatically
@@ -114,7 +115,6 @@ fun <T> SettingSegmentedRow(
                     Text(
                         text = title,
                         color = colors.textPrimary,
-                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -122,7 +122,6 @@ fun <T> SettingSegmentedRow(
                     Text(
                         text = subtitle,
                         color = colors.textSecondary,
-                        fontSize = 13.sp,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -153,14 +152,16 @@ fun <T> SettingSegmentedRow(
                             color = pillBgColor,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
+                                .defaultMinSize(minHeight = 40.dp)
                                 .semantics {
                                     role = Role.RadioButton
                                     contentDescription = "${optionLabel(option)}, ${if (isSelected) "selected" else "not selected"}"
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.SpaceX2s, vertical = Spacing.SpaceX2s),
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -177,8 +178,10 @@ fun <T> SettingSegmentedRow(
                                 Text(
                                     text = optionLabel(option),
                                     color = pillTextColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -233,7 +236,6 @@ fun SettingToggleRow(
                 Text(
                     text = title,
                     color = colors.textPrimary,
-                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -241,7 +243,6 @@ fun SettingToggleRow(
                 Text(
                     text = subtitle,
                     color = colors.textSecondary,
-                    fontSize = 13.sp,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -304,7 +305,6 @@ fun DestructiveActionRow(
                 Text(
                     text = title,
                     color = colors.error,
-                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -312,7 +312,6 @@ fun DestructiveActionRow(
                 Text(
                     text = subtitle,
                     color = colors.textSecondary,
-                    fontSize = 13.sp,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -344,21 +343,18 @@ fun SettingSearchRow(
             Text(
                 text = item.parentCategory,
                 color = colors.primary,
-                fontSize = 11.sp,
                 style = MaterialTheme.typography.labelSmall
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = item.title,
                 color = colors.textPrimary,
-                fontSize = 15.sp,
                 style = MaterialTheme.typography.titleSmall
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = item.subtitle,
                 color = colors.textSecondary,
-                fontSize = 12.sp,
                 style = MaterialTheme.typography.bodySmall
             )
         }

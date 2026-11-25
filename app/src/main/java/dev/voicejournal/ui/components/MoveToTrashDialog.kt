@@ -1,13 +1,11 @@
 package dev.voicejournal.ui.components
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
@@ -21,11 +19,12 @@ fun MoveToTrashDialog(
 ) {
     val colors = AppTheme.colors
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = title,
+                style = MaterialTheme.typography.titleMedium,
                 color = colors.textPrimary,
                 fontWeight = FontWeight.Bold
             )
@@ -33,6 +32,7 @@ fun MoveToTrashDialog(
         text = {
             Text(
                 text = message,
+                style = MaterialTheme.typography.bodyMedium,
                 color = colors.textSecondary
             )
         },
@@ -40,6 +40,7 @@ fun MoveToTrashDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     text = confirmButtonText,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Bold
                 )
@@ -49,13 +50,10 @@ fun MoveToTrashDialog(
             TextButton(onClick = onDismiss) {
                 Text(
                     text = dismissButtonText,
+                    style = MaterialTheme.typography.labelLarge,
                     color = colors.textSecondary
                 )
             }
-        },
-        containerColor = colors.surface,
-        titleContentColor = colors.textPrimary,
-        textContentColor = colors.textSecondary,
-        shape = RoundedCornerShape(24.dp)
+        }
     )
 }

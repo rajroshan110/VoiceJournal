@@ -16,8 +16,8 @@ android {
         applicationId = "dev.voicejournal"
         minSdk = 29
         targetSdk = 35
-        versionCode = 108
-        versionName = "1.0.5-dev1"
+        versionCode = 109
+        versionName = "1.0.5-dev2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

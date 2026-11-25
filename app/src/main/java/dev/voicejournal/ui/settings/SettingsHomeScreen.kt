@@ -25,14 +25,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.settings.components.CategoryNavCard
 import dev.voicejournal.ui.settings.components.SettingSearchRow
 import dev.voicejournal.ui.components.getTagIcon
@@ -91,8 +92,7 @@ fun SettingsHomeScreen(
 ) {
     val colors = AppTheme.colors
     val focusManager = LocalFocusManager.current
-    val configuration = LocalConfiguration.current
-    val isExpanded = configuration.screenWidthDp >= 600
+    val isExpanded = AppTheme.windowInfo.isWideLayout
 
     var selectedCompactSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -160,17 +160,20 @@ fun SettingsHomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
+                                .defaultMinSize(minHeight = 56.dp)
                                 .padding(horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = {
-                                if (!isExpanded && selectedCompactSubScreen != null) {
-                                    selectedCompactSubScreen = null
-                                } else {
-                                    onBackClick()
-                                }
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    if (!isExpanded && selectedCompactSubScreen != null) {
+                                        selectedCompactSubScreen = null
+                                    } else {
+                                        onBackClick()
+                                    }
+                                },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
@@ -189,6 +192,8 @@ fun SettingsHomeScreen(
                                 color = colors.textPrimary,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(start = 12.dp)
@@ -197,7 +202,7 @@ fun SettingsHomeScreen(
                             if (selectedCompactSubScreen == null || isExpanded) {
                                 IconButton(
                                     onClick = { isSearchVisible = true },
-                                    modifier = Modifier.minimumInteractiveComponentSize()
+                                    modifier = Modifier.physicalMinTouchTarget()
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
@@ -233,14 +238,13 @@ fun SettingsHomeScreen(
                     ) {
                         Text(
                             text = "No settings found for \"${uiState.searchQuery}\"",
+                            style = MaterialTheme.typography.bodyLarge,
                             color = colors.textSecondary,
-                            fontSize = 15.sp,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.clearSearch() },
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                        AppPrimaryButton(
+                            onClick = { viewModel.clearSearch() }
                         ) {
                             Text("Clear Search")
                         }

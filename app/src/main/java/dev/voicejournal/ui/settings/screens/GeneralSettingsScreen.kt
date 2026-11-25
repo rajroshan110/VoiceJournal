@@ -21,15 +21,16 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.AudioFormat
 import dev.voicejournal.domain.model.InsightDateRangeMode
 import dev.voicejournal.domain.model.ModelDownloadState
 import dev.voicejournal.domain.model.StartOfWeek
 import dev.voicejournal.domain.model.TimeFormat
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
 import dev.voicejournal.ui.settings.components.SettingSegmentedRow
@@ -206,15 +207,15 @@ fun GeneralSettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Speech-to-Text Model",
+                            style = MaterialTheme.typography.titleMedium,
                             color = colors.textPrimary,
-                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = if (uiState.isSpeechToTextEnabled) "Offline Whisper Base Q5 model" else "Offline transcription disabled",
-                            color = colors.textSecondary,
-                            fontSize = 13.sp
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textSecondary
                         )
                     }
 
@@ -250,8 +251,8 @@ fun GeneralSettingsScreen(
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "Model ready (59 MB)",
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = colors.textPrimary,
-                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -262,7 +263,11 @@ fun GeneralSettingsScreen(
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Model", modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Delete Model", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = "Delete Model",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
@@ -279,9 +284,17 @@ fun GeneralSettingsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Downloading... ${((uiState.downloadProgress ?: 0f) * 100).toInt()}%", color = colors.textSecondary, fontSize = 12.sp)
+                                    Text(
+                                        text = "Downloading... ${((uiState.downloadProgress ?: 0f) * 100).toInt()}%",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.textSecondary
+                                    )
                                     TextButton(onClick = { viewModel.cancelModelDownload() }) {
-                                        Text("Cancel", color = colors.error, fontSize = 12.sp)
+                                        Text(
+                                            text = "Cancel",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = colors.error
+                                        )
                                     }
                                 }
                             }
@@ -293,20 +306,28 @@ fun GeneralSettingsScreen(
                                 TextButton(onClick = { viewModel.downloadWhisperModel() }) {
                                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Retry Download", color = colors.primary, fontSize = 12.sp)
+                                    Text(
+                                        text = "Retry Download",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = colors.primary
+                                    )
                                 }
                             }
                         }
                         is ModelDownloadState.Idle -> {
                             if (!uiState.isModelDownloaded) {
-                                Button(
+                                AppPrimaryButton(
                                     onClick = { viewModel.downloadWhisperModel() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Download Whisper Base Q5 (59 MB)", fontSize = 13.sp)
+                                    Text(
+                                        text = "Download Whisper Base Q5 (59 MB)",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
@@ -317,33 +338,35 @@ fun GeneralSettingsScreen(
     }
 
     if (showDeleteModelDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDeleteModelDialog = false },
-            containerColor = colors.surface,
             title = {
                 Text(
                     text = "Delete Speech-to-Text Model?",
+                    style = MaterialTheme.typography.titleMedium,
                     color = colors.textPrimary,
-                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = "This will remove the downloaded Whisper model (59 MB) from your device. You will need an internet connection to download it again for offline transcription.",
-                    color = colors.textSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
                 )
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = {
                         showDeleteModelDialog = false
                         viewModel.deleteWhisperModel()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = colors.onPrimary
+                    )
                 ) {
-                    Text("Delete", color = Color.White)
+                    Text("Delete")
                 }
             },
             dismissButton = {

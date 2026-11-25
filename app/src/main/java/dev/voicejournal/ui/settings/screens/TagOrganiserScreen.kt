@@ -14,9 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getTagIcon
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
@@ -96,7 +96,6 @@ fun TagOrganiserScreen(
                         Text(
                             text = "Choose Tags",
                             color = colors.textPrimary,
-                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             style = MaterialTheme.typography.titleMedium
                         )
@@ -104,7 +103,6 @@ fun TagOrganiserScreen(
                         Text(
                             text = "Active: $activeTagsSummary",
                             color = colors.textSecondary,
-                            fontSize = 13.sp,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -155,7 +153,6 @@ fun TagOrganiserScreen(
                         Text(
                             text = "Enable Folder",
                             color = colors.textPrimary,
-                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             style = MaterialTheme.typography.titleMedium
                         )
@@ -163,7 +160,6 @@ fun TagOrganiserScreen(
                         Text(
                             text = "Show folders in sidebar and notes. Existing folders remain safely preserved when turned off.",
                             color = colors.textSecondary,
-                            fontSize = 13.sp,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -226,7 +222,6 @@ fun TagOrganiserScreen(
                         Text(
                             text = "Notes Organisation",
                             color = if (isOrganisationAvailable) colors.textPrimary else colors.textSecondary,
-                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             style = MaterialTheme.typography.titleMedium
                         )
@@ -238,7 +233,6 @@ fun TagOrganiserScreen(
                                 "Enable at least one tag category (Folders, Topics, or People) to use notes organisation"
                             },
                             color = colors.textSecondary,
-                            fontSize = 13.sp,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -318,12 +312,14 @@ private fun ChooseTagsDialog(
             color = colors.surface,
             tonalElevation = 6.dp,
             modifier = Modifier
+                .widthIn(max = 380.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -339,8 +335,7 @@ private fun ChooseTagsDialog(
                     Text(
                         text = "Select which tag categories and indicators appear across your journals, filters, and insights.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = colors.textSecondary,
-                        lineHeight = 18.sp
+                        color = colors.textSecondary
                     )
                 }
 
@@ -376,18 +371,11 @@ private fun ChooseTagsDialog(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Done Button
-                Button(
+                AppPrimaryButton(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Done",
-                        color = colors.onPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    )
+                    Text("Done")
                 }
             }
         }
@@ -419,7 +407,7 @@ private fun TagCategoryToggleRow(
         ) {
             Text(
                 text = iconText,
-                fontSize = if (iconText.length == 1 && !iconText.startsWith("#") && !iconText.startsWith("@")) 18.sp else 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = colors.primary
             )
@@ -432,16 +420,13 @@ private fun TagCategoryToggleRow(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary,
-                fontSize = 15.sp
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary,
-                fontSize = 12.sp,
-                lineHeight = 16.sp
+                color = colors.textSecondary
             )
         }
 

@@ -18,12 +18,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.trash.components.TrashNoteCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,14 +63,20 @@ fun TrashScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {
-                                if (uiState.isSelectionMode) {
-                                    viewModel.clearSelection()
-                                } else {
-                                    navController.popBackStack()
-                                }
-                            }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (uiState.isSelectionMode) {
+                                        viewModel.clearSelection()
+                                    } else {
+                                        navController.popBackStack()
+                                    }
+                                },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
@@ -85,7 +94,10 @@ fun TrashScreen(
                                 },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
@@ -93,7 +105,10 @@ fun TrashScreen(
                             if (uiState.allTrashEntries.isNotEmpty()) {
                                 if (uiState.isSelectionMode) {
                                     // Select All button
-                                    IconButton(onClick = { viewModel.selectAll() }) {
+                                    IconButton(
+                                        onClick = { viewModel.selectAll() },
+                                        modifier = Modifier.physicalMinTouchTarget()
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = "Select All",
@@ -102,7 +117,10 @@ fun TrashScreen(
                                     }
                                 } else {
                                     // Toggle Selection Mode button
-                                    IconButton(onClick = { viewModel.toggleSelectionMode() }) {
+                                    IconButton(
+                                        onClick = { viewModel.toggleSelectionMode() },
+                                        modifier = Modifier.physicalMinTouchTarget()
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = "Select Notes",
@@ -111,7 +129,10 @@ fun TrashScreen(
                                     }
 
                                     // Clear Trash Header Button
-                                    IconButton(onClick = { viewModel.setClearTrashDialogOpen(true) }) {
+                                    IconButton(
+                                        onClick = { viewModel.setClearTrashDialogOpen(true) },
+                                        modifier = Modifier.physicalMinTouchTarget()
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
                                             contentDescription = "Clear Trash",
@@ -130,7 +151,9 @@ fun TrashScreen(
                 Surface(
                     color = colors.surface,
                     shadowElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -140,10 +163,8 @@ fun TrashScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         // Restore Action
-                        Button(
+                        AppPrimaryButton(
                             onClick = { viewModel.setRestoreDialogOpen(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f).padding(end = 6.dp)
                         ) {
                             Icon(
@@ -152,14 +173,20 @@ fun TrashScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Restore (${uiState.selectedEntryIds.size})")
+                            Text(
+                                text = "Restore (${uiState.selectedEntryIds.size})",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         // Delete Permanently Action
-                        Button(
+                        AppPrimaryButton(
                             onClick = { viewModel.setDeleteSelectedDialogOpen(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.error),
-                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.error,
+                                contentColor = colors.onPrimary
+                            ),
                             modifier = Modifier.weight(1f).padding(start = 6.dp)
                         ) {
                             Icon(
@@ -168,7 +195,11 @@ fun TrashScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Delete")
+                            Text(
+                                text = "Delete",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
@@ -194,7 +225,7 @@ fun TrashScreen(
                         .padding(32.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🗑️", fontSize = 48.sp)
+                        Text("🗑️", style = MaterialTheme.typography.displayMedium)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Trash is Empty",
@@ -319,7 +350,7 @@ fun TrashScreen(
 
     // Dialog for Clear Trash (Empty All)
     if (uiState.isClearTrashDialogOpen) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.setClearTrashDialogOpen(false) },
             title = {
                 Text(
@@ -337,9 +368,12 @@ fun TrashScreen(
                 )
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = { viewModel.emptyTrash() },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = colors.onPrimary
+                    )
                 ) {
                     Text("Empty Trash")
                 }
@@ -348,15 +382,13 @@ fun TrashScreen(
                 TextButton(onClick = { viewModel.setClearTrashDialogOpen(false) }) {
                     Text("Cancel", color = colors.textSecondary)
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 
     // Dialog for Delete Selected Permanently
     if (uiState.isDeleteSelectedDialogOpen) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.setDeleteSelectedDialogOpen(false) },
             title = {
                 Text(
@@ -374,9 +406,12 @@ fun TrashScreen(
                 )
             },
             confirmButton = {
-                Button(
+                AppPrimaryButton(
                     onClick = { viewModel.permanentlyDeleteSelectedEntries() },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = colors.onPrimary
+                    )
                 ) {
                     Text("Delete Permanently")
                 }
@@ -385,15 +420,13 @@ fun TrashScreen(
                 TextButton(onClick = { viewModel.setDeleteSelectedDialogOpen(false) }) {
                     Text("Cancel", color = colors.textSecondary)
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 
     // Dialog for Restore Selected Notes Confirmation
     if (uiState.isRestoreDialogOpen) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.setRestoreDialogOpen(false) },
             title = {
                 Text(
@@ -411,9 +444,8 @@ fun TrashScreen(
                 )
             },
             confirmButton = {
-                Button(
-                    onClick = { viewModel.restoreSelectedEntries() },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                AppPrimaryButton(
+                    onClick = { viewModel.restoreSelectedEntries() }
                 ) {
                     Text("Restore")
                 }
@@ -422,9 +454,7 @@ fun TrashScreen(
                 TextButton(onClick = { viewModel.setRestoreDialogOpen(false) }) {
                     Text("Cancel", color = colors.textSecondary)
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 }

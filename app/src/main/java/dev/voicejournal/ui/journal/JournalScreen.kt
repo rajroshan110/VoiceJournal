@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
@@ -26,27 +28,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.Share
 import dev.voicejournal.domain.model.Tag
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.journal.components.*
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
+import dev.voicejournal.ui.designsystem.components.buttons.AppCompactPillButton
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.buttons.AppSecondaryOutlinedButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.util.findActivity
 import kotlinx.coroutines.launch
 
@@ -252,33 +258,37 @@ fun JournalScreen(
     }
 
     if (!audioErrorDialogMessage.isNullOrBlank()) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { audioErrorDialogMessage = null },
             title = {
                 Text(
                     text = "Playback Error",
-                    color = AppTheme.colors.textPrimary,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = audioErrorDialogMessage ?: "",
-                    color = AppTheme.colors.textSecondary
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
                 TextButton(onClick = { audioErrorDialogMessage = null }) {
-                    Text("OK", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "OK",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AppTheme.colors.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            },
-            containerColor = AppTheme.colors.surface,
-            shape = RoundedCornerShape(24.dp)
+            }
         )
     }
 
-    val configuration = LocalConfiguration.current
-    val isCompactLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE || configuration.screenHeightDp < 480
+    val windowInfo = AppTheme.windowInfo
+    val isCompactLandscape = windowInfo.isCompactLandscape
+    val isNarrowPhone = windowInfo.isNarrowPhone
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -384,7 +394,7 @@ fun JournalScreen(
                 if (uiState.feedState !is FeedState.EmptyGlobal) {
                     MicFab(
                         onClick = { navController.navigate(Screen.NoteDetail.createRoute(-1L)) },
-                        modifier = Modifier.padding(bottom = 8.dp, end = 8.dp)
+                        modifier = Modifier.padding(bottom = Spacing.SpaceXs, end = Spacing.SpaceXs)
                     )
                 }
             }
@@ -410,41 +420,71 @@ fun JournalScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .padding(Spacing.SpaceLg),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(Radius.RadiusMd),
                             color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically
+                            if (isNarrowPhone) {
+                                Column(
+                                    modifier = Modifier.padding(Spacing.SpaceLg),
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = "Error",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = state.message,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = "Error",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(Spacing.SpaceMd))
+                                        Text(
+                                            text = state.message,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    AppCompactPillButton(
+                                        onClick = { viewModel.retryFeedLoad() },
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError,
+                                        modifier = Modifier.align(Alignment.End)
+                                    ) {
+                                        Text("Retry", maxLines = 1, softWrap = false)
+                                    }
                                 }
-                                Button(
-                                    onClick = { viewModel.retryFeedLoad() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            } else {
+                                Row(
+                                    modifier = Modifier.padding(Spacing.SpaceLg),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)
                                 ) {
-                                    Text("Retry")
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = "Error",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(Spacing.SpaceMd))
+                                        Text(
+                                            text = state.message,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    AppCompactPillButton(
+                                        onClick = { viewModel.retryFeedLoad() },
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text("Retry", maxLines = 1, softWrap = false)
+                                    }
                                 }
                             }
                         }
@@ -454,61 +494,71 @@ fun JournalScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .verticalScroll(rememberScrollState())
+                            .padding(Spacing.Space2Xl),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             imageVector = MicIcon,
                             contentDescription = "No journal entries",
-                            tint = Color(0xFF666666),
-                            modifier = Modifier.size(72.dp)
+                            tint = AppTheme.colors.textSecondary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(IconSize.IconHero)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
                         Text(
                             text = "No journal entries yet",
                             style = MaterialTheme.typography.titleMedium,
                             color = AppTheme.colors.textPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceXs))
                         Text(
                             text = "Capture your thoughts and voice notes to start your journal.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
+                        Spacer(modifier = Modifier.height(Spacing.SpaceXl))
+                        AppPrimaryButton(
                             onClick = { navController.navigate(Screen.NoteDetail.createRoute(-1L)) },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            shape = RoundedCornerShape(Radius.RadiusPill)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Create new entry")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Record Your First Note")
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Create new entry",
+                                modifier = Modifier.size(IconSize.IconSm)
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                            Text(
+                                text = "Record Your First Note",
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
 
-                        OutlinedButton(
+                        AppSecondaryOutlinedButton(
                             onClick = {
                                 dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                                 importLauncher.launch(arrayOf("application/zip", "*/*"))
                             },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppTheme.colors.textPrimary),
-                            border = BorderStroke(1.dp, AppTheme.colors.border),
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            shape = RoundedCornerShape(Radius.RadiusPill)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Import Backup",
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(IconSize.IconSm)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import Backup")
+                            Spacer(modifier = Modifier.width(Spacing.SpaceXs))
+                            Text(
+                                text = "Import Backup",
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 }
@@ -516,73 +566,108 @@ fun JournalScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .verticalScroll(rememberScrollState())
+                            .padding(Spacing.Space2Xl),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             imageVector = FilterOffIcon,
                             contentDescription = "No matching entries",
-                            tint = Color(0xFF666666),
-                            modifier = Modifier.size(72.dp)
+                            tint = AppTheme.colors.textSecondary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(IconSize.IconHero)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
                         Text(
                             text = "No matching entries found",
                             style = MaterialTheme.typography.titleMedium,
                             color = AppTheme.colors.textPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceXs))
                         Text(
                             text = "Try adjusting your filters or search terms.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedButton(
+                        Spacer(modifier = Modifier.height(Spacing.SpaceXl))
+                        AppSecondaryOutlinedButton(
                             onClick = { viewModel.clearAllFilters() },
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            shape = RoundedCornerShape(Radius.RadiusPill)
                         ) {
-                            Text("Clear Filters")
+                            Text(
+                                text = "Clear Filters",
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 }
                 is FeedState.Success -> {
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(vertical = 4.dp),
+                        contentPadding = PaddingValues(vertical = Spacing.SpaceX2s),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         if (!uiState.permissionGranted) {
                             item {
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(Radius.RadiusMd),
                                     color = Color(0xFF2B2618),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                                        .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceXs)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
+                                    if (isNarrowPhone) {
+                                        Column(
+                                            modifier = Modifier.padding(Spacing.SpaceLg),
+                                            verticalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)
+                                        ) {
                                             Text(
                                                 text = "Storage permission required to play voice notes and view media previews",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = Color(0xFFFFD54F)
                                             )
+                                            AppCompactPillButton(
+                                                onClick = { viewModel.setPermissionGranted(true) },
+                                                containerColor = Color(0xFFFFD54F),
+                                                contentColor = Color.Black,
+                                                modifier = Modifier.align(Alignment.End)
+                                            ) {
+                                                Text(
+                                                    text = "Grant Permission",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    maxLines = 1,
+                                                    softWrap = false
+                                                )
+                                            }
                                         }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(
-                                            onClick = { viewModel.setPermissionGranted(true) },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD54F), contentColor = Color.Black)
+                                    } else {
+                                        Row(
+                                            modifier = Modifier.padding(Spacing.SpaceLg),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
                                         ) {
-                                            Text("Grant Permission", fontSize = 12.sp)
+                                            Text(
+                                                text = "Storage permission required to play voice notes and view media previews",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = Color(0xFFFFD54F),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            AppCompactPillButton(
+                                                onClick = { viewModel.setPermissionGranted(true) },
+                                                containerColor = Color(0xFFFFD54F),
+                                                contentColor = Color.Black
+                                            ) {
+                                                Text(
+                                                    text = "Grant Permission",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    maxLines = 1,
+                                                    softWrap = false
+                                                )
+                                            }
                                         }
                                     }
                                 }

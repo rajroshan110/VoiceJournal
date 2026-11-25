@@ -24,10 +24,13 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenu
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenuItem
 import dev.voicejournal.ui.designsystem.tokens.Spacing
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 enum class SortOption(val label: String) {
@@ -103,7 +106,7 @@ fun JournalHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.SpaceMd, vertical = 2.dp),
+                .padding(horizontal = Spacing.SpaceMd, vertical = Spacing.SpaceX3s),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -120,11 +123,16 @@ fun JournalHeader(
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s),
+                    modifier = if (filterContent == null || isSelectionMode) {
+                        Modifier.weight(1f, fill = false)
+                    } else {
+                        Modifier
+                    }
                 ) {
                     IconButton(
                         onClick = onMenuClick,
-                        modifier = Modifier.minimumInteractiveComponentSize()
+                        modifier = Modifier.physicalMinTouchTarget()
                     ) {
                         Icon(
                             imageVector = Icons.Default.Menu,
@@ -137,7 +145,10 @@ fun JournalHeader(
                         text = if (isSelectionMode) "$selectedCount selected" else "Voice",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (isSelectionMode) colors.primary else colors.textPrimary,
-                        fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (isSelectionMode) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
 
@@ -145,7 +156,7 @@ fun JournalHeader(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = Spacing.SpaceXs),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         filterContent()
@@ -162,7 +173,7 @@ fun JournalHeader(
                             if (canOrganise) {
                                 IconButton(
                                     onClick = onCategorizeSelected,
-                                    modifier = Modifier.minimumInteractiveComponentSize()
+                                    modifier = Modifier.physicalMinTouchTarget()
                                 ) {
                                     Icon(
                                         imageVector = getTagIcon(colors.primary),
@@ -173,7 +184,7 @@ fun JournalHeader(
 
                             IconButton(
                                 onClick = onDeleteSelected,
-                                modifier = Modifier.minimumInteractiveComponentSize()
+                                modifier = Modifier.physicalMinTouchTarget()
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -185,7 +196,7 @@ fun JournalHeader(
 
                         IconButton(
                             onClick = onClearSelection,
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            modifier = Modifier.physicalMinTouchTarget()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -202,7 +213,7 @@ fun JournalHeader(
                         // Search Button
                         IconButton(
                             onClick = onSearchToggle,
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            modifier = Modifier.physicalMinTouchTarget()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -215,7 +226,7 @@ fun JournalHeader(
                         Box {
                             IconButton(
                                 onClick = { sortMenuExpanded = true },
-                                modifier = Modifier.minimumInteractiveComponentSize()
+                                modifier = Modifier.physicalMinTouchTarget()
                             ) {
                                 Icon(
                                     imageVector = getSortIcon(colors.primary),
@@ -224,20 +235,14 @@ fun JournalHeader(
                                 )
                             }
 
-                            DropdownMenu(
+                            AppDropdownMenu(
                                 expanded = sortMenuExpanded,
-                                onDismissRequest = { sortMenuExpanded = false },
-                                modifier = Modifier.background(colors.surface)
+                                onDismissRequest = { sortMenuExpanded = false }
                             ) {
                                 SortOption.values().forEach { option ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = option.label,
-                                                color = if (option == currentSortOption) colors.primary else colors.textPrimary,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                        },
+                                    AppDropdownMenuItem(
+                                        text = option.label,
+                                        isSelected = option == currentSortOption,
                                         onClick = {
                                             onSortOptionSelect(option)
                                             sortMenuExpanded = false
@@ -250,7 +255,7 @@ fun JournalHeader(
                         // Settings Button
                         IconButton(
                             onClick = onSettingsClick,
-                            modifier = Modifier.minimumInteractiveComponentSize()
+                            modifier = Modifier.physicalMinTouchTarget()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Settings,

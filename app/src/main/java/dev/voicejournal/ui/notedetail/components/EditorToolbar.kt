@@ -33,12 +33,16 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Border
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.notedetail.editor.engine.RichTextState
 import dev.voicejournal.ui.notedetail.editor.model.ParagraphType
 import dev.voicejournal.ui.notedetail.editor.model.SpanType
 import dev.voicejournal.ui.notedetail.editor.model.TextAlignment
-import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 @Composable
 fun EditorToolbar(
@@ -46,6 +50,7 @@ fun EditorToolbar(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
+    val windowInfo = AppTheme.windowInfo
     var showLinkDialog by rememberSaveable { mutableStateOf(false) }
 
     // Active States
@@ -65,7 +70,7 @@ fun EditorToolbar(
     var showHeadingBar by rememberSaveable { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = windowInfo.isCompactLandscape || configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Detect active heading level (1..6) if any at the caret
     val activeHeadingLevel = (1..6).firstOrNull { level ->
@@ -93,36 +98,35 @@ fun EditorToolbar(
         ) {
             Surface(
                     color = colors.surface,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Radius.RadiusLg),
                     shadowElevation = 8.dp,
                     tonalElevation = 6.dp,
-                    border = BorderStroke(1.dp, colors.textSecondary.copy(alpha = 0.15f)),
+                    border = BorderStroke(Border.WidthThin, colors.textSecondary.copy(alpha = 0.15f)),
                     modifier = if (isLandscape) {
                         Modifier
-                            .padding(end = 52.dp, bottom = 4.dp)
-                            .width(420.dp)
+                            .padding(end = 52.dp, bottom = Spacing.SpaceX2s)
+                            .widthIn(max = (windowInfo.normalizedWidthDp * 0.72f).dp.coerceAtMost(420.dp))
                     } else {
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceX2s)
                     }
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .padding(horizontal = Spacing.SpaceXs, vertical = 6.dp)
                             .horizontalScroll(rememberScrollState()),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = if (isLandscape) Arrangement.SpaceBetween else Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = if (isLandscape) Arrangement.SpaceBetween else Arrangement.spacedBy(Spacing.SpaceX2s)
                     ) {
                         // Normal Body Paragraph (clears active heading)
                         ToolbarButton(
                             isActive = !isHeadingActive,
                             contentDescription = "Normal Body Text",
                             modifier = Modifier
-                                .height(38.dp)
-                                .defaultMinSize(minWidth = 58.dp)
-                                .padding(horizontal = 2.dp),
+                                .defaultMinSize(minWidth = 58.dp, minHeight = 40.dp)
+                                .padding(horizontal = Spacing.SpaceX3s),
                             onClick = {
                                 if (activeHeadingLevel != null) {
                                     richTextState.toggleParagraph(ParagraphType.Heading(activeHeadingLevel))
@@ -131,16 +135,18 @@ fun EditorToolbar(
                         ) {
                             Text(
                                 text = "¶ Body",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (!isHeadingActive) FontWeight.Bold else FontWeight.Normal,
-                                color = colors.textPrimary
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
 
                         VerticalDivider(
                             modifier = Modifier
                                 .height(20.dp)
-                                .padding(horizontal = 2.dp),
+                                .padding(horizontal = Spacing.SpaceX3s),
                             color = colors.textSecondary.copy(alpha = 0.25f)
                         )
 
@@ -151,8 +157,7 @@ fun EditorToolbar(
                                 isActive = isLevelActive,
                                 contentDescription = "Heading $level",
                                 modifier = Modifier
-                                    .height(38.dp)
-                                    .defaultMinSize(minWidth = 38.dp)
+                                    .defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
                                     .padding(horizontal = 1.dp),
                                 onClick = {
                                     richTextState.toggleParagraph(ParagraphType.Heading(level))
@@ -160,9 +165,11 @@ fun EditorToolbar(
                             ) {
                                 Text(
                                     text = "H$level",
-                                    fontSize = 13.sp,
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (isLevelActive) FontWeight.Bold else FontWeight.Medium,
-                                    color = colors.textPrimary
+                                    color = colors.textPrimary,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -171,18 +178,18 @@ fun EditorToolbar(
 
                         IconButton(
                             onClick = { showHeadingBar = false },
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close Heading Selector",
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                            modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Heading Selector",
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(IconSize.IconSm)
+                            )
+                        }
                     }
                 }
             }
-        }
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -193,7 +200,7 @@ fun EditorToolbar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = Spacing.SpaceXs, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Scrollable formatting ribbon containing the 3 format groups
@@ -202,7 +209,7 @@ fun EditorToolbar(
                         .weight(1f)
                         .horizontalScroll(scrollState),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
                 ) {
                     // GROUP 1: Character Spans
                     ToolbarButton(
@@ -210,7 +217,7 @@ fun EditorToolbar(
                         contentDescription = "Bold",
                         onClick = { richTextState.toggleSpan(SpanType.Bold) }
                     ) {
-                        Text("B", fontWeight = FontWeight.Black, fontSize = 16.sp, color = colors.textPrimary)
+                        Text("B", fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -218,7 +225,7 @@ fun EditorToolbar(
                         contentDescription = "Italic",
                         onClick = { richTextState.toggleSpan(SpanType.Italic) }
                     ) {
-                        Text("I", fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+                        Text("I", fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -226,7 +233,7 @@ fun EditorToolbar(
                         contentDescription = "Underline",
                         onClick = { richTextState.toggleSpan(SpanType.Underline) }
                     ) {
-                        Text("U", textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+                        Text("U", textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -234,7 +241,7 @@ fun EditorToolbar(
                         contentDescription = "Strikethrough",
                         onClick = { richTextState.toggleSpan(SpanType.Strikethrough) }
                     ) {
-                        Text("S", textDecoration = TextDecoration.LineThrough, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+                        Text("S", textDecoration = TextDecoration.LineThrough, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -242,7 +249,7 @@ fun EditorToolbar(
                         contentDescription = "Highlight",
                         onClick = { richTextState.toggleSpan(SpanType.Highlight()) }
                     ) {
-                        Text("🎨", fontSize = 14.sp)
+                        Text("🎨", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -250,7 +257,7 @@ fun EditorToolbar(
                         contentDescription = "Code",
                         onClick = { richTextState.toggleSpan(SpanType.Code) }
                     ) {
-                        Text("</>", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                        Text("</>", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -258,13 +265,13 @@ fun EditorToolbar(
                         contentDescription = "Insert Link",
                         onClick = { showLinkDialog = true }
                     ) {
-                        Text("🔗", fontSize = 14.sp)
+                        Text("🔗", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                     }
 
                     VerticalDivider(
                         modifier = Modifier
                             .height(22.dp)
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = Spacing.SpaceX2s),
                         color = colors.textSecondary.copy(alpha = 0.25f)
                     )
 
@@ -274,7 +281,7 @@ fun EditorToolbar(
                         contentDescription = "Quote",
                         onClick = { richTextState.toggleParagraph(ParagraphType.Quote) }
                     ) {
-                        Text("❝", fontSize = 16.sp, color = colors.textPrimary)
+                        Text("❝", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -282,7 +289,7 @@ fun EditorToolbar(
                         contentDescription = "Bullet List",
                         onClick = { richTextState.toggleParagraph(ParagraphType.BulletList) }
                     ) {
-                        Text("•≡", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                        Text("•≡", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     ToolbarButton(
@@ -290,13 +297,13 @@ fun EditorToolbar(
                         contentDescription = "Numbered List",
                         onClick = { richTextState.toggleParagraph(ParagraphType.NumberedList()) }
                     ) {
-                        Text("1≡", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                        Text("1≡", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = colors.textPrimary, maxLines = 1, softWrap = false)
                     }
 
                     VerticalDivider(
                         modifier = Modifier
                             .height(22.dp)
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = Spacing.SpaceX2s),
                         color = colors.textSecondary.copy(alpha = 0.25f)
                     )
 
@@ -308,16 +315,17 @@ fun EditorToolbar(
                         isActive = isHeadingActive || showHeadingBar,
                         contentDescription = if (activeHeadingLevel != null) "Heading $activeHeadingLevel (Tap to change)" else "Paragraph Style (Tap to change)",
                         modifier = Modifier
-                            .height(38.dp)
-                            .defaultMinSize(minWidth = 44.dp)
-                            .padding(horizontal = 2.dp),
+                            .defaultMinSize(minWidth = 44.dp, minHeight = 40.dp)
+                            .padding(horizontal = Spacing.SpaceX3s),
                         onClick = { showHeadingBar = !showHeadingBar }
                     ) {
                         Text(
                             text = headingButtonText,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
 
@@ -333,9 +341,8 @@ fun EditorToolbar(
                             null -> "Text Alignment: Default (Tap to align)"
                         },
                         modifier = Modifier
-                            .height(38.dp)
-                            .defaultMinSize(minWidth = 38.dp)
-                            .padding(horizontal = 2.dp),
+                            .defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+                            .padding(horizontal = Spacing.SpaceX3s),
                         onClick = { richTextState.cycleAlignment() }
                     ) {
                         AlignmentIcon(
@@ -348,7 +355,7 @@ fun EditorToolbar(
                 VerticalDivider(
                     modifier = Modifier
                         .height(24.dp)
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = Spacing.SpaceX2s),
                     color = colors.textSecondary.copy(alpha = 0.3f)
                 )
 
@@ -356,12 +363,12 @@ fun EditorToolbar(
                 IconButton(
                     onClick = { richTextState.undo() },
                     enabled = richTextState.canUndo,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
                 ) {
                     Text(
                         "↶",
                         color = if (richTextState.canUndo) colors.textPrimary else colors.textSecondary.copy(alpha = 0.35f),
-                        fontSize = 19.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -369,12 +376,12 @@ fun EditorToolbar(
                 IconButton(
                     onClick = { richTextState.redo() },
                     enabled = richTextState.canRedo,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
                 ) {
                     Text(
                         "↷",
                         color = if (richTextState.canRedo) colors.textPrimary else colors.textSecondary.copy(alpha = 0.35f),
-                        fontSize = 19.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -403,27 +410,34 @@ fun EditorToolbar(
         var linkText by rememberSaveable(activeLink, showLinkDialog) { mutableStateOf(initialSelectedText) }
         var urlText by rememberSaveable(activeLink, showLinkDialog) { mutableStateOf(initialUrl) }
 
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showLinkDialog = false },
-            title = { Text(if (activeLink != null) "Edit Link" else "Insert Link", color = colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = if (activeLink != null) "Edit Link" else "Insert Link",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.SpaceMd)
                 ) {
                     OutlinedTextField(
                         value = linkText,
                         onValueChange = { linkText = it },
-                        label = { Text("Link Text") },
-                        placeholder = { Text("Text to display", color = colors.textSecondary.copy(alpha = 0.6f)) },
+                        label = { Text("Link Text", style = MaterialTheme.typography.bodySmall) },
+                        placeholder = { Text("Text to display", color = colors.textSecondary.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = urlText,
                         onValueChange = { urlText = it },
-                        label = { Text("Link URL") },
-                        placeholder = { Text("https://example.com", color = colors.textSecondary.copy(alpha = 0.6f)) },
+                        label = { Text("Link URL", style = MaterialTheme.typography.bodySmall) },
+                        placeholder = { Text("https://example.com", color = colors.textSecondary.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -431,7 +445,7 @@ fun EditorToolbar(
             },
             confirmButton = {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (activeLink != null) {
@@ -439,7 +453,7 @@ fun EditorToolbar(
                             richTextState.removeLinkAtCursor()
                             showLinkDialog = false
                         }) {
-                            Text("Remove Link", color = colors.error, fontWeight = FontWeight.SemiBold)
+                            Text("Remove Link", color = colors.error, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     TextButton(onClick = {
@@ -448,13 +462,13 @@ fun EditorToolbar(
                         }
                         showLinkDialog = false
                     }) {
-                        Text("Apply", color = colors.primary, fontWeight = FontWeight.Bold)
+                        Text("Apply", color = colors.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLinkDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text("Cancel", color = colors.textSecondary, style = MaterialTheme.typography.labelLarge)
                 }
             }
         )
@@ -466,26 +480,29 @@ private fun ToolbarButton(
     isActive: Boolean,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.size(38.dp),
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val colors = AppTheme.colors
     val backgroundColor = if (isActive) colors.primary.copy(alpha = if (colors.isLight) 0.18f else 0.25f) else Color.Transparent
-    val borderStroke = if (isActive) BorderStroke(1.dp, colors.primary) else null
+    val borderStroke = if (isActive) BorderStroke(Border.WidthThin, colors.primary) else null
+    val shape = RoundedCornerShape(Radius.RadiusSm)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+            .clip(shape)
             .background(backgroundColor)
-            .then(if (borderStroke != null) Modifier.border(borderStroke, RoundedCornerShape(8.dp)) else Modifier)
+            .then(if (borderStroke != null) Modifier.border(borderStroke, shape) else Modifier)
             .clickable(
                 onClick = onClick,
-                role = androidx.compose.ui.semantics.Role.Checkbox
+                role = Role.Checkbox
             )
             .semantics {
                 this.contentDescription = contentDescription
                 this.selected = isActive
-            },
+            }
+            .padding(horizontal = Spacing.SpaceX2s, vertical = Spacing.SpaceX2s),
         contentAlignment = Alignment.Center
     ) {
         content()

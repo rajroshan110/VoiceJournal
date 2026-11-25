@@ -17,11 +17,13 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.journal.components.ShimmerSkeletonCard
+import dev.voicejournal.ui.designsystem.components.buttons.AppSecondaryOutlinedButton
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -180,7 +182,7 @@ fun DayEntryList(
         when {
             isLoading -> {
                 items(2) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = Spacing.SpaceLg)) {
                         ShimmerSkeletonCard()
                     }
                 }
@@ -190,7 +192,7 @@ fun DayEntryList(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -200,11 +202,11 @@ fun DayEntryList(
                             tint = colors.textSecondary,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
                         Text(
                             text = "Tap any date to view recorded entries.",
                             color = colors.textSecondary,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -215,7 +217,7 @@ fun DayEntryList(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -225,11 +227,11 @@ fun DayEntryList(
                             tint = colors.textSecondary,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
                         Text(
                             text = "Future date — no entries recorded.",
                             color = colors.textSecondary,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -240,7 +242,7 @@ fun DayEntryList(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -250,19 +252,23 @@ fun DayEntryList(
                             tint = colors.textSecondary,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
                         Text(
                             text = "No entries match the selected filter.",
                             color = colors.textSecondary,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
+                        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
+                        AppSecondaryOutlinedButton(
                             onClick = onClearFiltersClick,
-                            shape = RoundedCornerShape(24.dp)
+                            shape = RoundedCornerShape(Radius.RadiusPill)
                         ) {
-                            Text("Clear Filter", color = colors.primary)
+                            Text(
+                                text = "Clear Filter",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = colors.primary
+                            )
                         }
                     }
                 }
@@ -272,7 +278,7 @@ fun DayEntryList(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.Space2Xl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -282,11 +288,11 @@ fun DayEntryList(
                             tint = colors.textSecondary,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceMd))
                         Text(
                             text = "No voice entries recorded for this date.",
                             color = colors.textSecondary,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -294,7 +300,7 @@ fun DayEntryList(
             }
             else -> {
                 items(entries, key = { it.id }) { entry ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = Spacing.SpaceLg, vertical = 6.dp)) {
                         dev.voicejournal.ui.folders.components.FolderNoteCard(
                             entry = entry,
                             onClick = { onEntryClick(entry.id) },

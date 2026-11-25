@@ -7,9 +7,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import dev.voicejournal.domain.model.Tag
+import dev.voicejournal.ui.designsystem.components.buttons.AppPrimaryButton
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.components.menus.AppDropdownMenuItem
+import dev.voicejournal.ui.designsystem.components.menus.AppExposedDropdownMenu
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 @Composable
 fun RenameItemDialog(
@@ -21,7 +26,7 @@ fun RenameItemDialog(
     val colors = AppTheme.colors
     var nameInput by rememberSaveable { mutableStateOf(currentName.removePrefix("#").removePrefix("@")) }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -37,12 +42,19 @@ fun RenameItemDialog(
                     text = "All associated entries will be updated.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    modifier = Modifier.padding(bottom = Spacing.SpaceMd)
                 )
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
-                    placeholder = { Text("Enter new name...", color = colors.textSecondary) },
+                    placeholder = {
+                        Text(
+                            text = "Enter new name...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.textSecondary
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.textPrimary),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = colors.primary,
@@ -50,31 +62,32 @@ fun RenameItemDialog(
                         focusedTextColor = colors.textPrimary,
                         unfocusedTextColor = colors.textPrimary
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.RadiusMd),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            Button(
+            AppPrimaryButton(
                 onClick = {
                     if (nameInput.isNotBlank()) {
                         onConfirm(nameInput.trim())
                     }
                 },
-                enabled = nameInput.isNotBlank() && nameInput.trim() != currentName.removePrefix("#").removePrefix("@"),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                enabled = nameInput.isNotBlank() && nameInput.trim() != currentName.removePrefix("#").removePrefix("@")
             ) {
-                Text("Rename")
+                Text("Rename", style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(
+                    text = "Cancel",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.textSecondary
+                )
             }
-        },
-        containerColor = colors.surface,
-        shape = RoundedCornerShape(20.dp)
+        }
     )
 }
 
@@ -91,7 +104,7 @@ fun MergeItemDialog(
     var selectedTarget by remember { mutableStateOf<Tag?>(targetCandidates.firstOrNull()) }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -107,7 +120,7 @@ fun MergeItemDialog(
                     text = "Merge \"${sourceTag.name}\" into another item. All entries will be moved to the selected target, and duplicate associations will be consolidated.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = Spacing.SpaceLg)
                 )
 
                 if (targetCandidates.isEmpty()) {
@@ -125,7 +138,14 @@ fun MergeItemDialog(
                             value = selectedTarget?.name ?: "",
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Select Target", color = colors.textSecondary) },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.textPrimary),
+                            label = {
+                                Text(
+                                    text = "Select Target",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colors.textSecondary
+                                )
+                            },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = colors.primary,
@@ -133,19 +153,20 @@ fun MergeItemDialog(
                                 focusedTextColor = colors.textPrimary,
                                 unfocusedTextColor = colors.textPrimary
                             ),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(Radius.RadiusMd),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                         )
 
-                        ExposedDropdownMenu(
+                        AppExposedDropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
                             targetCandidates.forEach { candidate ->
-                                DropdownMenuItem(
-                                    text = { Text(candidate.name, color = colors.textPrimary) },
+                                AppDropdownMenuItem(
+                                    text = candidate.name,
+                                    isSelected = candidate == selectedTarget,
                                     onClick = {
                                         selectedTarget = candidate
                                         expanded = false
@@ -158,25 +179,26 @@ fun MergeItemDialog(
             }
         },
         confirmButton = {
-            Button(
+            AppPrimaryButton(
                 onClick = {
                     val target = selectedTarget
                     if (target != null) {
                         onConfirm(target)
                     }
                 },
-                enabled = selectedTarget != null,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                enabled = selectedTarget != null
             ) {
-                Text("Merge")
+                Text("Merge", style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(
+                    text = "Cancel",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.textSecondary
+                )
             }
-        },
-        containerColor = colors.surface,
-        shape = RoundedCornerShape(20.dp)
+        }
     )
 }

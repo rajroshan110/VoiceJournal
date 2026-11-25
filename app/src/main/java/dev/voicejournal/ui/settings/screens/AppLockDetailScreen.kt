@@ -1,10 +1,10 @@
 package dev.voicejournal.ui.settings.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -21,12 +21,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.AppLockMode
 import dev.voicejournal.domain.model.AppLockTimeout
+import dev.voicejournal.ui.designsystem.components.buttons.AppCircleIconButton
+import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
-import dev.voicejournal.ui.designsystem.theme.AppTheme
 
 private val FingerprintIcon: ImageVector by lazy {
     ImageVector.Builder(
@@ -135,21 +136,22 @@ fun AppLockDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         // Back Icon Button
-        IconButton(
+        AppCircleIconButton(
             onClick = onBackClick,
-            modifier = Modifier
-                .size(42.dp)
-                .background(colors.surface, shape = CircleShape)
+            containerColor = colors.surface,
+            contentColor = colors.textPrimary,
+            contentDescription = "Back"
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = colors.textPrimary,
-                modifier = Modifier.size(20.dp)
+                contentDescription = null,
+                modifier = Modifier.size(IconSize.IconMd)
             )
         }
 
@@ -158,8 +160,8 @@ fun AppLockDetailScreen(
         // Title & Subtitle
         Text(
             text = "Lock your journal",
+            style = MaterialTheme.typography.headlineMedium,
             color = colors.textPrimary,
-            fontSize = 28.sp,
             fontWeight = FontWeight.Bold
         )
 
@@ -167,9 +169,8 @@ fun AppLockDetailScreen(
 
         Text(
             text = "Keep your journal private by adding an extra layer of security",
-            color = colors.textSecondary,
-            fontSize = 15.sp,
-            lineHeight = 21.sp
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.textSecondary
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -177,8 +178,8 @@ fun AppLockDetailScreen(
         // Section 1: Ways to lock
         Text(
             text = "Ways to lock",
+            style = MaterialTheme.typography.titleSmall,
             color = colors.primary,
-            fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -207,10 +208,9 @@ fun AppLockDetailScreen(
             icon = {
                 Text(
                     text = "***",
+                    style = MaterialTheme.typography.titleMedium,
                     color = colors.textPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.Black
                 )
             },
             isSelected = uiState.appLockMode == AppLockMode.CUSTOM_PIN,
@@ -227,7 +227,10 @@ fun AppLockDetailScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Modify", fontSize = 13.sp)
+                        Text(
+                            text = "Modify",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             } else null
@@ -256,8 +259,8 @@ fun AppLockDetailScreen(
 
             Text(
                 text = "Enforce lock",
+                style = MaterialTheme.typography.titleSmall,
                 color = colors.primary,
-                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -300,17 +303,16 @@ fun AppLockDetailScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Important",
+                        style = MaterialTheme.typography.titleMedium,
                         color = colors.textPrimary,
-                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "If you forget your Custom PIN, you will lose access to your journal. There is no recovery option.",
-                    color = colors.textSecondary,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
                 )
             }
         }
@@ -330,6 +332,7 @@ private fun AppLockOptionCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(20.dp),
+        border = AppTheme.getSelectionBorder(isSelected, colors.primary, colors.border),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -351,8 +354,8 @@ private fun AppLockOptionCard(
 
             Text(
                 text = title,
+                style = MaterialTheme.typography.titleMedium,
                 color = colors.textPrimary,
-                fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )

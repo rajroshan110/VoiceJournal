@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.domain.model.TimeFormat
 import dev.voicejournal.ui.designsystem.theme.AppTheme
@@ -80,7 +79,6 @@ fun FolderNoteCard(
                     text = formattedDateTimeText,
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.primary,
-                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -113,7 +111,6 @@ fun FolderNoteCard(
                 text = snippetText,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary,
-                fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

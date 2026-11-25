@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.settings.BackupResultDialog
 
 /**
@@ -19,7 +21,7 @@ fun BackupRestoreConfirmationDialog(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -52,8 +54,7 @@ fun BackupRestoreConfirmationDialog(
                     style = MaterialTheme.typography.labelLarge
                 )
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -66,7 +67,7 @@ fun BackupResultAlertDialog(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -90,8 +91,7 @@ fun BackupResultAlertDialog(
                     style = MaterialTheme.typography.labelLarge
                 )
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -103,7 +103,7 @@ fun BackupRestoreProgressDialog(
     progressText: String?
 ) {
     val colors = AppTheme.colors
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = {},
         title = {
             Text(
@@ -116,13 +116,13 @@ fun BackupRestoreProgressDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = Spacing.SpaceXs),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceLg)
             ) {
                 CircularProgressIndicator(
                     color = colors.primary,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(IconSize.IconXl)
                 )
                 Text(
                     text = progressText ?: "Restoring data…",
@@ -131,7 +131,6 @@ fun BackupRestoreProgressDialog(
                 )
             }
         },
-        confirmButton = {},
-        containerColor = colors.surface
+        confirmButton = {}
     )
 }

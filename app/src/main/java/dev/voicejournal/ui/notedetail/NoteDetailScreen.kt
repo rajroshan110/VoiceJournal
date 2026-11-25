@@ -46,7 +46,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,6 +55,10 @@ import dev.voicejournal.data.storage.MediaStorageManager
 import dev.voicejournal.domain.model.TagType
 import dev.voicejournal.ui.util.findActivity
 import dev.voicejournal.ui.designsystem.components.audio.UnifiedAudioPlayerBar
+import dev.voicejournal.ui.designsystem.components.dialogs.AppAlertDialog
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.notedetail.components.TranscriptionButton
 import dev.voicejournal.ui.notedetail.components.TranscriptSection
 import dev.voicejournal.ui.notedetail.components.EditorToolbar
@@ -71,7 +74,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.voicejournal.util.TimeFormatter
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun NoteDetailScreen(
     navController: NavController,
@@ -391,8 +394,7 @@ fun NoteDetailScreen(
                     Text(
                         "Add title",
                         color = colors.textSecondary,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.headlineSmall
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -404,38 +406,45 @@ fun NoteDetailScreen(
                     focusedTextColor = colors.textPrimary,
                     unfocusedTextColor = colors.textPrimary
                 ),
-                textStyle = LocalTextStyle.current.copy(
-                    color = colors.textPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.SemiBold
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    color = colors.textPrimary
                 ),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
             )
 
-            // Date, Time & Tag Control Row
-            Row(
+            // Date, Time & Tag Control FlowRow
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceXs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceXs)
             ) {
+                val pillShape = RoundedCornerShape(Radius.RadiusPill)
                 Surface(
                     color = colors.surfaceVariant,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.clickable {
-                        datePickerTab = 0
-                        showDatePicker = true
-                    }
+                    shape = pillShape,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 32.dp)
+                        .clip(pillShape)
+                        .clickable {
+                            datePickerTab = 0
+                            showDatePicker = true
+                        }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = Spacing.SpaceMd, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.DateRange, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(IconSize.IconXs)
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
                         Text(
                             text = formattedDate,
                             color = colors.textPrimary,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             maxLines = 1,
                             softWrap = false
                         )
@@ -444,29 +453,35 @@ fun NoteDetailScreen(
 
                 Surface(
                     color = colors.surfaceVariant,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.clickable {
-                        datePickerTab = 1
-                        showDatePicker = true
-                    }
+                    shape = pillShape,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 32.dp)
+                        .clip(pillShape)
+                        .clickable {
+                            datePickerTab = 1
+                            showDatePicker = true
+                        }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = Spacing.SpaceMd, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(IconSize.IconXs)
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.SpaceX2s))
                         Text(
                             text = formattedTime,
                             color = colors.textPrimary,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             maxLines = 1,
                             softWrap = false
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f, fill = false))
 
                 val hasAnyTagsEnabled = uiState.isFolderEnabled || uiState.isTopicsEnabled || uiState.isPeopleEnabled
                 if (hasAnyTagsEnabled) {
@@ -483,18 +498,21 @@ fun NoteDetailScreen(
 
                     Surface(
                         color = if (visibleTags.isNotEmpty()) colors.primaryContainer else colors.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable { showTagsDialog = true }
+                        shape = pillShape,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 32.dp)
+                            .clip(pillShape)
+                            .clickable { showTagsDialog = true }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = Spacing.SpaceMd, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("🏷️ ", fontSize = 12.sp)
+                            Text("🏷️ ", style = MaterialTheme.typography.labelMedium)
                             Text(
                                 text = if (visibleTags.isNotEmpty()) "Tags (${visibleTags.size})" else "Tags",
                                 color = if (visibleTags.isNotEmpty()) colors.primary else colors.textSecondary,
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 softWrap = false
@@ -547,7 +565,7 @@ fun NoteDetailScreen(
                                 Text(
                                     text = if (uiState.audioTracks.size > 1) "Track ${index + 1}" else "Voice Note",
                                     color = if (isTrackSelected) colors.primary else colors.textSecondary,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold
                                 )
 
@@ -629,9 +647,7 @@ fun NoteDetailScreen(
             UserTextInput(
                 richTextState = viewModel.richTextState,
                 focusRequester = focusRequester,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 350.dp)
+                modifier = Modifier.fillMaxWidth()
             )
 
             // Standardized bottom breathing space:
@@ -738,10 +754,23 @@ fun NoteDetailScreen(
     // Delete Selected Items (Voice Tracks & Images) Confirmation Dialog
     if (showDeleteSelectedTracksDialog) {
         val count = trackSelectionState.totalSelectedCount
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDeleteSelectedTracksDialog = false },
-            title = { Text("Delete selected items?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete the selected $count item(s)?", color = colors.textSecondary) },
+            title = {
+                Text(
+                    text = "Delete selected items?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete the selected $count item(s)?",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -749,25 +778,45 @@ fun NoteDetailScreen(
                         viewModel.deleteSelectedItems()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteSelectedTracksDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(24.dp)
+            }
         )
     }
 
     // Archive Confirmation Dialog
     if (showArchiveConfirmDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showArchiveConfirmDialog = false },
-            title = { Text("Archive note?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to archive this note? It will be hidden from your Journal and Calendar tabs and moved to Archive.", color = colors.textSecondary) },
+            title = {
+                Text(
+                    text = "Archive note?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to archive this note? It will be hidden from your Journal and Calendar tabs and moved to Archive.",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -778,15 +827,23 @@ fun NoteDetailScreen(
                         }
                     }
                 ) {
-                    Text("Archive", color = colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Archive",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showArchiveConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 
@@ -813,81 +870,110 @@ fun NoteDetailScreen(
         } else {
             "Error"
         }
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.clearErrorMessage() },
             title = {
                 Text(
                     text = errorTitle,
                     color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = currentErrorMessage,
-                    color = colors.textSecondary
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearErrorMessage() }) {
-                    Text("OK", color = colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "OK",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(24.dp)
+            }
         )
     }
 
     // Generate Transcript Confirmation Dialog
     if (uiState.showTranscriptConfirmTrack != null) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { viewModel.dismissTranscriptConfirmDialog() },
-            title = { Text("Generate transcript?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Generate transcript?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Text(
-                    "This will transcribe the audio locally on your device. No internet connection is required.",
-                    color = colors.textSecondary
+                    text = "This will transcribe the audio locally on your device. No internet connection is required.",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmGenerateTranscript() }) {
-                    Text("Generate", color = colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Generate",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissTranscriptConfirmDialog() }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 
     // Whisper Model Download Prompt Dialog
     if (uiState.showModelDownloadPromptTrack != null) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = {
                 if (uiState.modelDownloadProgress == null) viewModel.dismissModelDownloadPrompt()
             },
-            title = { Text("Download Whisper Model", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Download Whisper Model",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column {
                     Text(
-                        "Whisper Base Q5 model (~59 MB - English & Hindi) is required for offline audio transcription. Would you like to download it now?",
-                        color = colors.textSecondary
+                        text = "Whisper Base Q5 model (~59 MB - English & Hindi) is required for offline audio transcription. Would you like to download it now?",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     if (uiState.modelDownloadProgress != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceLg))
                         LinearProgressIndicator(
                             progress = { uiState.modelDownloadProgress ?: 0f },
                             modifier = Modifier.fillMaxWidth(),
                             color = colors.primary
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(Spacing.SpaceX2s))
                         Text(
                             text = "Downloading: ${(uiState.modelDownloadProgress!! * 100).toInt()}%",
                             color = colors.textSecondary,
-                            fontSize = 12.sp
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -895,29 +981,51 @@ fun NoteDetailScreen(
             confirmButton = {
                 if (uiState.modelDownloadProgress == null) {
                     TextButton(onClick = { viewModel.confirmDownloadModel() }) {
-                        Text("Download", color = colors.primary, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Download",
+                            color = colors.primary,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             },
             dismissButton = {
                 if (uiState.modelDownloadProgress == null) {
                     TextButton(onClick = { viewModel.dismissModelDownloadPrompt() }) {
-                        Text("Cancel", color = colors.textSecondary)
+                        Text(
+                            text = "Cancel",
+                            color = colors.textSecondary,
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 
     // Draft Note and Discard Confirmation Dialog for New Notes & Drafts
     if (showDraftOrDiscardDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDraftOrDiscardDialog = false },
-            title = { Text("Save to Drafts?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("You have unsaved changes. Would you like to save this note as a draft or discard it?", color = colors.textSecondary) },
+            title = {
+                Text(
+                    text = "Save to Drafts?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "You have unsaved changes. Would you like to save this note as a draft or discard it?",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
+                    contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
                     onClick = {
                         showDraftOrDiscardDialog = false
                         viewModel.saveDraftOnExit {
@@ -926,38 +1034,77 @@ fun NoteDetailScreen(
                         }
                     }
                 ) {
-                    Text("Draft Note", color = colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Draft Note",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             },
             dismissButton = {
-                Row {
-                    TextButton(onClick = { showDraftOrDiscardDialog = false }) {
-                        Text("Cancel", color = colors.textSecondary)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                ) {
                     TextButton(
+                        contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
+                        onClick = { showDraftOrDiscardDialog = false }
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = colors.textSecondary,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                    TextButton(
+                        contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
                         onClick = {
                             showDraftOrDiscardDialog = false
                             viewModel.discardRecordingAndReset()
                             navController.popBackStack()
                         }
                     ) {
-                        Text("Discard", color = colors.error, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = "Discard",
+                            color = colors.error,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false
+                        )
                     }
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 
     // Unsaved Progress Confirmation Dialog for Existing Notes
     if (showUnsavedPromptDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showUnsavedPromptDialog = false },
-            title = { Text("Save Changes?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Would you like to save your progress before leaving?", color = colors.textSecondary) },
+            title = {
+                Text(
+                    text = "Save Changes?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Would you like to save your progress before leaving?",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
+                    contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
                     onClick = {
                         showUnsavedPromptDialog = false
                         viewModel.saveEntryWithFeedback { msg ->
@@ -966,35 +1113,73 @@ fun NoteDetailScreen(
                         }
                     }
                 ) {
-                    Text("Save", color = colors.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Save",
+                        color = colors.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             },
             dismissButton = {
-                Row {
-                    TextButton(onClick = { showUnsavedPromptDialog = false }) {
-                        Text("Cancel", color = colors.textSecondary)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
+                ) {
                     TextButton(
+                        contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
+                        onClick = { showUnsavedPromptDialog = false }
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = colors.textSecondary,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                    TextButton(
+                        contentPadding = PaddingValues(horizontal = Spacing.SpaceXs),
                         onClick = {
                             showUnsavedPromptDialog = false
                             navController.popBackStack()
                         }
                     ) {
-                        Text("Discard", color = colors.error, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = "Discard",
+                            color = colors.error,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false
+                        )
                     }
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 
     // Discard Active Recording Confirmation Dialog
     if (showDiscardRecordingConfirmDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDiscardRecordingConfirmDialog = false },
-            title = { Text("Discard recording?", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to discard this voice recording?", color = colors.textSecondary) },
+            title = {
+                Text(
+                    text = "Discard recording?",
+                    color = colors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to discard this voice recording?",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1002,15 +1187,23 @@ fun NoteDetailScreen(
                         viewModel.discardRecordingAndReset()
                     }
                 ) {
-                    Text("Discard", color = colors.error, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Discard",
+                        color = colors.error,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardRecordingConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(
+                        text = "Cancel",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
-            },
-            containerColor = colors.surface
+            }
         )
     }
 }

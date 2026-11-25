@@ -3,11 +3,7 @@ package dev.voicejournal.ui.notedetail.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,8 +15,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.components.dialogs.AppModalBottomSheet
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.IconSize
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 private fun getCameraIcon(tintColor: Color): ImageVector {
     return ImageVector.Builder(
@@ -128,41 +127,31 @@ fun AddItemSheet(
 ) {
     val colors = AppTheme.colors
 
-    ModalBottomSheet(
+    AppModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        dragHandle = null
+        containerColor = colors.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp),
+                .navigationBarsPadding()
+                .padding(bottom = Spacing.SpaceXl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 24.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .background(colors.textSecondary.copy(alpha = 0.4f), CircleShape)
-            )
-
             Text(
                 text = "Add Attachment",
                 color = colors.textPrimary,
-                fontSize = 20.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier.padding(top = Spacing.SpaceXs, bottom = Spacing.SpaceLg)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(24.dp)),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(horizontal = Spacing.SpaceLg)
+                    .clip(RoundedCornerShape(Radius.RadiusLg)),
+                verticalArrangement = Arrangement.spacedBy(Spacing.SpaceX2s)
             ) {
                 AddItemRow(
                     icon = getCameraIcon(colors.primary),
@@ -195,26 +184,25 @@ private fun AddItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Radius.RadiusMd))
             .background(colors.surfaceVariant)
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = Spacing.SpaceLg, vertical = Spacing.SpaceLg),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = colors.primary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(IconSize.IconLg)
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(Spacing.SpaceLg))
 
         Text(
             text = text,
             color = colors.textPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.titleSmall
         )
     }
 }

@@ -16,6 +16,7 @@ import dev.voicejournal.domain.usecase.TimeOfDayMetric
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
 import java.util.Locale
 
 @Composable
@@ -53,7 +54,7 @@ fun PeakReflectionCard(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .height(88.dp)
+                        .defaultMinSize(minHeight = 88.dp)
                         .clip(RoundedCornerShape(Radius.RadiusMd))
                         .background(colors.surfaceVariant)
                         .padding(vertical = Spacing.SpaceXs, horizontal = Spacing.SpaceX3s),
@@ -76,7 +77,7 @@ fun PeakReflectionCard(
                     Text(
                         text = pctStr,
                         color = colors.primary,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelLarge.tabularNumbers(),
                         fontWeight = FontWeight.Bold
                     )
                 }

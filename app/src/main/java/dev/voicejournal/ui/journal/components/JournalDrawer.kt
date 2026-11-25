@@ -17,10 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.voicejournal.ui.components.getFolderIcon
 import dev.voicejournal.ui.components.getTagIcon
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.tokens.Radius
+import dev.voicejournal.ui.designsystem.tokens.Spacing
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -60,26 +61,30 @@ fun JournalDrawerContent(
         }
     }
 
+    val drawerMaxWidth = (AppTheme.windowInfo.normalizedWidthDp * 0.80f).dp.coerceAtMost(300.dp)
+
     ModalDrawerSheet(
         drawerContainerColor = colors.surface,
         drawerContentColor = colors.textPrimary,
         modifier = modifier
-            .widthIn(max = 300.dp)
+            .widthIn(max = drawerMaxWidth)
             .fillMaxHeight()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 16.dp, horizontal = 12.dp)
+                .padding(vertical = Spacing.SpaceLg, horizontal = Spacing.SpaceMd)
         ) {
             // Header Section
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SpaceMd),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                    .padding(horizontal = Spacing.SpaceXs, vertical = Spacing.SpaceMd)
             ) {
                 if (appIconBitmap != null) {
                     Image(
@@ -87,18 +92,18 @@ fun JournalDrawerContent(
                         contentDescription = "Voice Journal",
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(Radius.RadiusMd))
                     )
                 } else {
                     Surface(
                         color = colors.primary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Radius.RadiusMd),
                         modifier = Modifier.size(40.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "🎙️",
-                                fontSize = 20.sp
+                                style = MaterialTheme.typography.titleLarge
                             )
                         }
                     }
@@ -322,8 +327,7 @@ fun JournalDrawerContent(
                 Text(
                     text = "VoiceJournal v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary.copy(alpha = 0.8f),
-                    fontSize = 12.sp
+                    color = colors.textSecondary.copy(alpha = 0.8f)
                 )
             }
         }

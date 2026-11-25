@@ -20,12 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.voicejournal.ui.designsystem.components.buttons.AppSecondaryOutlinedButton
 import dev.voicejournal.ui.settings.SettingsUiState
 import dev.voicejournal.ui.settings.SettingsViewModel
 import dev.voicejournal.ui.settings.components.settingHighlight
 import dev.voicejournal.ui.designsystem.theme.AppTheme
-import java.io.File
 
 @Composable
 fun LocalBackupScreen(
@@ -93,14 +92,13 @@ fun LocalBackupScreen(
                     Text(
                         text = "Local Backup & Restore",
                         color = colors.primary,
-                        fontSize = 13.sp,
                         style = MaterialTheme.typography.labelMedium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Export or import your journal entries, tags, and audio recordings as a zip archive via Storage Access Framework.",
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        style = MaterialTheme.typography.bodySmall
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -120,7 +118,7 @@ fun LocalBackupScreen(
                         Text(
                             text = "Backups are unencrypted. Store them securely.",
                             color = colors.error,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -136,7 +134,7 @@ fun LocalBackupScreen(
                             Text(
                                 text = uiState.backupProgressText ?: (if (uiState.isExporting) "Preparing backup…" else "Validating backup…"),
                                 color = colors.textSecondary,
-                                fontSize = 13.sp
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     } else {
@@ -144,24 +142,32 @@ fun LocalBackupScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            OutlinedButton(
+                            AppSecondaryOutlinedButton(
                                 onClick = {
                                     dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                                     exportLauncher.launch("VoiceJournal_Backup_${System.currentTimeMillis()}.vjbackup.zip")
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Export\nBackup", textAlign = TextAlign.Center)
+                                Text(
+                                    text = "Export Backup",
+                                    maxLines = 2,
+                                    textAlign = TextAlign.Center
+                                )
                             }
 
-                            OutlinedButton(
+                            AppSecondaryOutlinedButton(
                                 onClick = {
                                     dev.voicejournal.ui.util.AppLockStateManager.notifySystemPickerLaunched()
                                     importLauncher.launch(arrayOf("application/zip"))
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Import\nBackup", textAlign = TextAlign.Center)
+                                Text(
+                                    text = "Import Backup",
+                                    maxLines = 2,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                     }

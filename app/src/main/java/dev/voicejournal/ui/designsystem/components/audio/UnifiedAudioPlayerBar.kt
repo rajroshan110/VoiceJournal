@@ -25,11 +25,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import dev.voicejournal.ui.designsystem.tokens.ComponentDimens
 import dev.voicejournal.ui.designsystem.tokens.IconSize
 import dev.voicejournal.ui.designsystem.tokens.Radius
 import dev.voicejournal.ui.designsystem.tokens.Spacing
 import dev.voicejournal.ui.designsystem.tokens.TouchTarget
 import dev.voicejournal.ui.designsystem.theme.AppTheme
+import dev.voicejournal.ui.designsystem.theme.tabularNumbers
 import java.util.Locale
 
 private fun getPauseIcon(tintColor: Color): ImageVector {
@@ -119,7 +121,7 @@ fun UnifiedAudioPlayerBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .heightIn(min = ComponentDimens.AudioBarMinHeight)
                 .background(colors.surfaceVariant, shape = RoundedCornerShape(Radius.RadiusPill))
                 .padding(horizontal = Spacing.SpaceXs),
             verticalAlignment = Alignment.CenterVertically
@@ -196,7 +198,7 @@ fun UnifiedAudioPlayerBar(
                 isSeekable = isPlaying,
                 modifier = Modifier
                     .weight(1f)
-                    .height(32.dp)
+                    .height(36.dp)
             )
 
             Spacer(modifier = Modifier.width(Spacing.SpaceXs))
@@ -204,7 +206,7 @@ fun UnifiedAudioPlayerBar(
             // 3. Single-line Running Timer Readout
             Text(
                 text = timeText,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.tabularNumbers(),
                 color = colors.textSecondary,
                 maxLines = 1,
                 softWrap = false

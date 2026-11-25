@@ -17,14 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import dev.voicejournal.domain.model.JournalEntry
 import dev.voicejournal.ui.components.getDraftIcon
 import dev.voicejournal.ui.designsystem.components.SearchBar
+import dev.voicejournal.ui.designsystem.tokens.physicalMinTouchTarget
 import dev.voicejournal.ui.folders.components.FolderNoteCard
 import dev.voicejournal.ui.navigation.BottomNavBar
 import dev.voicejournal.ui.navigation.Screen
@@ -71,8 +71,14 @@ fun DraftScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = { viewModel.clearSelection() },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear Selection",
@@ -84,11 +90,17 @@ fun DraftScreen(
                                 text = "${selectionState.selectedCount} selected",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
-                        IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                        IconButton(
+                            onClick = { showDeleteConfirmDialog = true },
+                            modifier = Modifier.physicalMinTouchTarget()
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Move Selected Drafts to Trash",
@@ -118,8 +130,14 @@ fun DraftScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { navController.popBackStack() }) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                IconButton(
+                                    onClick = { navController.popBackStack() },
+                                    modifier = Modifier.physicalMinTouchTarget()
+                                ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = "Back",
@@ -131,11 +149,17 @@ fun DraftScreen(
                                     text = "Drafts",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
+                                    color = colors.textPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
 
-                            IconButton(onClick = { isSearchVisible = true }) {
+                            IconButton(
+                                onClick = { isSearchVisible = true },
+                                modifier = Modifier.physicalMinTouchTarget()
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Search Drafts",
@@ -168,7 +192,7 @@ fun DraftScreen(
                         .padding(32.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("📝", fontSize = 48.sp)
+                        Text("📝", style = MaterialTheme.typography.displayMedium)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No Draft Notes",
